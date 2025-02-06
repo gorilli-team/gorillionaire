@@ -9,6 +9,7 @@ interface CardProps {
   chainName: string;
   chainImage: string;
   onDeposit: () => void;
+  onWithdraw: () => void;
   onCardClick: () => void;
 }
 
@@ -19,6 +20,7 @@ export const Card: React.FC<CardProps> = ({
   chainName,
   chainImage,
   onDeposit,
+  onWithdraw,
   onCardClick,
 }) => {
   const { address } = useAccount();
@@ -51,15 +53,27 @@ export const Card: React.FC<CardProps> = ({
       </div>
       <div className="flex-shrink-0 mt-4">
         {address ? (
-          <button
-            onClick={(e) => {
+          <div className="flex flex-col gap-2">
+            {" "}
+            <button
+              onClick={(e) => {
                 e.stopPropagation();
                 onDeposit();
-            }}
-            className="px-4 py-2 bg-blue-500 text-white font-medium rounded-lg hover:bg-blue-600 transition w-full"
-          >
-            Deposit
-          </button>
+              }}
+              className="px-4 py-2 bg-blue-500 text-white font-medium rounded-lg hover:bg-blue-600 transition w-full"
+            >
+              Deposit
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onWithdraw();
+              }}
+              className="px-4 py-2 bg-blue-500 text-white font-medium rounded-lg hover:bg-blue-600 transition w-full"
+            >
+              Withdraw
+            </button>
+          </div>
         ) : (
           <div className="w-full flex justify-center">
             <WalletDefault />
