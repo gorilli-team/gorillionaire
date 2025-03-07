@@ -113,7 +113,7 @@ describe("Parsing Module", () => {
             const input = '```json\n{"key": "value", "number": 42}\n```';
             expect(parseJSONObjectFromText(input)).toEqual({
                 key: "value",
-                number: 42,
+                number: "42",
             });
         });
 
@@ -121,7 +121,7 @@ describe("Parsing Module", () => {
             const input = '{"key": "value", "number": 42}';
             expect(parseJSONObjectFromText(input)).toEqual({
                 key: "value",
-                number: 42,
+                number: "42",
             });
         });
 

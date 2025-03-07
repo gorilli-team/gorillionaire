@@ -1,8 +1,8 @@
-[@elizaos/core v0.1.7](../index.md) / messageCompletionFooter
+[@elizaos/core v0.25.8](../index.md) / messageCompletionFooter
 
 # Variable: messageCompletionFooter
 
-> `const` **messageCompletionFooter**: "\nResponse format should be formatted in a JSON block like this:\n\`\`\`json\n\{ \"user\": \"\{\{agentName\}\}\", \"text\": \"string\", \"action\": \"string\" \}\n\`\`\`"
+> `const` **messageCompletionFooter**: "\nResponse format should be formatted in a valid JSON block like this:\n\`\`\`json\n\{ \"user\": \"\{\{agentName\}\}\", \"text\": \"\<string\>\", \"action\": \"\<string\>\" \}\n\`\`\`\n\nThe “action” field should be one of the options in \[Available Actions\] and the \"text\" field should be the response you want to send.\n"
 
 ## Defined in
 

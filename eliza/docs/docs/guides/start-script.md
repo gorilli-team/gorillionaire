@@ -187,5 +187,5 @@ Need help? Try these steps:
 
 ---
 <div align="center">
-<i>Made with ❤️ by the ai16z team</i>
+<i>Made with ❤️ by the ElizaOS team</i>
 </div>

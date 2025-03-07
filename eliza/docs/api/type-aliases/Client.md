@@ -1,4 +1,4 @@
-[@elizaos/core v0.1.7](../index.md) / Client
+[@elizaos/core v0.25.8](../index.md) / Client
 
 # Type Alias: Client
 
@@ -8,9 +8,25 @@ Client interface for platform connections
 
 ## Type declaration
 
+### name
+
+> **name**: `string`
+
+Client name
+
+### config?
+
+> `optional` **config**: `object`
+
+Client configuration
+
+#### Index Signature
+
+ \[`key`: `string`\]: `any`
+
 ### start()
 
-> **start**: (`runtime`) => `Promise`\<`unknown`\>
+> **start**: (`runtime`) => `Promise`\<[`ClientInstance`](ClientInstance.md)\>
 
 Start client connection
 
@@ -20,22 +36,8 @@ Start client connection
 
 #### Returns
 
-`Promise`\<`unknown`\>
-
-### stop()
-
-> **stop**: (`runtime`) => `Promise`\<`unknown`\>
-
-Stop client connection
-
-#### Parameters
-
-• **runtime**: [`IAgentRuntime`](../interfaces/IAgentRuntime.md)
-
-#### Returns
-
-`Promise`\<`unknown`\>
+`Promise`\<[`ClientInstance`](ClientInstance.md)\>
 
 ## Defined in
 
-[packages/core/src/types.ts:582](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L582)
+[packages/core/src/types.ts:628](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L628)

@@ -128,6 +128,17 @@ const config = {
         [
             "classic",
             {
+                blog: {
+                    showReadingTime: true,
+                    editUrl: "https://github.com/elizaos/eliza/tree/main/docs/blog/",
+                    blogSidebarTitle: 'Recent posts',
+                    blogSidebarCount: 10,
+                    feedOptions: {
+                        type: 'all',
+                        title: 'ElizaOS Updates',
+                        description: 'Stay up to date with the latest from ElizaOS',
+                    },
+                },
                 docs: {
                     sidebarPath: "./sidebars.js",
                     editUrl: "https://github.com/elizaos/eliza/tree/main/docs/",
@@ -143,6 +154,22 @@ const config = {
         ],
     ],
     themeConfig: {
+        mermaid: {
+            theme: {
+                light: 'default',
+                dark: 'dark'
+            },
+            options: {
+                fontSize: 16,
+                flowchart: {
+                    htmlLabels: true,
+                    padding: 20,
+                    nodeSpacing: 50,
+                    rankSpacing: 50,
+                    curve: 'cardinal'
+                }
+            }
+        },
         colorMode: {
             defaultMode: "dark",
             disableSwitch: false,
@@ -173,6 +200,16 @@ const config = {
                     position: "left",
                     label: "API",
                     docId: "index",
+                },
+                {
+                  to: 'showcase',
+                  label: 'Packages',
+                  position: 'left'
+                },
+                {
+                  to: 'blog',
+                  label: 'Blog',
+                  position: 'left'
                 },
                 {
                     type: "doc",

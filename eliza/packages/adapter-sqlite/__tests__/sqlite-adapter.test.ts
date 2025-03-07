@@ -1,8 +1,8 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type { UUID } from '@elizaos/core';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SqliteDatabaseAdapter } from '../src';
-import { type UUID, elizaLogger } from '@elizaos/core';
-import type Database from 'better-sqlite3';
 import { load } from '../src/sqlite_vec';
+import type { Database } from 'better-sqlite3';
 
 // Mock the elizaLogger
 vi.mock('@elizaos/core', async () => {

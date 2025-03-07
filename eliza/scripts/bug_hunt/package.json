@@ -16,8 +16,5 @@
     },
     "engines": {
         "node": ">=18.0.0"
-    },
-    "dependencies": {
-        "elizaos-bug-hunter": "file:"
     }
 }

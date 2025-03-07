@@ -1,4 +1,4 @@
-[@elizaos/core v0.1.7](../index.md) / composeActionExamples
+[@elizaos/core v0.25.8](../index.md) / composeActionExamples
 
 # Function: composeActionExamples()
 

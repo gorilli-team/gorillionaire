@@ -1,18 +1,18 @@
-[@elizaos/core v0.1.7](../index.md) / ServiceType
+[@elizaos/core v0.25.8](../index.md) / ServiceType
 
 # Enumeration: ServiceType
 
 ## Enumeration Members
 
-### IMAGE_DESCRIPTION
+### IMAGE\_DESCRIPTION
 
-> **IMAGE_DESCRIPTION**: `"image_description"`
+> **IMAGE\_DESCRIPTION**: `"image_description"`
 
 #### Defined in
 
-[packages/core/src/types.ts:1286](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1286)
+[packages/core/src/types.ts:1525](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1525)
 
----
+***
 
 ### TRANSCRIPTION
 
@@ -20,9 +20,9 @@
 
 #### Defined in
 
-[packages/core/src/types.ts:1287](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1287)
+[packages/core/src/types.ts:1526](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1526)
 
----
+***
 
 ### VIDEO
 
@@ -30,19 +30,19 @@
 
 #### Defined in
 
-[packages/core/src/types.ts:1288](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1288)
+[packages/core/src/types.ts:1527](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1527)
 
----
+***
 
-### TEXT_GENERATION
+### TEXT\_GENERATION
 
-> **TEXT_GENERATION**: `"text_generation"`
+> **TEXT\_GENERATION**: `"text_generation"`
 
 #### Defined in
 
-[packages/core/src/types.ts:1289](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1289)
+[packages/core/src/types.ts:1528](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1528)
 
----
+***
 
 ### BROWSER
 
@@ -50,19 +50,19 @@
 
 #### Defined in
 
-[packages/core/src/types.ts:1290](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1290)
+[packages/core/src/types.ts:1529](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1529)
 
----
+***
 
-### SPEECH_GENERATION
+### SPEECH\_GENERATION
 
-> **SPEECH_GENERATION**: `"speech_generation"`
+> **SPEECH\_GENERATION**: `"speech_generation"`
 
 #### Defined in
 
-[packages/core/src/types.ts:1291](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1291)
+[packages/core/src/types.ts:1530](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1530)
 
----
+***
 
 ### PDF
 
@@ -70,9 +70,9 @@
 
 #### Defined in
 
-[packages/core/src/types.ts:1292](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1292)
+[packages/core/src/types.ts:1531](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1531)
 
----
+***
 
 ### INTIFACE
 
@@ -80,19 +80,19 @@
 
 #### Defined in
 
-[packages/core/src/types.ts:1293](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1293)
+[packages/core/src/types.ts:1532](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1532)
 
----
+***
 
-### AWS_S3
+### AWS\_S3
 
-> **AWS_S3**: `"aws_s3"`
+> **AWS\_S3**: `"aws_s3"`
 
 #### Defined in
 
-[packages/core/src/types.ts:1294](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1294)
+[packages/core/src/types.ts:1533](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1533)
 
----
+***
 
 ### BUTTPLUG
 
@@ -100,9 +100,9 @@
 
 #### Defined in
 
-[packages/core/src/types.ts:1295](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1295)
+[packages/core/src/types.ts:1534](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1534)
 
----
+***
 
 ### SLACK
 
@@ -110,4 +110,74 @@
 
 #### Defined in
 
-[packages/core/src/types.ts:1296](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1296)
+[packages/core/src/types.ts:1535](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1535)
+
+***
+
+### VERIFIABLE\_LOGGING
+
+> **VERIFIABLE\_LOGGING**: `"verifiable_logging"`
+
+#### Defined in
+
+[packages/core/src/types.ts:1536](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1536)
+
+***
+
+### IRYS
+
+> **IRYS**: `"irys"`
+
+#### Defined in
+
+[packages/core/src/types.ts:1537](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1537)
+
+***
+
+### TEE\_LOG
+
+> **TEE\_LOG**: `"tee_log"`
+
+#### Defined in
+
+[packages/core/src/types.ts:1538](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1538)
+
+***
+
+### GOPLUS\_SECURITY
+
+> **GOPLUS\_SECURITY**: `"goplus_security"`
+
+#### Defined in
+
+[packages/core/src/types.ts:1539](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1539)
+
+***
+
+### WEB\_SEARCH
+
+> **WEB\_SEARCH**: `"web_search"`
+
+#### Defined in
+
+[packages/core/src/types.ts:1540](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1540)
+
+***
+
+### EMAIL\_AUTOMATION
+
+> **EMAIL\_AUTOMATION**: `"email_automation"`
+
+#### Defined in
+
+[packages/core/src/types.ts:1541](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1541)
+
+***
+
+### NKN\_CLIENT\_SERVICE
+
+> **NKN\_CLIENT\_SERVICE**: `"nkn_client_service"`
+
+#### Defined in
+
+[packages/core/src/types.ts:1542](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1542)

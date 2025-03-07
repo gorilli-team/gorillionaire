@@ -1,4 +1,4 @@
-[@elizaos/core v0.1.7](../index.md) / getEnvVariable
+[@elizaos/core v0.25.8](../index.md) / getEnvVariable
 
 # Function: getEnvVariable()
 

@@ -1,4 +1,4 @@
-import { getModel, getEndpoint, models } from "../src/models.ts";
+import { getModelSettings, getImageModelSettings, getEndpoint, models } from "../src/models.ts";
 import { ModelProviderName, ModelClass } from "../src/types.ts";
 import { describe, test, expect, vi } from "vitest";
 
@@ -129,22 +129,22 @@ describe("Model Provider Configuration", () => {
     });
     describe("Livepeer Provider", () => {
         test("should have correct endpoint configuration", () => {
-            expect(models[ModelProviderName.LIVEPEER].endpoint).toBe("http://gateway.test-gateway");
+            expect(getEndpoint(ModelProviderName.LIVEPEER)).toBe("https://dream-gateway.livepeer.cloud");
         });
 
         test("should have correct model mappings", () => {
             const livepeerModels = models[ModelProviderName.LIVEPEER].model;
-            expect(livepeerModels[ModelClass.SMALL]).toBe("meta-llama/Meta-Llama-3.1-8B-Instruct");
-            expect(livepeerModels[ModelClass.MEDIUM]).toBe("meta-llama/Meta-Llama-3.1-8B-Instruct");
-            expect(livepeerModels[ModelClass.LARGE]).toBe("meta-llama/Meta-Llama-3.1-8B-Instruct");
-            expect(livepeerModels[ModelClass.IMAGE]).toBe("ByteDance/SDXL-Lightning");
+            expect(livepeerModels[ModelClass.SMALL]?.name).toBe("meta-llama/Meta-Llama-3.1-8B-Instruct");
+            expect(livepeerModels[ModelClass.MEDIUM]?.name).toBe("meta-llama/Meta-Llama-3.1-8B-Instruct");
+            expect(livepeerModels[ModelClass.LARGE]?.name).toBe("meta-llama/Meta-Llama-3.1-8B-Instruct");
+            expect(livepeerModels[ModelClass.IMAGE]?.name).toBe("ByteDance/SDXL-Lightning");
         });
 
         test("should have correct settings configuration", () => {
-            const settings = models[ModelProviderName.LIVEPEER].settings;
-            expect(settings.maxInputTokens).toBe(128000);
-            expect(settings.maxOutputTokens).toBe(8192);
-            expect(settings.temperature).toBe(0);
+            const settings = getModelSettings(ModelProviderName.LIVEPEER, ModelClass.LARGE);
+            expect(settings?.maxInputTokens).toBe(8000);
+            expect(settings?.maxOutputTokens).toBe(8192);
+            expect(settings?.temperature).toBe(0);
         });
     });
 });
@@ -169,10 +169,10 @@ describe("Model Retrieval Functions", () => {
             ).toBe("nousresearch/hermes-3-llama-3.1-405b");
         });
 
-        test("should throw error for invalid model provider", () => {
-            expect(() =>
-                getModel("INVALID_PROVIDER" as any, ModelClass.SMALL)
-            ).toThrow();
+        test("Test to ensure an invalid model provider returns undefined", () => {
+            expect(
+                getModelSettings("INVALID_PROVIDER" as any, ModelClass.SMALL)
+            ).toBe(undefined);
         });
     });
 
@@ -250,12 +250,12 @@ describe("Environment Variable Integration", () => {
 describe("Generation with Livepeer", () => {
     test("should have correct image generation settings", () => {
         const livepeerConfig = models[ModelProviderName.LIVEPEER];
-        expect(livepeerConfig.model[ModelClass.IMAGE]).toBe("ByteDance/SDXL-Lightning");
-        expect(livepeerConfig.settings.temperature).toBe(0);
+        expect(livepeerConfig.model[ModelClass.IMAGE]?.name).toBe("ByteDance/SDXL-Lightning");
+        expect(getModelSettings(ModelProviderName.LIVEPEER, ModelClass.SMALL)?.temperature).toBe(0);
     });
 
     test("should use default image model", () => {
         delete process.env.IMAGE_LIVEPEER_MODEL;
-        expect(models[ModelProviderName.LIVEPEER].model[ModelClass.IMAGE]).toBe("ByteDance/SDXL-Lightning");
+        expect(getImageModelSettings(ModelProviderName.LIVEPEER)?.name).toBe("ByteDance/SDXL-Lightning");
     });
 });

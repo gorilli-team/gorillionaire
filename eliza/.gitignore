@@ -92,3 +92,9 @@ lit-config.json
 # Configuration to exclude the extra and local_docs directories
 extra
 **/dist/**
+
+ton_nft_metadata/
+ton_nft_metadata/*
+
+ton_nft_images/
+ton_nft_images/*

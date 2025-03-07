@@ -1,4 +1,4 @@
-[@elizaos/core v0.1.7](../index.md) / EmbeddingProvider
+[@elizaos/core v0.25.8](../index.md) / EmbeddingProvider
 
 # Variable: EmbeddingProvider
 
@@ -17,6 +17,10 @@
 ### GaiaNet
 
 > `readonly` **GaiaNet**: `"GaiaNet"` = `"GaiaNet"`
+
+### Heurist
+
+> `readonly` **Heurist**: `"Heurist"` = `"Heurist"`
 
 ### BGE
 

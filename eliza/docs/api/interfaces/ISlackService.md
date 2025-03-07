@@ -1,4 +1,4 @@
-[@elizaos/core v0.1.7](../index.md) / ISlackService
+[@elizaos/core v0.25.8](../index.md) / ISlackService
 
 # Interface: ISlackService
 
@@ -14,7 +14,7 @@
 
 #### Defined in
 
-[packages/core/src/types.ts:1318](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1318)
+[packages/core/src/types.ts:1586](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1586)
 
 ## Accessors
 
@@ -34,7 +34,7 @@
 
 #### Defined in
 
-[packages/core/src/types.ts:1090](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1090)
+[packages/core/src/types.ts:1279](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1279)
 
 ## Methods
 
@@ -58,4 +58,4 @@ Add abstract initialize method that must be implemented by derived classes
 
 #### Defined in
 
-[packages/core/src/types.ts:1095](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1095)
+[packages/core/src/types.ts:1284](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1284)

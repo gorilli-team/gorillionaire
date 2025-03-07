@@ -146,7 +146,7 @@ Example usage:
 ```typescript
 const result = await generateImage(
     {
-        prompt: 'A cute anime girl with big breasts and straight long black hair wearing orange T-shirt. The T-shirt has "ai16z" texts in the front. The girl is looking at the viewer',
+        prompt: 'A cute anime girl with big breasts and straight long black hair wearing orange T-shirt.',
         width: 1024,
         height: 1024,
         numIterations: 20, // optional
@@ -208,7 +208,6 @@ CHARACTER.C3PO.DISCORD_API_TOKEN=xyz
 # DOBBY
 CHARACTER.DOBBY.DISCORD_APPLICATION_ID=123
 CHARACTER.DOBBY.DISCORD_API_TOKEN=369
-
 ```
 
 ## Custom Actions
@@ -302,96 +301,79 @@ const settings = {
 };
 ```
 
-### Plugin Configuration
 
-Enable and configure plugins in `elizaConfig.yaml`:
-
-```yaml
-plugins:
-    - name: solana
-      enabled: true
-      settings:
-          network: mainnet-beta
-          endpoint: https://api.mainnet-beta.solana.com
-
-    - name: image-generation
-      enabled: true
-      settings:
-          provider: dalle
-          size: 1024x1024
-```
 
 ## Configuration Best Practices
 
 1. **Environment Segregation**
 
-    - Use different `.env` files for different environments
-    - Follow naming convention: `.env.development`, `.env.staging`, `.env.production`
+- Use different `.env` files for different environments
+- Follow naming convention: `.env.development`, `.env.staging`, `.env.production`
 
 2. **Secret Management**
 
-    - Never commit secrets to version control
-    - Use secret management services in production
-    - Rotate API keys regularly
+- Never commit secrets to version control
+  - Github has branch / workflow protection
+- Use secret management services in production
+- Rotate API keys regularly
 
 3. **Character Configuration**
 
-    - Keep character files modular and focused
-    - Use inheritance for shared traits
-    - Document character behaviors
+- Keep character files modular and focused
+- Use inheritance for shared traits
+- Document character behaviors
 
 4. **Plugin Management**
 
-    - Enable only needed plugins
-    - Configure plugin-specific settings in separate files
-    - Monitor plugin performance
+- Enable only needed plugins
+- Configure plugin-specific settings in separate files
 
-5. **Database Configuration**
-    - Use SQLite for development
-    - Configure connection pooling for production
-    - Set up proper indexes
+---
 
-## Troubleshooting
+## FAQ
 
-### Common Issues
+### How do I manage multiple environment configurations?
+Use different .env files (.env.development, .env.staging, .env.production) and load them based on NODE_ENV.
 
-1. **Environment Variables Not Loading**
+### How do I configure different model providers?
+Set `modelProvider` in your character.json and add corresponding API keys in `.env` or character secrets. Supports Anthropic, OpenAI, DeepSeek, and others.
 
-    ```bash
-    # Check .env file location
-    node -e "console.log(require('path').resolve('.env'))"
+### How do I handle secrets and credentials?
+Use `.env` file for global settings or add secrets in `character.json` under `settings.secrets` for per-agent configuration.
 
-    # Verify environment variables
-    node -e "console.log(process.env)"
-    ```
+### How do I adjust the temperature setting in my character file?
+The temperature setting controls response randomness and can be configured in your character's JSON file:
 
-2. **Character Loading Failures**
-
-    ```bash
-    # Validate character file
-    npx ajv validate -s character-schema.json -d your-character.json
-    ```
-
-3. **Database Connection Issues**
-    ```bash
-    # Test database connection
-    npx ts-node scripts/test-db-connection.ts
-    ```
-
-### Configuration Validation
-
-Use the built-in config validator:
-
-```bash
-pnpm run validate-config
+```json
+{
+    "modelProvider": "openrouter",
+    "temperature": 0.7,
+    "settings": {
+        "maxInputTokens": 200000,
+        "maxOutputTokens": 8192,
+        "model": "large"
+    }
+}
 ```
+Increase temperature for more creative responses, decrease for more consistent outputs.
 
-This will check:
+### I'm getting an authentication error ("No auth credentials found"). What should I do?
+Check these common issues:
+1. Verify API keys in your .env file
+2. Ensure keys are properly formatted
+3. Check logs for specific authentication errors
+4. Try restarting the application after updating credentials
 
-- Environment variables
-- Character files
-- Database configuration
-- Plugin settings
+### How do I debug when my agent isn't responding?
+1. Enable debug logging: `DEBUG=eliza:*` in your .env file
+2. Check database for saved messages
+3. Verify model provider connectivity
+4. Review logs for error messages
+
+### How do I control my agent's behavior across platforms?
+Configure platform-specific settings in `.env` (like `TWITTER_TARGET_USERS`) and adjust response templates in your character file.
+
+---
 
 ## Further Resources
 
@@ -399,3 +381,4 @@ This will check:
 - [Secrets Management](./secrets-management.md) for secure configuration
 - [Local Development](./local-development.md) for development setup
 - [Advanced Usage](./advanced.md) for complex configurations
+

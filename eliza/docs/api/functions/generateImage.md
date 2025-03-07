@@ -1,4 +1,4 @@
-[@elizaos/core v0.1.7](../index.md) / generateImage
+[@elizaos/core v0.25.8](../index.md) / generateImage
 
 # Function: generateImage()
 
@@ -32,6 +32,10 @@
 
 • **data.hideWatermark?**: `boolean`
 
+• **data.safeMode?**: `boolean`
+
+• **data.cfgScale?**: `number`
+
 • **runtime**: [`IAgentRuntime`](../interfaces/IAgentRuntime.md)
 
 ## Returns
@@ -52,4 +56,4 @@
 
 ## Defined in
 
-[packages/core/src/generation.ts:1126](https://github.com/elizaOS/eliza/blob/main/packages/core/src/generation.ts#L1126)
+[packages/core/src/generation.ts:1704](https://github.com/elizaOS/eliza/blob/main/packages/core/src/generation.ts#L1704)

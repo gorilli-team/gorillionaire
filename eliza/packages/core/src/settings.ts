@@ -11,7 +11,7 @@ elizaLogger.info("Loading embedding settings:", {
 });
 
 // Add this logging block
-elizaLogger.info("Loading character settings:", {
+elizaLogger.debug("Loading character settings:", {
     CHARACTER_PATH: process.env.CHARACTER_PATH,
     ARGV: process.argv,
     CHARACTER_ARG: process.argv.find((arg) => arg.startsWith("--character=")),

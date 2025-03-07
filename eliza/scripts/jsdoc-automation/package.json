@@ -24,7 +24,6 @@
         "@typescript-eslint/typescript-estree": "6.18.1",
         "dotenv": "^16.4.7",
         "langchain": "^0.3.7",
-        "plugin-audix": "file:",
         "yaml": "^2.3.4"
     },
     "devDependencies": {

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { validateEnv, validateCharacterConfig } from "../src/environment";
-import { Clients, ModelProviderName } from "../src/types";
+import { ModelProviderName } from "../src/types";
 
 describe("Environment Configuration", () => {
     const originalEnv = process.env;
@@ -77,7 +77,7 @@ describe("Character Configuration", () => {
         postExamples: ["Test post"],
         topics: ["topic1"],
         adjectives: ["friendly"],
-        clients: [Clients.DISCORD],
+        clients: ["discord"],
         plugins: ["test-plugin"],
         style: {
             all: ["style1"],

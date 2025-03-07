@@ -1,4 +1,4 @@
-[@elizaos/core v0.1.7](../index.md) / ModelConfiguration
+[@elizaos/core v0.25.8](../index.md) / ModelConfiguration
 
 # Interface: ModelConfiguration
 
@@ -10,39 +10,39 @@
 
 #### Defined in
 
-[packages/core/src/types.ts:660](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L660)
+[packages/core/src/types.ts:715](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L715)
 
----
+***
 
-### max_response_length?
+### maxOutputTokens?
 
-> `optional` **max_response_length**: `number`
-
-#### Defined in
-
-[packages/core/src/types.ts:661](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L661)
-
----
-
-### frequency_penalty?
-
-> `optional` **frequency_penalty**: `number`
+> `optional` **maxOutputTokens**: `number`
 
 #### Defined in
 
-[packages/core/src/types.ts:662](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L662)
+[packages/core/src/types.ts:716](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L716)
 
----
+***
 
-### presence_penalty?
+### frequency\_penalty?
 
-> `optional` **presence_penalty**: `number`
+> `optional` **frequency\_penalty**: `number`
 
 #### Defined in
 
-[packages/core/src/types.ts:663](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L663)
+[packages/core/src/types.ts:717](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L717)
 
----
+***
+
+### presence\_penalty?
+
+> `optional` **presence\_penalty**: `number`
+
+#### Defined in
+
+[packages/core/src/types.ts:718](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L718)
+
+***
 
 ### maxInputTokens?
 
@@ -50,14 +50,14 @@
 
 #### Defined in
 
-[packages/core/src/types.ts:664](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L664)
+[packages/core/src/types.ts:719](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L719)
 
----
+***
 
-### experimental_telemetry?
+### experimental\_telemetry?
 
-> `optional` **experimental_telemetry**: [`TelemetrySettings`](../type-aliases/TelemetrySettings.md)
+> `optional` **experimental\_telemetry**: [`TelemetrySettings`](../type-aliases/TelemetrySettings.md)
 
 #### Defined in
 
-[packages/core/src/types.ts:665](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L665)
+[packages/core/src/types.ts:720](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L720)

@@ -1,6 +1,6 @@
 # Eliza
 
-<img src="https://github.com/elizaOS/eliza/blob/develop/docs/static/img/eliza_banner.jpg" alt="Eliza Banner" width="100%" />
+<img src="/docs/static/img/eliza_banner.jpg" alt="Eliza Banner" width="100%" />
 
 ## 機能
 
@@ -23,8 +23,11 @@
 
 **必須条件:**
 
+- [Python 2.7+](https://www.python.org/downloads/)
 - [Node.js 23+](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm)
 - [pnpm](https://pnpm.io/installation)
+
+> **Windowsユーザーへの注意事項:** [WSL 2](https://learn.microsoft.com/ja-jp/windows/wsl/install)が必須です。
 
 ### .envファイルの編集
 
@@ -33,7 +36,7 @@
 
 ### キャラクターファイルの編集
 
-- `packages/core/src/defaultCharacter.ts`ファイルを確認 - これを変更可能
+- `packages/core/src/defaultCharacter.ts` デフォルトのキャラクター設定 ← これを編集
 - `pnpm start --characters="path/to/your/character.json"`を使用してキャラクターをロードし、複数のボットを同時に実行可能
 
 .envファイルとキャラクターファイルを設定した後、以下のコマンドでボットを起動可能:
@@ -65,7 +68,7 @@ pnpm start
 
 ## 追加の要件
 
-Sharpをインストールする必要があるかもしれません。起動時にエラーが表示された場合は、以下のコマンドでインストールを試みてください:
+Sharpをインストールする必要があるかもしれません。起動時にエラーが表示された場合は、以下のコマンドでインストールを試みてください。
 
 ```
 pnpm install --include=optional sharp
@@ -73,7 +76,7 @@ pnpm install --include=optional sharp
 
 # 環境設定
 
-���まざまなプラットフォームに接続するために、.envファイルに環境変数を追加する必要があります:
+さまざまなプラットフォームに接続するために、.envファイルに環境変数を追加する必要があります。
 
 ```
 # 必須環境変数
@@ -150,7 +153,7 @@ XAI_MODELを追加し、[Llamaでの実行](#run-with-llama)のオプション�
 
 ## Discordボット
 
-Discordボットの設定に関するヘルプについては、こちらを参照してください: https://discordjs.guide/preparations/setting-up-a-bot-application.html
+Discordボットの設定に関するヘルプについては、こちらを参照してください。 https://discordjs.guide/preparations/setting-up-a-bot-application.html
 
 # 開発
 
@@ -170,7 +173,7 @@ pnpm test:sqlite   # SQLiteでテストを実行
 pnpm test:sqljs    # SQL.jsでテストを実行
 ```
 
-テストはJestを使用して記述されており、`src/**/*.test.ts`ファイルにあります。テスト環境は次のように構成されています:
+テストはJestを使用して記述されており、`src/**/*.test.ts`ファイルにあります。テスト環境は次のように構成されています。
 
 - `.env.test`から環境変数をロード
 - 長時間実行されるテストのために2分のタイムアウトを使用

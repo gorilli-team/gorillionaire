@@ -1,4 +1,4 @@
-[@elizaos/core v0.1.7](../index.md) / Character
+[@elizaos/core v0.25.8](../index.md) / Character
 
 # Type Alias: Character
 
@@ -25,6 +25,12 @@ Character name
 > `optional` **username**: `string`
 
 Optional username
+
+### email?
+
+> `optional` **email**: `string`
+
+Optional email
 
 ### system?
 
@@ -64,99 +70,155 @@ Optional prompt templates
 
 ### templates.goalsTemplate?
 
-> `optional` **goalsTemplate**: `string`
+> `optional` **goalsTemplate**: [`TemplateType`](TemplateType.md)
 
 ### templates.factsTemplate?
 
-> `optional` **factsTemplate**: `string`
+> `optional` **factsTemplate**: [`TemplateType`](TemplateType.md)
 
 ### templates.messageHandlerTemplate?
 
-> `optional` **messageHandlerTemplate**: `string`
+> `optional` **messageHandlerTemplate**: [`TemplateType`](TemplateType.md)
 
 ### templates.shouldRespondTemplate?
 
-> `optional` **shouldRespondTemplate**: `string`
+> `optional` **shouldRespondTemplate**: [`TemplateType`](TemplateType.md)
 
 ### templates.continueMessageHandlerTemplate?
 
-> `optional` **continueMessageHandlerTemplate**: `string`
+> `optional` **continueMessageHandlerTemplate**: [`TemplateType`](TemplateType.md)
 
 ### templates.evaluationTemplate?
 
-> `optional` **evaluationTemplate**: `string`
+> `optional` **evaluationTemplate**: [`TemplateType`](TemplateType.md)
 
 ### templates.twitterSearchTemplate?
 
-> `optional` **twitterSearchTemplate**: `string`
+> `optional` **twitterSearchTemplate**: [`TemplateType`](TemplateType.md)
 
 ### templates.twitterActionTemplate?
 
-> `optional` **twitterActionTemplate**: `string`
+> `optional` **twitterActionTemplate**: [`TemplateType`](TemplateType.md)
 
 ### templates.twitterPostTemplate?
 
-> `optional` **twitterPostTemplate**: `string`
+> `optional` **twitterPostTemplate**: [`TemplateType`](TemplateType.md)
 
 ### templates.twitterMessageHandlerTemplate?
 
-> `optional` **twitterMessageHandlerTemplate**: `string`
+> `optional` **twitterMessageHandlerTemplate**: [`TemplateType`](TemplateType.md)
 
 ### templates.twitterShouldRespondTemplate?
 
-> `optional` **twitterShouldRespondTemplate**: `string`
+> `optional` **twitterShouldRespondTemplate**: [`TemplateType`](TemplateType.md)
+
+### templates.twitterVoiceHandlerTemplate?
+
+> `optional` **twitterVoiceHandlerTemplate**: [`TemplateType`](TemplateType.md)
+
+### templates.instagramPostTemplate?
+
+> `optional` **instagramPostTemplate**: [`TemplateType`](TemplateType.md)
+
+### templates.instagramMessageHandlerTemplate?
+
+> `optional` **instagramMessageHandlerTemplate**: [`TemplateType`](TemplateType.md)
+
+### templates.instagramShouldRespondTemplate?
+
+> `optional` **instagramShouldRespondTemplate**: [`TemplateType`](TemplateType.md)
 
 ### templates.farcasterPostTemplate?
 
-> `optional` **farcasterPostTemplate**: `string`
+> `optional` **farcasterPostTemplate**: [`TemplateType`](TemplateType.md)
 
 ### templates.lensPostTemplate?
 
-> `optional` **lensPostTemplate**: `string`
+> `optional` **lensPostTemplate**: [`TemplateType`](TemplateType.md)
 
 ### templates.farcasterMessageHandlerTemplate?
 
-> `optional` **farcasterMessageHandlerTemplate**: `string`
+> `optional` **farcasterMessageHandlerTemplate**: [`TemplateType`](TemplateType.md)
 
 ### templates.lensMessageHandlerTemplate?
 
-> `optional` **lensMessageHandlerTemplate**: `string`
+> `optional` **lensMessageHandlerTemplate**: [`TemplateType`](TemplateType.md)
 
 ### templates.farcasterShouldRespondTemplate?
 
-> `optional` **farcasterShouldRespondTemplate**: `string`
+> `optional` **farcasterShouldRespondTemplate**: [`TemplateType`](TemplateType.md)
 
 ### templates.lensShouldRespondTemplate?
 
-> `optional` **lensShouldRespondTemplate**: `string`
+> `optional` **lensShouldRespondTemplate**: [`TemplateType`](TemplateType.md)
 
 ### templates.telegramMessageHandlerTemplate?
 
-> `optional` **telegramMessageHandlerTemplate**: `string`
+> `optional` **telegramMessageHandlerTemplate**: [`TemplateType`](TemplateType.md)
 
 ### templates.telegramShouldRespondTemplate?
 
-> `optional` **telegramShouldRespondTemplate**: `string`
+> `optional` **telegramShouldRespondTemplate**: [`TemplateType`](TemplateType.md)
+
+### templates.telegramAutoPostTemplate?
+
+> `optional` **telegramAutoPostTemplate**: `string`
+
+### templates.telegramPinnedMessageTemplate?
+
+> `optional` **telegramPinnedMessageTemplate**: `string`
+
+### templates.discordAutoPostTemplate?
+
+> `optional` **discordAutoPostTemplate**: `string`
+
+### templates.discordAnnouncementHypeTemplate?
+
+> `optional` **discordAnnouncementHypeTemplate**: `string`
 
 ### templates.discordVoiceHandlerTemplate?
 
-> `optional` **discordVoiceHandlerTemplate**: `string`
+> `optional` **discordVoiceHandlerTemplate**: [`TemplateType`](TemplateType.md)
 
 ### templates.discordShouldRespondTemplate?
 
-> `optional` **discordShouldRespondTemplate**: `string`
+> `optional` **discordShouldRespondTemplate**: [`TemplateType`](TemplateType.md)
 
 ### templates.discordMessageHandlerTemplate?
 
-> `optional` **discordMessageHandlerTemplate**: `string`
+> `optional` **discordMessageHandlerTemplate**: [`TemplateType`](TemplateType.md)
 
 ### templates.slackMessageHandlerTemplate?
 
-> `optional` **slackMessageHandlerTemplate**: `string`
+> `optional` **slackMessageHandlerTemplate**: [`TemplateType`](TemplateType.md)
 
 ### templates.slackShouldRespondTemplate?
 
-> `optional` **slackShouldRespondTemplate**: `string`
+> `optional` **slackShouldRespondTemplate**: [`TemplateType`](TemplateType.md)
+
+### templates.jeeterPostTemplate?
+
+> `optional` **jeeterPostTemplate**: `string`
+
+### templates.jeeterSearchTemplate?
+
+> `optional` **jeeterSearchTemplate**: `string`
+
+### templates.jeeterInteractionTemplate?
+
+> `optional` **jeeterInteractionTemplate**: `string`
+
+### templates.jeeterMessageHandlerTemplate?
+
+> `optional` **jeeterMessageHandlerTemplate**: `string`
+
+### templates.jeeterShouldRespondTemplate?
+
+> `optional` **jeeterShouldRespondTemplate**: `string`
+
+### templates.devaPostTemplate?
+
+> `optional` **devaPostTemplate**: `string`
 
 ### bio
 
@@ -196,21 +258,21 @@ Character traits
 
 ### knowledge?
 
-> `optional` **knowledge**: `string`[]
+> `optional` **knowledge**: (`string` \| `object` \| `object`)[]
 
 Optional knowledge base
-
-### clients
-
-> **clients**: [`Clients`](../enumerations/Clients.md)[]
-
-Supported client platforms
 
 ### plugins
 
 > **plugins**: [`Plugin`](Plugin.md)[]
 
 Available plugins
+
+### postProcessors?
+
+> `optional` **postProcessors**: `Pick`\<[`Plugin`](Plugin.md), `"name"` \| `"description"` \| `"handlePostCharacterLoaded"`\>[]
+
+Character Processor Plugins
 
 ### settings?
 
@@ -224,7 +286,7 @@ Optional configuration
 
 #### Index Signature
 
-\[`key`: `string`\]: `string`
+ \[`key`: `string`\]: `string`
 
 ### settings.intiface?
 
@@ -245,6 +307,10 @@ Optional configuration
 ### settings.imageSettings.height?
 
 > `optional` **height**: `number`
+
+### settings.imageSettings.cfgScale?
+
+> `optional` **cfgScale**: `number`
 
 ### settings.imageSettings.negativePrompt?
 
@@ -281,6 +347,10 @@ Optional configuration
 ### settings.imageSettings.hideWatermark?
 
 > `optional` **hideWatermark**: `boolean`
+
+### settings.imageSettings.safeMode?
+
+> `optional` **safeMode**: `boolean`
 
 ### settings.voice?
 
@@ -342,7 +412,7 @@ New structured ElevenLabs config
 
 #### Index Signature
 
-\[`key`: `string`\]: `any`[]
+ \[`key`: `string`\]: `any`[]
 
 ### settings.chains.evm?
 
@@ -355,6 +425,10 @@ New structured ElevenLabs config
 ### settings.transcription?
 
 > `optional` **transcription**: [`TranscriptionProvider`](../enumerations/TranscriptionProvider.md)
+
+### settings.ragKnowledge?
+
+> `optional` **ragKnowledge**: `boolean`
 
 ### clientConfig?
 
@@ -402,6 +476,34 @@ Optional client-specific config
 
 > `optional` **allowedChannelIds**: `string`[]
 
+### clientConfig.discord.autoPost?
+
+> `optional` **autoPost**: `object`
+
+### clientConfig.discord.autoPost.enabled?
+
+> `optional` **enabled**: `boolean`
+
+### clientConfig.discord.autoPost.monitorTime?
+
+> `optional` **monitorTime**: `number`
+
+### clientConfig.discord.autoPost.inactivityThreshold?
+
+> `optional` **inactivityThreshold**: `number`
+
+### clientConfig.discord.autoPost.mainChannelId?
+
+> `optional` **mainChannelId**: `string`
+
+### clientConfig.discord.autoPost.announcementChannelIds?
+
+> `optional` **announcementChannelIds**: `string`[]
+
+### clientConfig.discord.autoPost.minTimeBetweenPosts?
+
+> `optional` **minTimeBetweenPosts**: `number`
+
 ### clientConfig.telegram?
 
 > `optional` **telegram**: `object`
@@ -445,6 +547,34 @@ Optional client-specific config
 ### clientConfig.telegram.teamMemberInterestKeywords?
 
 > `optional` **teamMemberInterestKeywords**: `string`[]
+
+### clientConfig.telegram.autoPost?
+
+> `optional` **autoPost**: `object`
+
+### clientConfig.telegram.autoPost.enabled?
+
+> `optional` **enabled**: `boolean`
+
+### clientConfig.telegram.autoPost.monitorTime?
+
+> `optional` **monitorTime**: `number`
+
+### clientConfig.telegram.autoPost.inactivityThreshold?
+
+> `optional` **inactivityThreshold**: `number`
+
+### clientConfig.telegram.autoPost.mainChannelId?
+
+> `optional` **mainChannelId**: `string`
+
+### clientConfig.telegram.autoPost.pinnedMessagesGroups?
+
+> `optional` **pinnedMessagesGroups**: `string`[]
+
+### clientConfig.telegram.autoPost.minTimeBetweenPosts?
+
+> `optional` **minTimeBetweenPosts**: `number`
 
 ### clientConfig.slack?
 
@@ -522,6 +652,50 @@ Optional Twitter profile
 
 > `optional` **nicknames**: `string`[]
 
+### instagramProfile?
+
+> `optional` **instagramProfile**: `object`
+
+Optional Instagram profile
+
+### instagramProfile.id
+
+> **id**: `string`
+
+### instagramProfile.username
+
+> **username**: `string`
+
+### instagramProfile.bio
+
+> **bio**: `string`
+
+### instagramProfile.nicknames?
+
+> `optional` **nicknames**: `string`[]
+
+### simsaiProfile?
+
+> `optional` **simsaiProfile**: `object`
+
+Optional SimsAI profile
+
+### simsaiProfile.id
+
+> **id**: `string`
+
+### simsaiProfile.username
+
+> **username**: `string`
+
+### simsaiProfile.screenName
+
+> **screenName**: `string`
+
+### simsaiProfile.bio
+
+> **bio**: `string`
+
 ### nft?
 
 > `optional` **nft**: `object`
@@ -532,6 +706,16 @@ Optional NFT prompt
 
 > **prompt**: `string`
 
+### extends?
+
+> `optional` **extends**: `string`[]
+
+Optinal Parent characters to inherit information from
+
+### twitterSpaces?
+
+> `optional` **twitterSpaces**: [`TwitterSpaceDecisionOptions`](../interfaces/TwitterSpaceDecisionOptions.md)
+
 ## Defined in
 
-[packages/core/src/types.ts:671](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L671)
+[packages/core/src/types.ts:728](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L728)

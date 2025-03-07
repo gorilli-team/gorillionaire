@@ -307,7 +307,7 @@ Finally, click on the `Submit` button to deploy your Eliza agent.
 
 This will take a few minutes to complete. Once the deployment is complete, you can click on the `View` button to view your Eliza agent.
 
-Here is an example of a deployed agent named `vitailik2077`:
+Here is an example of a deployed agent named `vitalik2077`:
 
 ![Deployed Agent](https://i.imgur.com/ie8gpg9.png)
 

@@ -81,6 +81,25 @@ async function set(
     });
 
     const preprocessed = preprocess(item.content.text);
+    
+    // If text is shorter than chunk size, don't split it
+    if (preprocessed.length <= chunkSize) {
+        const embedding = await embed(runtime, preprocessed);
+        await runtime.knowledgeManager.createMemory({
+            id: stringToUuid(item.id + preprocessed),
+            roomId: runtime.agentId,
+            agentId: runtime.agentId,
+            userId: runtime.agentId,
+            createdAt: Date.now(),
+            content: {
+                source: item.id,
+                text: preprocessed,
+            },
+            embedding,
+        });
+        return;
+    }
+
     const fragments = await splitChunks(preprocessed, chunkSize, bleed);
 
     for (const fragment of fragments) {

@@ -1,4 +1,4 @@
-[@elizaos/core v0.1.7](../index.md) / postActionResponseFooter
+[@elizaos/core v0.25.8](../index.md) / postActionResponseFooter
 
 # Variable: postActionResponseFooter
 
@@ -6,4 +6,4 @@
 
 ## Defined in
 
-[packages/core/src/parsing.ts:172](https://github.com/elizaOS/eliza/blob/main/packages/core/src/parsing.ts#L172)
+[packages/core/src/parsing.ts:277](https://github.com/elizaOS/eliza/blob/main/packages/core/src/parsing.ts#L277)
