@@ -3704,27 +3704,6 @@ gopd@^1.0.1, gopd@^1.2.0:
   resolved "https://registry.yarnpkg.com/gopd/-/gopd-1.2.0.tgz#89f56b8217bdbc8802bd299df6d7f1081d7e51a1"
   integrity sha512-ZUKRh6/kUFoAiTAtTYPZJ3hw9wNxx+BIBOijnlG9PnrJsCcSjs1wyyD6vJpaYtgnzDrKYRSqf3OO6Rfa93xsRg==
 
-"gorillionaire-frontend@file:.":
-  version "0.1.0"
-  dependencies:
-    "@coinbase/onchainkit" "^0.36.9"
-    "@nadnameservice/nns-viem-sdk" "^1.1.0"
-    "@privy-io/react-auth" "^2.6.2"
-    axios "^1.8.3"
-    ethers "^6.13.5"
-    flowbite-react "^0.10.2"
-    gorillionaire-frontend "file:../../../Library/Caches/Yarn/v6/npm-gorillionaire-frontend-0.1.0-fb794f6d-ca4e-4467-9579-fa7799160757-1746694158075/node_modules/gorillionaire-frontend"
-    js-cookie "^3.0.5"
-    lightweight-charts "^5.0.3"
-    next "15.1.6"
-    pino-pretty "^13.0.0"
-    react "^19.0.0"
-    react-dom "^19.0.0"
-    react-toastify "^11.0.5"
-    recharts "^2.15.1"
-    viem "^2.23.8"
-    wagmi "^2.14.9"
-
 graceful-fs@^4.2.4:
   version "4.2.11"
   resolved "https://registry.yarnpkg.com/graceful-fs/-/graceful-fs-4.2.11.tgz#4183e4e8bf08bb6e05bbb2f7d2e0c8f712ca40e3"
