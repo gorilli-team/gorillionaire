@@ -26,6 +26,7 @@ app.use("/events/spike", require("./routes/events/spike"));
 app.use("/events/listings", require("./routes/events/listings"));
 app.use("/events/transfers", require("./routes/events/transfers"));
 app.use("/events/prices", require("./routes/events/prices"));
+app.use("/events/token", require("./routes/events/token"));
 app.use("/trade", require("./routes/trade/0x"));
 app.use("/pyth", require("./routes/pyth/mon-price"));
 app.use("/nillion/data", require("./routes/nillion/data"));
