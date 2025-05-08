@@ -1,10 +1,11 @@
 "use client";
 import type { ReactNode } from "react";
-import { PrivyProvider } from '@privy-io/react-auth';
-import { defineChain } from 'viem';
+import { PrivyProvider } from "@privy-io/react-auth";
+import { defineChain, createPublicClient, http } from "viem";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createConfig, http, WagmiProvider } from "wagmi";
+import { createConfig, WagmiProvider } from "wagmi";
 import { coinbaseWallet } from "wagmi/connectors";
+import { NNS } from "@nadnameservice/nns-viem-sdk";
 
 // Viem define chain
 export const monadChain = defineChain({
@@ -32,6 +33,13 @@ export const monadChain = defineChain({
   },
 });
 
+const viemClient = createPublicClient({
+  chain: monadChain,
+  transport: http(),
+});
+
+export const nnsClient = new NNS(viemClient);
+
 const wagmiConfig = createConfig({
   chains: [monadChain],
   connectors: [
@@ -57,22 +65,27 @@ export function Providers({ children }: { children: ReactNode }) {
           appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID || ""}
           config={{
             appearance: {
-              theme: 'light',
-              accentColor: '#3B82F6',
+              theme: "light",
+              accentColor: "#3B82F6",
             },
             embeddedWallets: {
-              createOnLogin: 'users-without-wallets',
+              createOnLogin: "users-without-wallets",
             },
-            supportedChains: [
-              monadChain
+            supportedChains: [monadChain],
+            loginMethods: [
+              "email",
+              "google",
+              "apple",
+              "discord",
+              "twitter",
+              "wallet",
             ],
-            loginMethods: ['email', 'google', 'apple', 'discord', 'twitter', 'wallet'],
             fundingMethodConfig: {
               moonpay: {
-                paymentMethod: 'credit_debit_card', // Purchase with credit or debit card
+                paymentMethod: "credit_debit_card", // Purchase with credit or debit card
                 uiConfig: {
-                  accentColor: '#696FFD',
-                  theme: 'light'
+                  accentColor: "#696FFD",
+                  theme: "light",
                 },
               },
             },

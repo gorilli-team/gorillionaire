@@ -24,6 +24,8 @@ import { usePrivy } from "@privy-io/react-auth";
 import { ToastContainer, toast, Bounce } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Cookies from "js-cookie";
+import { nnsClient } from "@/app/providers";
+import { HexString } from "@/app/types";
 
 type Token = {
   symbol: string;
@@ -295,8 +297,12 @@ const Signals = () => {
       );
       const data: ApiTrade[] = await response.json();
 
-      const formattedTrades = data.map((trade: ApiTrade) => ({
-        user: trade.userAddress,
+      const profiles = await nnsClient.getProfiles(
+        data.map((t: ApiTrade) => t.userAddress as HexString)
+      );
+
+      const formattedTrades = data.map((trade: ApiTrade, i) => ({
+        user: profiles[i]?.primaryName || trade.userAddress,
         action: trade.action,
         amount: trade.tokenAmount,
         token: trade.tokenSymbol,

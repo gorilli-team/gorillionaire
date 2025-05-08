@@ -14,9 +14,11 @@ import { NFT_ACCESS_ADDRESS } from "../../utils/constants";
 import { abi } from "../../abi/access-nft";
 import Image from "next/image";
 import { MONAD_CHAIN_ID } from "../../utils/constants";
-
+import { nnsClient } from "@/app/providers";
+import { HexString } from "@/app/types";
 type Holder = {
   ownerAddress: string;
+  nadName: string;
 };
 
 // Define the signal type
@@ -117,7 +119,16 @@ const Agents = () => {
           data.result.data &&
           Array.isArray(data.result.data)
         ) {
-          setHolders(data.result.data);
+          const nadProfiles = await nnsClient.getProfiles(
+            data.result.data.map((h: Holder) => h.ownerAddress as HexString)
+          );
+
+          setHolders(
+            data.result.data.map((h: Holder, i: number) => ({
+              ...h,
+              nadName: nadProfiles[i]?.primaryName,
+            }))
+          );
           if (data.result.data.length > 0) {
             data.result.data.forEach((holder: Holder) => {
               if (holder.ownerAddress === address) {
@@ -791,7 +802,7 @@ if (signals.data) {
                         </div>
                         <div className="overflow-hidden max-w-full">
                           <p className="text-sm font-medium text-gray-700 break-all">
-                            {holder.ownerAddress}
+                            {holder.nadName || holder.ownerAddress}
                           </p>
                         </div>
                       </div>

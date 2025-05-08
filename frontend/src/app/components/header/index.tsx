@@ -1,11 +1,13 @@
 "use client";
 import { useLogin, usePrivy } from "@privy-io/react-auth";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import Image from "next/image";
 import { ToastContainer, toast, Bounce } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import LeaderboardBadge from "../leaderboard_badge";
 import Cookies from "js-cookie";
+import { useGetProfile } from "@nadnameservice/nns-wagmi-hooks";
+import { HexString } from "@/app/types";
 
 interface Notification {
   type: string;
@@ -24,6 +26,11 @@ interface Notification {
 
 export default function Header() {
   const { ready, authenticated, user, logout } = usePrivy();
+  const { profile: nadProfile } = useGetProfile(
+    (user?.wallet?.address || "0x") as HexString
+  );
+
+  const userAddress = useMemo(() => user?.wallet?.address, [user]);
 
   const { login } = useLogin({
     onComplete: async ({ user }) => {
@@ -45,7 +52,6 @@ export default function Header() {
   });
   const [monPriceFormatted, setMonPriceFormatted] = useState<string>("0.00");
   const [isFlashing, setIsFlashing] = useState(false);
-  const [userAddress, setUserAddress] = useState<string | null>(null);
 
   // WebSocket notification state
   const wsRef = useRef<WebSocket | null>(null);
@@ -79,7 +85,6 @@ export default function Header() {
 
     const trackUser = async () => {
       if (authenticated && user?.wallet) {
-        setUserAddress(user.wallet.address);
         //make a call to the backend to track the user
         const privyToken = Cookies.get("privy-token");
 
@@ -95,8 +100,6 @@ export default function Header() {
           }
         );
         await response.json();
-      } else {
-        setUserAddress(null);
       }
     };
 
@@ -279,16 +282,21 @@ export default function Header() {
 
           {ready && authenticated ? (
             <div className="flex items-center gap-2 sm:gap-4">
-              {userAddress && (
+              {nadProfile.primaryName ? (
                 <div className="text-xs sm:text-sm text-gray-600 truncate max-w-[80px] sm:max-w-none">
-                  {userAddress.slice(0, 6)}...
-                  {userAddress.slice(-4)}
+                  {nadProfile.primaryName}
                 </div>
+              ) : (
+                userAddress && (
+                  <div className="text-xs sm:text-sm text-gray-600 truncate max-w-[80px] sm:max-w-none">
+                    {userAddress.slice(0, 6)}...
+                    {userAddress.slice(-4)}
+                  </div>
+                )
               )}
               <button
                 onClick={() => {
                   logout();
-                  setUserAddress(null);
                 }}
                 className="px-2 sm:px-4 py-1 sm:py-2 text-xs sm:text-sm font-medium text-white bg-violet-600 rounded-md hover:bg-violet-400"
               >

@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@coinbase/onchainkit": "^0.36.9",
+    "@nadnameservice/nns-viem-sdk": "^1.1.0",
+    "@nadnameservice/nns-wagmi-hooks": "^1.1.0",
     "@privy-io/react-auth": "^2.6.2",
     "axios": "^1.8.3",
     "ethers": "^6.13.5",

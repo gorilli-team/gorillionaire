@@ -29,6 +29,7 @@ export interface Token {
   name: string;
   decimals: number;
 }
+export type HexString = `0x${string}`;
 
 declare global {
   interface Window {

@@ -5,10 +5,13 @@ import { Pagination } from "flowbite-react";
 import { useAccount } from "wagmi";
 import Image from "next/image";
 import { getTimeAgo } from "@/app/utils/time";
+import { nnsClient } from "@/app/providers";
 
 interface Investor {
   rank: number;
   address: string;
+  nadName?: string;
+  nadAvatar?: string;
   points: number;
   activitiesList: Activity[];
 }
@@ -43,7 +46,18 @@ const LeaderboardComponent = () => {
         `${process.env.NEXT_PUBLIC_API_URL}/activity/track/leaderboard?page=${currentPage}`
       );
       const data = await response.json();
-      setInvestors(data.users || []);
+
+      const nadProfiles = await nnsClient.getProfiles(
+        data.users?.map((u: Investor) => u.address)
+      );
+
+      setInvestors(
+        data.users.map((u: Investor, i: number) => ({
+          ...u,
+          nadName: nadProfiles[i]?.primaryName,
+          nadAvatar: nadProfiles[i]?.avatar,
+        })) || []
+      );
       setInvestorCount(data.pagination.total);
     } catch (error) {
       console.error("Error fetching leaderboard:", error);
@@ -69,13 +83,13 @@ const LeaderboardComponent = () => {
   useEffect(() => {
     fetchLeaderboard(currentPage);
     fetchMe();
-  
+
     // Set up an interval to refresh data every 30 seconds
     const interval = setInterval(() => {
       fetchLeaderboard(currentPage);
       fetchMe();
     }, 30000);
-  
+
     // Cleanup interval on component unmount
     return () => clearInterval(interval);
   }, [address, currentPage]);
@@ -207,7 +221,10 @@ const LeaderboardComponent = () => {
                           <div className="flex items-center">
                             <div className="w-8 h-8 rounded-full flex items-center justify-center mr-2 overflow-hidden">
                               <Image
-                                src={`/avatar_${investor.rank % 6}.png`}
+                                src={
+                                  investor.nadAvatar ||
+                                  `/avatar_${investor.rank % 6}.png`
+                                }
                                 alt="User Avatar"
                                 width={32}
                                 height={32}
@@ -215,7 +232,7 @@ const LeaderboardComponent = () => {
                               />
                             </div>
                             <span className="text-gray-700 font-bold truncate max-w-[200px] md:max-w-full">
-                              {investor.address}
+                              {investor?.nadName || investor.address}
                             </span>
                           </div>
                         </td>
