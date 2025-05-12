@@ -11,6 +11,9 @@ import Sidebar from "@/app/components/sidebar";
 import Header from "@/app/components/header";
 import { Pagination } from "flowbite-react";
 import ActivitiesChart from "@/app/components/activities-chart";
+import { useReadContract } from "wagmi";
+import { abi } from "@/app/abi/early-nft";
+import { NFT_ACCESS_ADDRESS } from "@/app/utils/constants";
 
 interface UserActivity {
   name: string;
@@ -38,6 +41,7 @@ interface UserProfile {
     limit: number;
     totalPages: number;
   };
+  hasV2NFT?: boolean;
 }
 
 const UserProfilePage = () => {
@@ -49,6 +53,14 @@ const UserProfilePage = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
+  // Read NFT balance for the V2 contract
+  const { data: v2NFTBalance } = useReadContract({
+    abi,
+    functionName: "balanceOf",
+    address: NFT_ACCESS_ADDRESS,
+    args: [params.address as `0x${string}`],
+  });
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -69,6 +81,7 @@ const UserProfilePage = () => {
           rank: data.userActivity?.rank || "0",
           activitiesList: data.userActivity?.activitiesList || [],
           pagination: data.userActivity?.pagination,
+          hasV2NFT: Number(v2NFTBalance) > 0,
         });
       } catch (error) {
         console.error("Error fetching user profile:", error);
@@ -94,7 +107,7 @@ const UserProfilePage = () => {
       fetchUserProfile();
       fetchAllActivities();
     }
-  }, [params.address, currentPage]);
+  }, [params.address, currentPage, v2NFTBalance]);
 
   const onPageChange = (page: number) => {
     setCurrentPage(page);
@@ -290,6 +303,25 @@ const UserProfilePage = () => {
                         </svg>
                         Verified
                       </span>
+
+                      {userProfile.hasV2NFT && (
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
+                          <svg
+                            className="w-4 h-4 mr-1"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
+                            />
+                          </svg>
+                          V2 Access
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
