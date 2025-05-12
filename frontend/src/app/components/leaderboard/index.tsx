@@ -6,6 +6,7 @@ import { useAccount } from "wagmi";
 import Image from "next/image";
 import { getTimeAgo } from "@/app/utils/time";
 import { nnsClient } from "@/app/providers";
+import Link from "next/link";
 
 interface Investor {
   rank: number;
@@ -218,7 +219,10 @@ const LeaderboardComponent = () => {
                           </div>
                         </td>
                         <td className="py-4 h-16 pr-2">
-                          <div className="flex items-center">
+                          <Link
+                            href={`/users/${investor.address}`}
+                            className="flex items-center hover:opacity-80 transition-opacity"
+                          >
                             <div className="w-8 h-8 rounded-full flex items-center justify-center mr-2 overflow-hidden">
                               <Image
                                 src={
@@ -234,7 +238,7 @@ const LeaderboardComponent = () => {
                             <span className="text-gray-700 font-bold truncate max-w-[200px] md:max-w-full">
                               {investor?.nadName || investor.address}
                             </span>
-                          </div>
+                          </Link>
                         </td>
                         <td className="py-4 h-16 text-center text-gray-700 pr-2">
                           <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium rounded-full bg-blue-50 text-blue-700">
@@ -336,9 +340,12 @@ const LeaderboardComponent = () => {
                         <span className="text-xs text-gray-500 block mb-1">
                           INVESTOR
                         </span>
-                        <span className="text-gray-700 font-medium text-sm break-all">
+                        <Link
+                          href={`/users/${investor.address}`}
+                          className="text-gray-700 font-medium text-sm break-all hover:opacity-80 transition-opacity"
+                        >
                           {investor.address}
-                        </span>
+                        </Link>
                       </div>
 
                       <div className="flex justify-between items-center pt-1">
