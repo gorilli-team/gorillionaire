@@ -26,6 +26,7 @@ import "react-toastify/dist/ReactToastify.css";
 import Cookies from "js-cookie";
 import { nnsClient } from "@/app/providers";
 import { HexString } from "@/app/types";
+import { getTokenImage } from "@/app/utils/tokens";
 
 type Token = {
   symbol: string;
@@ -94,17 +95,7 @@ const parseSignalText = (signalText: string) => {
 
 const fetchImageFromSignalText = (signalText: string) => {
   const { symbol } = parseSignalText(signalText);
-  if (symbol === "CHOG") {
-    return "https://imagedelivery.net/tWwhAahBw7afBzFUrX5mYQ/5d1206c2-042c-4edc-9f8b-dcef2e9e8f00/public";
-  } else if (symbol === "DAK") {
-    return "https://imagedelivery.net/tWwhAahBw7afBzFUrX5mYQ/27759359-9374-4995-341c-b2636a432800/public";
-  } else if (symbol === "YAKI") {
-    return "https://imagedelivery.net/tWwhAahBw7afBzFUrX5mYQ/6679b698-a845-412b-504b-23463a3e1900/public";
-  } else if (symbol === "MON") {
-    return "https://imagedelivery.net/cBNDGgkrsEA-b_ixIp9SkQ/I_t8rg_V_400x400.jpg/public";
-  } else {
-    return "https://imagedelivery.net/cBNDGgkrsEA-b_ixIp9SkQ/I_t8rg_V_400x400.jpg/public";
-  }
+  return getTokenImage(symbol || "");
 };
 
 const formatNumber = (num: number): string => {
