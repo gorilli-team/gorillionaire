@@ -147,6 +147,7 @@ router.post("/trade-points", async (req, res) => {
       name: "Trade",
       points: points,
       date: new Date(),
+      intentId: intentId,
       txHash: txHash,
     });
     userActivity.points += points;
@@ -241,17 +242,49 @@ router.get("/leaderboard", async (req, res) => {
 router.get("/me", async (req, res) => {
   try {
     const { address } = req.query;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
     if (!address) {
       return res.status(400).json({ error: "No address provided" });
     }
-    const userActivity = await UserActivity.findOne({
-      address: address.toLowerCase(),
-    });
-    if (userActivity && userActivity.activitiesList) {
-      userActivity?.activitiesList.sort((a, b) => {
-        return new Date(b.date) - new Date(a.date);
+
+    // Get user activity with paginated activities
+    const userActivity = await UserActivity.findOne(
+      { address: address.toLowerCase() },
+      {
+        activitiesList: 1,
+        points: 1,
+        address: 1,
+        createdAt: 1,
+      }
+    )
+      .sort({ "activitiesList.date": -1 })
+      .populate({
+        path: "activitiesList.intentId",
+        model: "Intent",
       });
+
+    userActivity.activitiesList = userActivity.activitiesList.sort(
+      (a, b) => new Date(b.date) - new Date(a.date)
+    );
+
+    userActivity.activitiesList = userActivity.activitiesList.slice(
+      skip,
+      skip + limit
+    );
+
+    if (!userActivity) {
+      return res.status(404).json({ error: "User activity not found" });
     }
+
+    // Get total count of activities
+    const totalActivities = await UserActivity.aggregate([
+      { $match: { address: address.toLowerCase() } },
+      { $project: { count: { $size: "$activitiesList" } } },
+    ]);
+
     //count the number of users with more points than the user
     const count = await UserActivity.countDocuments({
       $or: [
@@ -262,6 +295,7 @@ router.get("/me", async (req, res) => {
         },
       ],
     });
+
     //rank is the number of users with more points than the user + 1
     const result = {
       ...userActivity.toObject(),
@@ -269,11 +303,20 @@ router.get("/me", async (req, res) => {
     };
 
     res.json({
-      userActivity: result,
+      userActivity: {
+        ...result,
+        pagination: {
+          total: totalActivities[0]?.count || 0,
+          page,
+          limit,
+          totalPages: Math.ceil((totalActivities[0]?.count || 0) / limit),
+        },
+      },
     });
   } catch (error) {
     console.error("Error fetching user activity:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
 module.exports = router;

@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { ObjectId } = mongoose.Types;
 
 const userActivitySchema = new mongoose.Schema(
   {
@@ -23,6 +24,11 @@ const userActivitySchema = new mongoose.Schema(
         name: String,
         points: Number,
         date: Date,
+        intentId: {
+          type: ObjectId,
+          ref: "Intent",
+        },
+        txHash: String,
       },
     ],
     streak: {
@@ -34,7 +40,20 @@ const userActivitySchema = new mongoose.Schema(
       default: false,
     },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+  }
 );
+
+// Add a pre-find middleware to sort activitiesList by date in descending order
+userActivitySchema.pre("find", function () {
+  this.sort({ "activitiesList.date": -1 });
+});
+
+userActivitySchema.pre("findOne", function () {
+  this.sort({ "activitiesList.date": -1 });
+});
 
 module.exports = mongoose.model("UserActivity", userActivitySchema);
