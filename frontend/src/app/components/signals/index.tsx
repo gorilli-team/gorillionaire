@@ -51,6 +51,7 @@ type ApiTokenHolder = {
 
 type TradeEvent = {
   user: string;
+  userAddress: string;
   action: string;
   amount: number;
   token: string;
@@ -294,6 +295,7 @@ const Signals = () => {
 
       const formattedTrades = data.map((trade: ApiTrade, i) => ({
         user: profiles[i]?.primaryName || trade.userAddress,
+        userAddress: trade.userAddress,
         action: trade.action,
         amount: trade.tokenAmount,
         token: trade.tokenSymbol,
@@ -643,52 +645,55 @@ const Signals = () => {
           <div className="py-2 px-3">
             <div className="ticker-wrapper">
               <div className="ticker-track">
-                {[
-                  ...completedTrades,
-                  ...completedTrades,
-                  ...completedTrades,
-                ].map((trade, index) => (
-                  <div key={index} className="ticker-item">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 relative border border-gray-200">
-                        {trade.userImageUrl && (
-                          <Image
-                            src={trade.userImageUrl}
-                            alt={`${trade.user} avatar`}
-                            width={32}
-                            height={32}
-                            className="object-cover"
-                          />
-                        )}
-                      </div>
-                      <div className="flex flex-col">
-                        <div className="flex items-center">
-                          <span className="text-sm font-bold">
-                            {trade.user}
-                          </span>
+                {[...completedTrades, ...completedTrades].map(
+                  (trade, index) => (
+                    <div key={index} className="ticker-item">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 relative border border-gray-200">
+                          {trade.userImageUrl && (
+                            <Image
+                              src={trade.userImageUrl}
+                              alt={`${trade.user} avatar`}
+                              width={32}
+                              height={32}
+                              className="object-cover"
+                            />
+                          )}
                         </div>
-                        <div className="flex items-center">
-                          <span className="mr-1">
-                            {trade.action === "buy" ? "💰" : "💸"}
-                          </span>
-                          <span className="text-sm mr-1">{trade.action}</span>
-                          <span
-                            className={`text-sm font-bold ${
-                              trade.action === "buy"
-                                ? "text-green-500"
-                                : "text-red-500"
-                            }`}
-                          >
-                            {trade.amount} {trade.token}
-                          </span>
-                          <span className="text-xs text-gray-500 ml-2">
-                            {trade.timeAgo}
-                          </span>
+                        <div className="flex flex-col">
+                          <div className="flex items-center">
+                            <span className="text-sm font-bold">
+                              <a
+                                href={`/users/${trade.userAddress}`}
+                                className="hover:text-violet-600 transition-colors duration-200"
+                              >
+                                {trade.user}
+                              </a>
+                            </span>
+                          </div>
+                          <div className="flex items-center">
+                            <span className="mr-1">
+                              {trade.action === "buy" ? "💰" : "💸"}
+                            </span>
+                            <span className="text-sm mr-1">{trade.action}</span>
+                            <span
+                              className={`text-sm font-bold ${
+                                trade.action === "buy"
+                                  ? "text-green-500"
+                                  : "text-red-500"
+                              }`}
+                            >
+                              {trade.amount} {trade.token}
+                            </span>
+                            <span className="text-xs text-gray-500 ml-2">
+                              {trade.timeAgo}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                )}
               </div>
             </div>
           </div>
