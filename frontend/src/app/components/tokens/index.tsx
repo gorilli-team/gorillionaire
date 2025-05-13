@@ -8,6 +8,7 @@ import {
   trackedTokens,
   fetchUntrackedTokens,
   TokenData,
+  fetchAllTokens,
 } from "@/app/shared/tokenData";
 import { useRouter } from "next/navigation";
 import { getTimeAgo } from "@/app/utils/time";
@@ -86,8 +87,8 @@ const Tokens = () => {
   useEffect(() => {
     const getTokens = async () => {
       try {
-        // const fetchedTokens = await fetchAllTokens();
-        // setTokenStats(fetchedTokens || []);
+        const fetchedTokens = await fetchAllTokens();
+        setTokenStats(fetchedTokens || []);
       } catch (error) {
         console.error("Error fetching tokens:", error);
         setTokenStats([]);
