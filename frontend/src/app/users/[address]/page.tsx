@@ -229,85 +229,72 @@ const UserProfilePage = () => {
             {/* Two-column layout for desktop */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               {/* Left Column: Profile & Activity Chart */}
-              <div className="lg:col-span-5 space-y-6">
+              <div className="lg:col-span-6 space-y-6">
                 {/* Profile Header */}
-                <div className="bg-white rounded-2xl shadow-lg p-6 transform transition-all duration-300 hover:shadow-xl">
-                  <div className="flex flex-col items-center text-center">
-                    <div className="relative mb-4">
-                      <div className="w-28 h-28 rounded-full overflow-hidden border-4 border-violet-200 shadow-md">
-                        <Image
-                          src={
-                            userProfile.nadAvatar ||
-                            `/avatar_${parseInt(userProfile.rank) % 6}.png`
-                          }
-                          alt="Profile"
-                          width={128}
-                          height={128}
-                          className="w-full h-full object-cover"
-                        />
+                <div className="bg-white rounded-2xl shadow-lg px-10 py-4 transform transition-all duration-300 hover:shadow-xl">
+                  <div className="flex flex-row items-center flex-wrap gap-4">
+                    {/* Left Column: Avatar and Name */}
+                    <div className="flex flex-col items-center">
+                      <div className="relative mb-2">
+                        <div className="w-20 h-20 rounded-full overflow-hidden border-4 border-violet-200 shadow-md">
+                          <Image
+                            src={
+                              userProfile.nadAvatar ||
+                              `/avatar_${parseInt(userProfile.rank) % 6}.png`
+                            }
+                            alt="Profile"
+                            width={80}
+                            height={80}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="absolute -bottom-1 -right-1 bg-violet-600 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg text-sm">
+                          <span className="font-bold">{userProfile.rank}</span>
+                          <span className="text-xs">
+                            {getOrdinalSuffix(userProfile.rank)}
+                          </span>
+                        </div>
                       </div>
-                      <div className="absolute -bottom-2 -right-2 bg-violet-600 text-white rounded-full w-10 h-10 flex items-center justify-center shadow-lg">
-                        <span className="font-bold">{userProfile.rank}</span>
-                        <span className="text-xs">
-                          {getOrdinalSuffix(userProfile.rank)}
-                        </span>
-                      </div>
+
+                      <h1 className="text-xl font-bold text-gray-900 leading-tight">
+                        {userProfile.nadName ||
+                          formatAddress(userProfile.address)}
+                      </h1>
+
+                      {userProfile.nadName && (
+                        <p className="text-gray-500 text-sm font-mono mt-0.5">
+                          {formatAddress(userProfile.address)}
+                        </p>
+                      )}
                     </div>
 
-                    <h1 className="text-2xl font-bold text-gray-900 leading-tight">
-                      {userProfile.nadName ||
-                        formatAddress(userProfile.address)}
-                    </h1>
-
-                    {userProfile.nadName && (
-                      <p className="text-gray-500 text-sm font-mono mt-1">
-                        {formatAddress(userProfile.address)}
-                      </p>
-                    )}
-
-                    <div className="mt-4">
-                      <div className="p-4 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-xl text-center shadow-lg w-full">
-                        <div className="text-4xl font-bold text-white">
+                    {/* Right Column: Points and Badges */}
+                    <div className="flex-1 flex flex-col items-end">
+                      <div className="p-3 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-xl text-center shadow-lg w-80">
+                        <div className="text-3xl font-bold text-white">
                           {userProfile.points}
                         </div>
-                        <div className="text-violet-100">Total Points</div>
+                        <div className="text-violet-100 text-sm">
+                          Total Points
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="flex items-center justify-center mt-4 gap-4">
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-violet-100 text-violet-800">
-                        <svg
-                          className="w-4 h-4 mr-1"
-                          fill="currentColor"
-                          viewBox="0 0 20 20"
-                        >
-                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118l-2.799-2.034c-.784-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                        </svg>
-                        Rank {userProfile.rank}
-                        {getOrdinalSuffix(userProfile.rank)}
-                      </span>
-
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800">
-                        <svg
-                          className="w-4 h-4 mr-1"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                          />
-                        </svg>
-                        Verified
-                      </span>
-
-                      {userProfile.hasV2NFT && (
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
+                      <div className="flex flex-wrap items-center gap-2 mt-2">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-violet-100 text-violet-800">
                           <svg
-                            className="w-4 h-4 mr-1"
+                            className="w-3 h-3 mr-1"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118l-2.799-2.034c-.784-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                          </svg>
+                          Rank {userProfile.rank}
+                          {getOrdinalSuffix(userProfile.rank)}
+                        </span>
+
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                          <svg
+                            className="w-3 h-3 mr-1"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -316,12 +303,31 @@ const UserProfilePage = () => {
                               strokeLinecap="round"
                               strokeLinejoin="round"
                               strokeWidth="2"
-                              d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
+                              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                             />
                           </svg>
-                          V2 Access
+                          Verified
                         </span>
-                      )}
+
+                        {userProfile.hasV2NFT && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                            <svg
+                              className="w-3 h-3 mr-1"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
+                              />
+                            </svg>
+                            V2 Access
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -337,7 +343,7 @@ const UserProfilePage = () => {
                     </span>
                   </div>
 
-                  <div className="p-4 bg-gray-50 rounded-xl">
+                  <div className="bg-gray-50 rounded-xl">
                     <ActivitiesChart activities={allActivities} />
                   </div>
 
@@ -378,7 +384,7 @@ const UserProfilePage = () => {
               </div>
 
               {/* Right Column: Activities List */}
-              <div className="lg:col-span-7">
+              <div className="lg:col-span-6">
                 <div className="bg-white rounded-2xl shadow-lg p-6 h-full">
                   <div className="flex justify-between items-center mb-6">
                     <h2 className="text-2xl font-bold text-gray-900">
