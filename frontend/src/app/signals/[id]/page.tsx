@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { LoadingOverlay } from "@/app/components/ui/LoadingSpinner";
 import Image from "next/image";
 import { getTokenImage } from "@/app/utils/tokens";
@@ -84,44 +84,47 @@ export default function SignalDetails() {
   const { user } = usePrivy();
   const { switchChain } = useSwitchChain();
 
-  const tokens: Token[] = [
-    {
-      symbol: "MON",
-      name: "Monad",
-      totalHolding: 0,
-      imageUrl: getTokenImage("MON"),
-      decimals: 18,
-      address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
-      price: 0,
-    },
-    {
-      symbol: "DAK",
-      name: "Molandak",
-      totalHolding: 0,
-      imageUrl: getTokenImage("DAK"),
-      decimals: 18,
-      address: "0x0F0BDEbF0F83cD1EE3974779Bcb7315f9808c714",
-      price: 0,
-    },
-    {
-      symbol: "YAKI",
-      name: "Moyaki",
-      totalHolding: 0,
-      imageUrl: getTokenImage("YAKI"),
-      decimals: 18,
-      address: "0xfe140e1dCe99Be9F4F15d657CD9b7BF622270C50",
-      price: 0,
-    },
-    {
-      symbol: "CHOG",
-      name: "Chog",
-      totalHolding: 0,
-      imageUrl: getTokenImage("CHOG"),
-      decimals: 18,
-      address: "0xE0590015A873bF326bd645c3E1266d4db41C4E6B",
-      price: 0,
-    },
-  ];
+  const tokens = useMemo<Token[]>(
+    () => [
+      {
+        symbol: "MON",
+        name: "Monad",
+        totalHolding: 0,
+        imageUrl: getTokenImage("MON"),
+        decimals: 18,
+        address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
+        price: 0,
+      },
+      {
+        symbol: "DAK",
+        name: "Molandak",
+        totalHolding: 0,
+        imageUrl: getTokenImage("DAK"),
+        decimals: 18,
+        address: "0x0F0BDEbF0F83cD1EE3974779Bcb7315f9808c714",
+        price: 0,
+      },
+      {
+        symbol: "YAKI",
+        name: "Moyaki",
+        totalHolding: 0,
+        imageUrl: getTokenImage("YAKI"),
+        decimals: 18,
+        address: "0xfe140e1dCe99Be9F4F15d657CD9b7BF622270C50",
+        price: 0,
+      },
+      {
+        symbol: "CHOG",
+        name: "Chog",
+        totalHolding: 0,
+        imageUrl: getTokenImage("CHOG"),
+        decimals: 18,
+        address: "0xE0590015A873bF326bd645c3E1266d4db41C4E6B",
+        price: 0,
+      },
+    ],
+    []
+  );
 
   useEffect(() => {
     const fetchSignal = async () => {
