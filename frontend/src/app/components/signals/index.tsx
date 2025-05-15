@@ -157,6 +157,10 @@ const Signals = () => {
   const [currentDexAmount, setCurrentDexAmount] = useState(0);
   const [currentDexType, setCurrentDexType] = useState<"Buy" | "Sell">("Buy");
   const [currentSignalId, setCurrentSignalId] = useState<string>("");
+  const [currentDexInputAmount, setCurrentDexInputAmount] =
+    useState<string>("");
+  const [currentDexOutputAmount, setCurrentDexOutputAmount] =
+    useState<string>("");
 
   const fetchHolderData = useCallback(async () => {
     try {
@@ -406,15 +410,15 @@ const Signals = () => {
 
     const token = currentDexToken;
     const type = currentDexType;
-    const amount = currentDexAmount;
-
-    // for sells we need to convert percentage to amount, for buys change gets handled backend/side
-    const sellAmount =
-      type === "Sell" ? (token.totalHolding * amount) / 100 : amount;
+    // Use the current input/output amounts from the modal
+    const amount =
+      type === "Buy"
+        ? parseFloat(currentDexOutputAmount)
+        : parseFloat(currentDexInputAmount);
 
     const params = new URLSearchParams({
       token: token.symbol,
-      amount: sellAmount.toString(),
+      amount: amount.toString(),
       type: type.toLowerCase(),
       userAddress: user?.wallet?.address,
     });
@@ -513,7 +517,7 @@ const Signals = () => {
           functionName: "approve",
           args: [
             PERMIT2_ADDRESS,
-            parseUnits(sellAmount.toString(), token.decimals),
+            parseUnits(amount.toString(), token.decimals),
           ],
         });
 
@@ -592,9 +596,9 @@ const Signals = () => {
     setIsModalOpen(false);
   }, [
     currentDexToken,
-    currentDexAmount,
     currentDexType,
-    currentSignalId,
+    currentDexInputAmount,
+    currentDexOutputAmount,
     user?.wallet?.address,
     sendTransactionAsync,
     signTypedDataAsync,
@@ -1166,6 +1170,10 @@ const Signals = () => {
               ?.confidenceScore ||
             sellSignals.find((s) => s._id === currentSignalId)?.confidenceScore
           }
+          onAmountChange={(inputAmount, outputAmount) => {
+            setCurrentDexInputAmount(inputAmount);
+            setCurrentDexOutputAmount(outputAmount);
+          }}
         />
       )}
     </div>
