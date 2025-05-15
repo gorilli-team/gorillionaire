@@ -24,6 +24,7 @@ interface DexModalProps {
   signalText?: string;
   confidenceScore?: string;
   sellPercentage?: number;
+  onAmountChange?: (inputAmount: string, outputAmount: string) => void;
 }
 
 const DexModal: React.FC<DexModalProps> = ({
@@ -38,6 +39,7 @@ const DexModal: React.FC<DexModalProps> = ({
   signalText = "",
   confidenceScore = "",
   sellPercentage = 100,
+  onAmountChange,
 }) => {
   const [inputAmount, setInputAmount] = useState<string>("");
   const [outputAmount, setOutputAmount] = useState<string>("0");
@@ -115,6 +117,20 @@ const DexModal: React.FC<DexModalProps> = ({
     }
   };
 
+  const handleConfirm = async () => {
+    setIsLoading(true);
+    try {
+      // Pass the current input/output amounts to the parent component
+      await onConfirm();
+      // Close the modal after successful confirmation
+      onClose();
+    } catch (error) {
+      console.error("Error confirming trade:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -128,9 +144,12 @@ const DexModal: React.FC<DexModalProps> = ({
         // For buy: user changes input (MON amount), calculate token output
         const usdValue = parseFloat(value) * monPrice;
         const tokenAmount = usdValue / token.price;
-        setOutputAmount((tokenAmount * 0.995).toFixed(6)); // Apply slippage
+        const newOutputAmount = (tokenAmount * 0.995).toFixed(6); // Apply slippage
+        setOutputAmount(newOutputAmount);
+        onAmountChange?.(value, newOutputAmount);
       } else {
         setOutputAmount("0");
+        onAmountChange?.(value, "0");
       }
     }
   };
@@ -143,14 +162,19 @@ const DexModal: React.FC<DexModalProps> = ({
         // For buy: user changes output (token amount), calculate MON input
         const usdValue = parseFloat(value) * token.price;
         const monNeeded = usdValue / monPrice;
-        setInputAmount((monNeeded * 1.005).toFixed(6)); // Apply slippage
+        const newInputAmount = (monNeeded * 1.005).toFixed(6); // Apply slippage
+        setInputAmount(newInputAmount);
+        onAmountChange?.(newInputAmount, value);
       } else if (value && type === "Sell") {
         // For sell: user changes output (MON amount), calculate token input
         const usdValue = parseFloat(value) * monPrice;
         const tokenAmount = usdValue / token.price;
-        setInputAmount((tokenAmount * 1.005).toFixed(6)); // Apply slippage
+        const newInputAmount = (tokenAmount * 1.005).toFixed(6); // Apply slippage
+        setInputAmount(newInputAmount);
+        onAmountChange?.(newInputAmount, value);
       } else {
         setInputAmount("0");
+        onAmountChange?.("0", value);
       }
     }
   };
@@ -435,7 +459,7 @@ const DexModal: React.FC<DexModalProps> = ({
             </div>
 
             <button
-              onClick={onConfirm}
+              onClick={handleConfirm}
               disabled={isLoading}
               className={`w-full py-3 rounded-full font-medium text-white 
                 ${
