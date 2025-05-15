@@ -49,6 +49,12 @@ type Signal = {
   };
 };
 
+type ApiTokenHolder = {
+  symbol: string;
+  balance: string;
+  decimal: number;
+};
+
 type Token = {
   symbol: string;
   name: string;
@@ -88,47 +94,162 @@ export default function SignalDetails() {
   const [currentDexToken, setCurrentDexToken] = useState<Token | null>(null);
   const [currentDexAmount, setCurrentDexAmount] = useState(0);
   const [currentDexType, setCurrentDexType] = useState<"Buy" | "Sell">("Buy");
+  const [currentDexInputAmount, setCurrentDexInputAmount] =
+    useState<string>("");
+  const [currentDexOutputAmount, setCurrentDexOutputAmount] =
+    useState<string>("");
 
+  // Add state for token balances and prices
+  const [moyakiBalance, setMoyakiBalance] = useState<number>(0);
+  const [chogBalance, setChogBalance] = useState<number>(0);
+  const [dakBalance, setDakBalance] = useState<number>(0);
+  const [monBalance, setMonBalance] = useState<number>(0);
+  const [chogPrice, setChogPrice] = useState<number>(0);
+  const [dakPrice, setDakPrice] = useState<number>(0);
+  const [moyakiPrice, setMoyakiPrice] = useState<number>(0);
+  const [monPrice, setMonPrice] = useState<number>(0);
+
+  // Add fetchHolderData function
+  const fetchHolderData = useCallback(async () => {
+    try {
+      if (!user?.wallet?.address) {
+        console.log("No wallet address available");
+        return;
+      }
+
+      // Fetch token holders data for specific user
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/token/holders/user/${user.wallet.address}`
+      );
+      const data = await response.json();
+
+      if (
+        data.code === 0 &&
+        data.result &&
+        data.result.data &&
+        Array.isArray(data.result.data)
+      ) {
+        data.result.data.forEach((token: ApiTokenHolder) => {
+          // Convert balance string to number considering decimals
+          const balance = parseFloat(token.balance);
+
+          if (token.symbol === "MON") {
+            setMonBalance(balance);
+          } else if (token.symbol === "CHOG") {
+            setChogBalance(balance);
+          } else if (token.symbol === "DAK") {
+            setDakBalance(balance);
+          } else if (token.symbol === "YAKI") {
+            setMoyakiBalance(balance);
+          }
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching token holders data:", error);
+    }
+  }, [user?.wallet?.address]);
+
+  // Add fetchPriceData function
+  const fetchPriceData = async () => {
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/pyth/mon-price`
+      );
+      const monData = await res.json();
+      const monPrice = monData?.price?.price;
+      const scaledMonPrice = Number(monPrice) / 1e8;
+      setMonPrice(scaledMonPrice);
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/events/prices/latest`
+      );
+      const data = await response.json();
+
+      data.data.forEach(
+        (item: {
+          symbol: string;
+          price: {
+            price: number;
+          };
+        }) => {
+          if (item.symbol === "CHOG") {
+            setChogPrice(item.price?.price);
+          } else if (item.symbol === "DAK") {
+            setDakPrice(item.price?.price);
+          } else if (item.symbol === "YAKI") {
+            setMoyakiPrice(item.price?.price);
+          }
+        }
+      );
+    } catch (error) {
+      console.error("Error fetching price data:", error);
+    }
+  };
+
+  // Add useEffect for fetching balances and prices
+  useEffect(() => {
+    if (user?.wallet?.address) {
+      fetchHolderData();
+      // Refresh balances every 30 seconds
+      const interval = setInterval(fetchHolderData, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [user?.wallet?.address, fetchHolderData]);
+
+  useEffect(() => {
+    fetchPriceData();
+  }, []);
+
+  // Update tokens array to use the fetched balances and prices
   const tokens = useMemo<Token[]>(
     () => [
       {
         symbol: "MON",
         name: "Monad",
-        totalHolding: 0,
+        totalHolding: monBalance,
         imageUrl: getTokenImage("MON"),
         decimals: 18,
         address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
-        price: 0,
+        price: monPrice,
       },
       {
         symbol: "DAK",
         name: "Molandak",
-        totalHolding: 0,
+        totalHolding: dakBalance,
         imageUrl: getTokenImage("DAK"),
         decimals: 18,
         address: "0x0F0BDEbF0F83cD1EE3974779Bcb7315f9808c714",
-        price: 0,
+        price: dakPrice,
       },
       {
         symbol: "YAKI",
         name: "Moyaki",
-        totalHolding: 0,
+        totalHolding: moyakiBalance,
         imageUrl: getTokenImage("YAKI"),
         decimals: 18,
         address: "0xfe140e1dCe99Be9F4F15d657CD9b7BF622270C50",
-        price: 0,
+        price: moyakiPrice,
       },
       {
         symbol: "CHOG",
         name: "Chog",
-        totalHolding: 0,
+        totalHolding: chogBalance,
         imageUrl: getTokenImage("CHOG"),
         decimals: 18,
         address: "0xE0590015A873bF326bd645c3E1266d4db41C4E6B",
-        price: 0,
+        price: chogPrice,
       },
     ],
-    []
+    [
+      monBalance,
+      dakBalance,
+      moyakiBalance,
+      chogBalance,
+      chogPrice,
+      dakPrice,
+      moyakiPrice,
+      monPrice,
+    ]
   );
 
   useEffect(() => {
@@ -219,15 +340,15 @@ export default function SignalDetails() {
 
     const token = currentDexToken;
     const type = currentDexType;
-    const amount = currentDexAmount;
-
-    // for sells we need to convert percentage to amount, for buys change gets handled backend/side
-    const sellAmount =
-      type === "Sell" ? (token.totalHolding * amount) / 100 : amount;
+    // Use the current input/output amounts from the modal
+    const amount =
+      type === "Buy"
+        ? parseFloat(currentDexOutputAmount)
+        : parseFloat(currentDexInputAmount);
 
     const params = new URLSearchParams({
       token: token.symbol,
-      amount: sellAmount.toString(),
+      amount: amount.toString(),
       type: type.toLowerCase(),
       userAddress: user?.wallet?.address,
     });
@@ -312,7 +433,7 @@ export default function SignalDetails() {
           functionName: "approve",
           args: [
             PERMIT2_ADDRESS,
-            parseUnits(sellAmount.toString(), token.decimals),
+            parseUnits(amount.toString(), token.decimals),
           ],
         });
 
@@ -376,8 +497,9 @@ export default function SignalDetails() {
     setIsModalOpen(false);
   }, [
     currentDexToken,
-    currentDexAmount,
     currentDexType,
+    currentDexInputAmount,
+    currentDexOutputAmount,
     user?.wallet?.address,
     sendTransactionAsync,
     signTypedDataAsync,
@@ -714,6 +836,10 @@ export default function SignalDetails() {
           monPrice={tokens.find((t) => t.symbol === "MON")?.price || 0}
           signalText={signal?.signal_text}
           confidenceScore={signal?.confidenceScore}
+          onAmountChange={(inputAmount, outputAmount) => {
+            setCurrentDexInputAmount(inputAmount);
+            setCurrentDexOutputAmount(outputAmount);
+          }}
         />
       )}
     </div>

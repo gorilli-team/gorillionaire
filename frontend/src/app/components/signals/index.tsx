@@ -405,6 +405,29 @@ const Signals = () => {
       setCurrentDexAmount(amount);
       setCurrentDexType(type);
       setIsModalOpen(true);
+
+      // Update the user-signals collection
+      // do it like it was done before we we integrated DexModal
+
+      const privyToken = Cookies.get("privy-token");
+      await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/signals/generated-signals/user-signal`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${privyToken}`,
+          },
+          body: JSON.stringify({
+            userAddress: user?.wallet?.address,
+            signalId: currentSignalId,
+            choice: "Yes",
+            type: type,
+            token: token.symbol,
+            amount: amount.toString(),
+          }),
+        }
+      );
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [user?.wallet?.address]
@@ -610,6 +633,7 @@ const Signals = () => {
     signTypedDataAsync,
     wagmiConfig,
     writeContractAsync,
+    currentSignalId,
   ]);
 
   const handleOptionSelect = useCallback(
