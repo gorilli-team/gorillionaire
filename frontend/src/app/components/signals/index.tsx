@@ -640,7 +640,6 @@ const Signals = () => {
     [
       currentDexToken,
       currentDexType,
-      currentDexAmount,
       user?.wallet?.address,
       sendTransactionAsync,
       signTypedDataAsync,
