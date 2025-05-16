@@ -157,10 +157,6 @@ const Signals = () => {
   const [currentDexAmount, setCurrentDexAmount] = useState(0);
   const [currentDexType, setCurrentDexType] = useState<"Buy" | "Sell">("Buy");
   const [currentSignalId, setCurrentSignalId] = useState<string>("");
-  const [currentDexInputAmount, setCurrentDexInputAmount] =
-    useState<string>("");
-  const [currentDexOutputAmount, setCurrentDexOutputAmount] =
-    useState<string>("");
 
   const fetchHolderData = useCallback(async () => {
     try {
@@ -428,72 +424,181 @@ const Signals = () => {
   );
 
   // New function to execute trade after DEX modal confirmation
-  const executeTrade = useCallback(async () => {
-    if (!currentDexToken || !user?.wallet?.address) return;
+  const executeTrade = useCallback(
+    async (inputAmount: string) => {
+      if (!currentDexToken || !user?.wallet?.address) return;
 
-    const token = currentDexToken;
-    const type = currentDexType;
-    // Use the current input/output amounts from the modal
-    const amount =
-      type === "Buy"
-        ? parseFloat(currentDexOutputAmount)
-        : parseFloat(currentDexInputAmount);
+      const token = currentDexToken;
+      const type = currentDexType;
+      // Use the inputAmount from DexModal for the API call
+      const amount = parseFloat(inputAmount);
 
-    const params = new URLSearchParams({
-      token: token.symbol,
-      amount: amount.toString(),
-      type: type.toLowerCase(),
-      userAddress: user?.wallet?.address,
-    });
+      const params = new URLSearchParams({
+        token: token.symbol,
+        amount: amount.toString(),
+        type: type.toLowerCase(),
+        userAddress: user?.wallet?.address,
+      });
 
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/trade/0x-quote?${params.toString()}`
-    );
-    const quoteData = await res.json();
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/trade/0x-quote?${params.toString()}`
+      );
+      const quoteData = await res.json();
+      console.log("QUOTE DATA:", quoteData);
 
-    if (!quoteData) return;
+      if (!quoteData) return;
 
-    if (quoteData.issues?.balance) {
-      return toast.error("Insufficient balance");
-    }
-
-    // Show notification when trade request is being sent to the blockchain
-    toast(
-      <div>
-        <div>Trade request in progress...</div>
-      </div>,
-      {
-        position: "bottom-right",
-        autoClose: 10000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        draggable: true,
-        progress: undefined,
-        theme: "light",
-        transition: Bounce,
+      if (quoteData.issues?.balance) {
+        return toast.error("Insufficient balance");
       }
-    );
 
-    // Different flow if sell token is native token
-    if (quoteData.sellToken?.toLowerCase() === MON_ADDRESS.toLowerCase()) {
-      const txHash = await sendTransactionAsync({
+      // Defensive: check for transaction before proceeding
+      const isNativeSell =
+        quoteData.sellToken?.toLowerCase() === MON_ADDRESS.toLowerCase();
+      if (isNativeSell && !quoteData.transaction) {
+        toast.error("Trade quote did not return a transaction object.");
+        return;
+      }
+
+      if (!isNativeSell && !quoteData.transaction) {
+        toast.error("Trade quote did not return a transaction object.");
+        return;
+      }
+
+      // Show notification when trade request is being sent to the blockchain (only if transaction exists)
+      toast(
+        <div>
+          <div>Trade request in progress...</div>
+        </div>,
+        {
+          position: "bottom-right",
+          autoClose: 10000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          draggable: true,
+          progress: undefined,
+          theme: "light",
+          transition: Bounce,
+        }
+      );
+
+      // Native token flow
+      if (isNativeSell) {
+        const txHash = await sendTransactionAsync({
+          account: user?.wallet?.address as `0x${string}`,
+          gas: quoteData.transaction.gas
+            ? BigInt(quoteData.transaction.gas)
+            : undefined,
+          to: quoteData.transaction.to,
+          data: quoteData.transaction.data,
+          value: BigInt(quoteData.transaction.value),
+          gasPrice: quoteData.transaction.gasPrice
+            ? BigInt(quoteData.transaction.gasPrice)
+            : undefined,
+          chainId: MONAD_CHAIN_ID,
+        });
+
+        await waitForTransactionReceipt(wagmiConfig, {
+          hash: txHash,
+          confirmations: 1,
+        });
+        const privyToken = Cookies.get("privy-token");
+        await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/activity/track/trade-points`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${privyToken}`,
+            },
+            body: JSON.stringify({
+              address: user?.wallet?.address,
+              txHash,
+              intentId: quoteData.intentId,
+            }),
+          }
+        );
+
+        // Update the signals state to add the user's choice
+        if (currentSignalId) {
+          setBuySignals((prevSignals) =>
+            prevSignals.map((signal) =>
+              signal._id === currentSignalId
+                ? { ...signal, userSignal: { choice: "Yes" } }
+                : signal
+            )
+          );
+          setSellSignals((prevSignals) =>
+            prevSignals.map((signal) =>
+              signal._id === currentSignalId
+                ? { ...signal, userSignal: { choice: "Yes" } }
+                : signal
+            )
+          );
+        }
+
+        return;
+      } else if (
+        quoteData.sellToken?.toLowerCase() === MON_ADDRESS.toLowerCase()
+      ) {
+        toast.error("Trade quote did not return a transaction object.");
+        return;
+      }
+
+      if (quoteData.issues && quoteData.issues.allowance !== null) {
+        try {
+          const hash = await writeContractAsync({
+            abi: erc20Abi,
+            address: type === "Sell" ? token.address : WMONAD_ADDRESS,
+            functionName: "approve",
+            args: [
+              PERMIT2_ADDRESS,
+              parseUnits(amount.toString(), token.decimals),
+            ],
+          });
+
+          await waitForTransactionReceipt(wagmiConfig, {
+            hash,
+            confirmations: 1,
+          });
+        } catch (error) {
+          console.error("Error approving Permit2:", error);
+        }
+      }
+
+      const transaction = quoteData?.transaction;
+      if (!transaction) {
+        toast.error("Trade quote did not return a transaction object.");
+        return;
+      }
+      let signature;
+      let signatureLengthInHex;
+      if (quoteData?.permit2?.eip712) {
+        signature = await signTypedDataAsync(quoteData.permit2.eip712);
+        signatureLengthInHex = numberToHex(size(signature), {
+          signed: false,
+          size: 32,
+        });
+        transaction.data = concat([
+          transaction.data,
+          signatureLengthInHex,
+          signature,
+        ]);
+      }
+
+      const hash = await sendTransactionAsync({
         account: user?.wallet?.address as `0x${string}`,
-        gas: quoteData?.transaction.gas
-          ? BigInt(quoteData.transaction.gas)
-          : undefined,
-        to: quoteData?.transaction.to,
-        data: quoteData.transaction.data,
-        value: BigInt(quoteData.transaction.value),
-        gasPrice: quoteData?.transaction.gasPrice
-          ? BigInt(quoteData.transaction.gasPrice)
-          : undefined,
+        gas: transaction.gas ? BigInt(transaction.gas) : undefined,
+        to: transaction.to,
+        data: transaction.data,
         chainId: MONAD_CHAIN_ID,
       });
 
       await waitForTransactionReceipt(wagmiConfig, {
-        hash: txHash,
+        hash,
         confirmations: 1,
       });
+
       const privyToken = Cookies.get("privy-token");
       await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/activity/track/trade-points`,
@@ -505,7 +610,7 @@ const Signals = () => {
           },
           body: JSON.stringify({
             address: user?.wallet?.address,
-            txHash,
+            txHash: hash,
             intentId: quoteData.intentId,
           }),
         }
@@ -529,106 +634,21 @@ const Signals = () => {
         );
       }
 
-      return;
-    }
-
-    if (quoteData.issues && quoteData.issues.allowance !== null) {
-      try {
-        const hash = await writeContractAsync({
-          abi: erc20Abi,
-          address: type === "Sell" ? token.address : WMONAD_ADDRESS,
-          functionName: "approve",
-          args: [
-            PERMIT2_ADDRESS,
-            parseUnits(amount.toString(), token.decimals),
-          ],
-        });
-
-        await waitForTransactionReceipt(wagmiConfig, {
-          hash,
-          confirmations: 1,
-        });
-      } catch (error) {
-        console.error("Error approving Permit2:", error);
-      }
-    }
-
-    const transaction = quoteData?.transaction;
-    const signature = await signTypedDataAsync(quoteData?.permit2.eip712);
-    const signatureLengthInHex = numberToHex(size(signature), {
-      signed: false,
-      size: 32,
-    });
-    transaction.data = concat([
-      transaction.data,
-      signatureLengthInHex,
-      signature,
-    ]);
-
-    const hash = await sendTransactionAsync({
-      account: user?.wallet?.address as `0x${string}`,
-      gas: !!quoteData.transaction.gas
-        ? BigInt(quoteData.transaction.gas)
-        : undefined,
-      to: quoteData.transaction.to,
-      data: quoteData.transaction.data,
-      chainId: MONAD_CHAIN_ID,
-    });
-
-    await waitForTransactionReceipt(wagmiConfig, {
-      hash,
-      confirmations: 1,
-    });
-
-    const privyToken = Cookies.get("privy-token");
-    await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/activity/track/trade-points`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${privyToken}`,
-        },
-        body: JSON.stringify({
-          address: user?.wallet?.address,
-          txHash: hash,
-          intentId: quoteData.intentId,
-        }),
-      }
-    );
-
-    // Update the signals state to add the user's choice
-    if (currentSignalId) {
-      setBuySignals((prevSignals) =>
-        prevSignals.map((signal) =>
-          signal._id === currentSignalId
-            ? { ...signal, userSignal: { choice: "Yes" } }
-            : signal
-        )
-      );
-      setSellSignals((prevSignals) =>
-        prevSignals.map((signal) =>
-          signal._id === currentSignalId
-            ? { ...signal, userSignal: { choice: "Yes" } }
-            : signal
-        )
-      );
-    }
-
-    // Close the modal
-    setIsModalOpen(false);
-  }, [
-    currentDexToken,
-    currentDexType,
-    currentDexInputAmount,
-    currentDexOutputAmount,
-    user?.wallet?.address,
-    sendTransactionAsync,
-    signTypedDataAsync,
-    wagmiConfig,
-    writeContractAsync,
-    currentSignalId,
-  ]);
+      // Close the modal
+      setIsModalOpen(false);
+    },
+    [
+      currentDexToken,
+      currentDexType,
+      currentDexAmount,
+      user?.wallet?.address,
+      sendTransactionAsync,
+      signTypedDataAsync,
+      wagmiConfig,
+      writeContractAsync,
+      currentSignalId,
+    ]
+  );
 
   const handleOptionSelect = useCallback(
     async (signalId: string, option: "Yes" | "No") => {
@@ -1194,10 +1214,6 @@ const Signals = () => {
               ?.confidenceScore ||
             sellSignals.find((s) => s._id === currentSignalId)?.confidenceScore
           }
-          onAmountChange={(inputAmount, outputAmount) => {
-            setCurrentDexInputAmount(inputAmount);
-            setCurrentDexOutputAmount(outputAmount);
-          }}
         />
       )}
     </div>

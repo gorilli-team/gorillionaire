@@ -400,6 +400,7 @@ export default function SignalDetails() {
         hash: txHash,
         confirmations: 1,
       });
+
       const privyToken = Cookies.get("privy-token");
       await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/activity/track/trade-points`,
@@ -422,6 +423,24 @@ export default function SignalDetails() {
         prev ? { ...prev, userSignal: { choice: "Yes" } } : prev
       );
       setIsModalOpen(false);
+
+      // Make API call to record user's "Yes" response
+      await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/signals/generated-signals/user-signal`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${Cookies.get("privy-token")}`,
+          },
+          body: JSON.stringify({
+            userAddress: user?.wallet?.address,
+            signalId: signal?._id,
+            choice: "Yes",
+          }),
+        }
+      );
+
       return;
     }
 
@@ -447,16 +466,20 @@ export default function SignalDetails() {
     }
 
     const transaction = quoteData?.transaction;
-    const signature = await signTypedDataAsync(quoteData?.permit2.eip712);
-    const signatureLengthInHex = numberToHex(size(signature), {
-      signed: false,
-      size: 32,
-    });
-    transaction.data = concat([
-      transaction.data,
-      signatureLengthInHex,
-      signature,
-    ]);
+    let signature;
+    let signatureLengthInHex;
+    if (quoteData?.permit2?.eip712) {
+      signature = await signTypedDataAsync(quoteData.permit2.eip712);
+      signatureLengthInHex = numberToHex(size(signature), {
+        signed: false,
+        size: 32,
+      });
+      transaction.data = concat([
+        transaction.data,
+        signatureLengthInHex,
+        signature,
+      ]);
+    }
 
     const hash = await sendTransactionAsync({
       account: user?.wallet?.address as `0x${string}`,
@@ -473,14 +496,13 @@ export default function SignalDetails() {
       confirmations: 1,
     });
 
-    const privyToken = Cookies.get("privy-token");
     await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/activity/track/trade-points`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${privyToken}`,
+          Authorization: `Bearer ${Cookies.get("privy-token")}`,
         },
         body: JSON.stringify({
           address: user?.wallet?.address,
@@ -495,6 +517,24 @@ export default function SignalDetails() {
       prev ? { ...prev, userSignal: { choice: "Yes" } } : prev
     );
     setIsModalOpen(false);
+
+    // Make API call to record user's "Yes" response
+    const privyToken = Cookies.get("privy-token");
+    await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/signals/generated-signals/user-signal`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${privyToken}`,
+        },
+        body: JSON.stringify({
+          userAddress: user?.wallet?.address,
+          signalId: signal?._id,
+          choice: "Yes",
+        }),
+      }
+    );
   }, [
     currentDexToken,
     currentDexType,
@@ -505,6 +545,7 @@ export default function SignalDetails() {
     signTypedDataAsync,
     wagmiConfig,
     writeContractAsync,
+    signal?._id,
   ]);
 
   const onNo = useCallback(() => {

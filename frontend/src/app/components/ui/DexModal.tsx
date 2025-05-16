@@ -15,7 +15,7 @@ interface ExtendedToken extends Token {
 interface DexModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: (inputAmount: string) => void;
   token: ExtendedToken;
   amount: number;
   type: "Buy" | "Sell";
@@ -88,7 +88,7 @@ const DexModal: React.FC<DexModalProps> = ({
         calculateOutputForSell(sellAmount);
       }
     }
-  }, [isOpen, type, token, amount, sellPercentage, monBalance, monPrice]); // added monBalance, monPrice
+  }, [isOpen, type, token, amount, sellPercentage, monBalance, monPrice]); //eslint-disable-line
 
   const calculateInputForBuy = async (targetAmount: number) => {
     setIsLoading(true);
@@ -133,8 +133,8 @@ const DexModal: React.FC<DexModalProps> = ({
   const handleConfirm = async () => {
     setIsLoading(true);
     try {
-      // Pass the current input/output amounts to the parent component
-      await onConfirm();
+      // Pass the current input amount to the parent component
+      await onConfirm(inputAmount);
       // Close the modal after successful confirmation
       onClose();
     } catch (error) {
