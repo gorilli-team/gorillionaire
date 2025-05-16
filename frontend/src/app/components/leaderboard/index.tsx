@@ -23,6 +23,15 @@ interface Activity {
   date: string;
 }
 
+const isValidUrl = (urlString: string): boolean => {
+  try {
+    const url = new URL(urlString);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+};
+
 const LeaderboardComponent = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [activitiesPage, setActivitiesPage] = useState(1);
@@ -56,7 +65,7 @@ const LeaderboardComponent = () => {
         data.users.map((u: Investor, i: number) => ({
           ...u,
           nadName: nadProfiles[i]?.primaryName,
-          nadAvatar: nadProfiles[i]?.avatar,
+          nadAvatar: nadProfiles[i]?.avatar || `/avatar_${i % 6}.png`,
         })) || []
       );
       setInvestorCount(data.pagination.total);
@@ -199,6 +208,7 @@ const LeaderboardComponent = () => {
                   </thead>
                   <tbody>
                     {currentInvestors.map((investor) => (
+                      //log investor
                       <tr
                         key={investor.address}
                         className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${
@@ -224,16 +234,37 @@ const LeaderboardComponent = () => {
                             className="flex items-center hover:opacity-80 transition-opacity"
                           >
                             <div className="w-8 h-8 rounded-full flex items-center justify-center mr-2 overflow-hidden">
-                              <Image
-                                src={
-                                  investor.nadAvatar ||
-                                  `/avatar_${investor.rank % 6}.png`
-                                }
-                                alt="User Avatar"
-                                width={32}
-                                height={32}
-                                className="w-full h-full object-cover"
-                              />
+                              {investor.nadAvatar &&
+                              investor.nadAvatar !== "" &&
+                              isValidUrl(investor.nadAvatar) ? (
+                                <Image
+                                  src={investor.nadAvatar}
+                                  alt="User Avatar"
+                                  width={32}
+                                  height={32}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = "none";
+                                    e.currentTarget.parentElement!.innerHTML = `
+                                      <Image
+                                        src="/avatar_${investor.rank % 6}.png"
+                                        alt="User Avatar"
+                                        width={32}
+                                        height={32}
+                                        className="w-full h-full object-cover"
+                                      />
+                                    `;
+                                  }}
+                                />
+                              ) : (
+                                <Image
+                                  src={`/avatar_${investor.rank % 6}.png`}
+                                  alt="User Avatar"
+                                  width={32}
+                                  height={32}
+                                  className="w-full h-full object-cover"
+                                />
+                              )}
                             </div>
                             <span className="text-gray-700 font-bold truncate max-w-[200px] md:max-w-full">
                               {investor?.nadName || investor.address}
