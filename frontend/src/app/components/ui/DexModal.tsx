@@ -66,8 +66,21 @@ const DexModal: React.FC<DexModalProps> = ({
     if (isOpen) {
       if (type === "Buy") {
         // For buy: set the target amount in the output and calculate MON needed
-        setOutputAmount(amount.toString());
-        calculateInputForBuy(amount);
+        // Calculate how much MON is needed for the requested amount
+        const usdValue = amount * token.price;
+        const monNeeded = usdValue / monPrice;
+        const monNeededWithSlippage = monNeeded * 1.005;
+        // If user can't afford the requested amount, cap to max possible
+        if (monNeededWithSlippage > monBalance) {
+          // Calculate max tokens user can buy with their MON balance
+          const maxTokenAmount = (monBalance * monPrice) / token.price;
+          const adjustedTokenAmount = maxTokenAmount * 0.995;
+          setOutputAmount(adjustedTokenAmount.toFixed(6));
+          calculateInputForBuy(adjustedTokenAmount);
+        } else {
+          setOutputAmount(amount.toString());
+          calculateInputForBuy(amount);
+        }
       } else {
         // For sell: calculate amount based on percentage of total holdings
         const sellAmount = (token.totalHolding * sellPercentage) / 100;
@@ -75,7 +88,7 @@ const DexModal: React.FC<DexModalProps> = ({
         calculateOutputForSell(sellAmount);
       }
     }
-  }, [isOpen, type, token, amount, sellPercentage]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isOpen, type, token, amount, sellPercentage, monBalance, monPrice]); // added monBalance, monPrice
 
   const calculateInputForBuy = async (targetAmount: number) => {
     setIsLoading(true);
@@ -136,6 +149,12 @@ const DexModal: React.FC<DexModalProps> = ({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     if (/^\d*\.?\d*$/.test(value)) {
+      // For sell orders, check if input amount exceeds total holdings
+      if (type === "Sell" && parseFloat(value) > inputToken.totalHolding) {
+        setInputAmount(inputToken.totalHolding.toString());
+        calculateOutputForSell(inputToken.totalHolding);
+        return;
+      }
       setInputAmount(value);
       if (value && type === "Sell") {
         // For sell: user changes input (token amount), calculate MON output
@@ -157,12 +176,25 @@ const DexModal: React.FC<DexModalProps> = ({
   const handleOutputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     if (/^\d*\.?\d*$/.test(value)) {
-      setOutputAmount(value);
-      if (value && type === "Buy") {
+      if (type === "Buy" && value) {
         // For buy: user changes output (token amount), calculate MON input
         const usdValue = parseFloat(value) * token.price;
         const monNeeded = usdValue / monPrice;
         const newInputAmount = (monNeeded * 1.005).toFixed(6); // Apply slippage
+        // If calculated MON needed exceeds balance, cap to max possible
+        if (parseFloat(newInputAmount) > inputToken.totalHolding) {
+          const maxTokenAmount =
+            (inputToken.totalHolding * monPrice) / token.price;
+          const adjustedOutputAmount = (maxTokenAmount * 0.995).toFixed(6);
+          setOutputAmount(adjustedOutputAmount);
+          setInputAmount(inputToken.totalHolding.toString());
+          onAmountChange?.(
+            inputToken.totalHolding.toString(),
+            adjustedOutputAmount
+          );
+          return;
+        }
+        setOutputAmount(value);
         setInputAmount(newInputAmount);
         onAmountChange?.(newInputAmount, value);
       } else if (value && type === "Sell") {
@@ -170,9 +202,24 @@ const DexModal: React.FC<DexModalProps> = ({
         const usdValue = parseFloat(value) * monPrice;
         const tokenAmount = usdValue / token.price;
         const newInputAmount = (tokenAmount * 1.005).toFixed(6); // Apply slippage
+        // Check if calculated token amount exceeds balance
+        if (parseFloat(newInputAmount) > inputToken.totalHolding) {
+          const maxMonAmount =
+            (inputToken.totalHolding * token.price) / monPrice;
+          const adjustedOutputAmount = (maxMonAmount * 0.995).toFixed(6);
+          setOutputAmount(adjustedOutputAmount);
+          setInputAmount(inputToken.totalHolding.toString());
+          onAmountChange?.(
+            inputToken.totalHolding.toString(),
+            adjustedOutputAmount
+          );
+          return;
+        }
+        setOutputAmount(value);
         setInputAmount(newInputAmount);
         onAmountChange?.(newInputAmount, value);
       } else {
+        setOutputAmount(value);
         setInputAmount("0");
         onAmountChange?.("0", value);
       }
@@ -460,10 +507,18 @@ const DexModal: React.FC<DexModalProps> = ({
 
             <button
               onClick={handleConfirm}
-              disabled={isLoading}
+              disabled={
+                isLoading ||
+                (type === "Buy" && parseFloat(inputAmount) > monBalance) ||
+                (type === "Sell" &&
+                  parseFloat(inputAmount) > inputToken.totalHolding)
+              }
               className={`w-full py-3 rounded-full font-medium text-white 
                 ${
-                  isLoading
+                  isLoading ||
+                  (type === "Buy" && parseFloat(inputAmount) > monBalance) ||
+                  (type === "Sell" &&
+                    parseFloat(inputAmount) > inputToken.totalHolding)
                     ? "bg-gray-400 cursor-not-allowed"
                     : "bg-violet-600 hover:bg-violet-700"
                 }`}
