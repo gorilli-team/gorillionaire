@@ -29,15 +29,6 @@ async function startServer() {
     // Verify connection
     console.log("Connected to database:", mongoose.connection.db.databaseName);
 
-    // List collections to verify access
-    const collections = await mongoose.connection.db
-      .listCollections()
-      .toArray();
-    console.log(
-      "Available collections in gorillionaire:",
-      collections.map((c) => c.name)
-    );
-
     // Create HTTP server
     const server = http.createServer(app);
 
