@@ -5,6 +5,7 @@ const UserActivity = require("../../models/UserActivity");
 const Intent = require("../../models/Intent");
 const { broadcastNotification } = require("../../websocket");
 const UserAuth = require("../../models/UserAuth");
+const { trackOnDiscordXpGained } = require("../../controllers/points");
 
 //track user signin
 router.post("/signin", async (req, res) => {
@@ -45,6 +46,7 @@ router.post("/signin", async (req, res) => {
         ],
       });
       await newUserActivity.save();
+      await trackOnDiscordXpGained(address, 50);
       res.json({ message: "User activity created" });
     } else {
       //update user activity
