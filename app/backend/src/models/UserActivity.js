@@ -29,6 +29,10 @@ const userActivitySchema = new mongoose.Schema(
           ref: "Intent",
         },
         txHash: String,
+        signalId: {
+          type: ObjectId,
+          ref: "GeneratedSignal",
+        },
       },
     ],
     streak: {
