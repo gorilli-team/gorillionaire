@@ -414,6 +414,7 @@ export default function SignalDetails() {
             address: user?.wallet?.address,
             txHash,
             intentId: quoteData.intentId,
+            signalId: signal?._id,
           }),
         }
       );
@@ -508,6 +509,7 @@ export default function SignalDetails() {
           address: user?.wallet?.address,
           txHash: hash,
           intentId: quoteData.intentId,
+          signalId: signal?._id,
         }),
       }
     );

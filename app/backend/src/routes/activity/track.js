@@ -83,7 +83,12 @@ router.post("/signin", async (req, res) => {
 
 router.post("/trade-points", async (req, res) => {
   try {
-    const { address, txHash, intentId } = req.body;
+    const { address, txHash, intentId, signalId } = req.body;
+
+    if (!signalId) {
+      return res.status(400).json({ error: "Signal ID is required" });
+    }
+
     const privyToken = req.headers.authorization.replace("Bearer ", "");
     if (!address || !txHash || !intentId) {
       return res
@@ -148,6 +153,7 @@ router.post("/trade-points", async (req, res) => {
       points: points,
       date: new Date(),
       intentId: intentId,
+      signalId: signalId,
       txHash: txHash,
     });
     userActivity.points += points;

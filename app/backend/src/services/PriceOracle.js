@@ -96,10 +96,6 @@ class PriceOracle {
           blockNumber: 0, // We don't get block numbers from Codex API
           address: priceData.poolAddress,
         });
-
-        console.log(
-          `Updated price for ${token.symbol}: $${priceData.priceUsd}`
-        );
       }
     } catch (error) {
       console.error("Error updating prices:", error);
