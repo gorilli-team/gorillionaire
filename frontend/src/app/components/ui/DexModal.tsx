@@ -134,7 +134,11 @@ const DexModal: React.FC<DexModalProps> = ({
     setIsLoading(true);
     try {
       // Pass the current input amount to the parent component
-      await onConfirm(inputAmount);
+      if (type === "Buy") {
+        await onConfirm(outputAmount);
+      } else {
+        await onConfirm(inputAmount);
+      }
       // Close the modal after successful confirmation
       onClose();
     } catch (error) {
