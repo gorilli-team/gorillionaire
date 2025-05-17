@@ -6,6 +6,7 @@ const userActivitySchema = new mongoose.Schema(
     address: {
       type: String,
       required: true,
+      unique: true,
       index: true,
     },
     nonce: {

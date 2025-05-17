@@ -210,15 +210,15 @@ router.get("/points", async (req, res) => {
 
 router.get("/leaderboard", async (req, res) => {
   try {
-    const twoDaysAgo = new Date();
-    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
-
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
     const [users, total] = await Promise.all([
-      UserActivity.find().sort({ points: -1 }).skip(skip).limit(limit),
+      UserActivity.find()
+        .sort({ points: -1, createdAt: 1 })
+        .skip(skip)
+        .limit(limit),
       UserActivity.countDocuments(),
     ]);
 
