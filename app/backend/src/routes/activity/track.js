@@ -149,7 +149,7 @@ router.post("/trade-points", async (req, res) => {
     }
 
     //add the txHash to the userActivity.activitiesList
-    const points = Math.floor(intent.usdValue);
+    const points = Math.ceil(intent.usdValue);
     userActivity.activitiesList.push({
       name: "Trade",
       points: points,
