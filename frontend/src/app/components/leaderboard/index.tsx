@@ -39,6 +39,7 @@ const LeaderboardComponent = () => {
   const [filteredInvestors, setFilteredInvestors] = useState<Investor[]>([]);
   const [investors, setInvestors] = useState<Investor[]>([]);
   const [investorCount, setInvestorCount] = useState(0);
+  const [myData, setMyData] = useState<Investor | null>(null);
 
   const { address } = useAccount();
 
@@ -58,13 +59,14 @@ const LeaderboardComponent = () => {
         data.users?.map((u: Investor) => u.address)
       );
 
-      setInvestors(
+      const processedInvestors =
         data.users.map((u: Investor, i: number) => ({
           ...u,
           nadName: nadProfiles[i]?.primaryName,
           nadAvatar: nadProfiles[i]?.avatar || `/avatar_${i % 6}.png`,
-        })) || []
-      );
+        })) || [];
+
+      setInvestors(processedInvestors);
       setInvestorCount(data.pagination.total);
     } catch (error) {
       console.error("Error fetching leaderboard:", error);
@@ -79,7 +81,22 @@ const LeaderboardComponent = () => {
         `${process.env.NEXT_PUBLIC_API_URL}/activity/track/me?address=${address}`
       );
       const data = await response.json();
-      console.log("userActivity:", data);
+
+      // Get NNS profile for the current user
+      const nadProfile = await nnsClient.getProfiles([address]);
+
+      // Create investor object from /me response
+      const myInvestorData: Investor = {
+        rank: data.userActivity?.rank || 0, // Access rank from userActivity object
+        address: address,
+        nadName: nadProfile[0]?.primaryName,
+        nadAvatar:
+          nadProfile[0]?.avatar || `/avatar_${data.userActivity?.rank % 6}.png`,
+        points: data.userActivity?.points || 0,
+        activitiesList: data.userActivity?.activitiesList || [],
+      };
+
+      setMyData(myInvestorData);
     } catch (error) {
       console.error("Error fetching user activity:", error);
     }
@@ -135,6 +152,10 @@ const LeaderboardComponent = () => {
   // Empty rows for both tables
   const emptyInvestorRows = getEmptyRows(currentInvestors, itemsPerPage);
 
+  // Use myData instead of finding in investors list
+  const myInvestor = myData;
+  const pageInvestors = currentInvestors;
+
   // Function to check if the current wallet address matches an investor
   const isCurrentUserAddress = (investorAddress: string): boolean => {
     if (!address) return false;
@@ -183,7 +204,7 @@ const LeaderboardComponent = () => {
                   <thead className="sticky top-0 bg-white z-10">
                     <tr className="text-left text-sm text-gray-500 border-b">
                       <th className="pb-2 pr-2 font-medium">RANK</th>
-                      <th className="pb-2 pr-2 font-medium">INVESTOR</th>
+                      <th className="pb-2 pr-2 font-medium">INVESTORZ</th>
                       <th className="pb-2 pr-2 font-medium text-center">
                         ACTIVITIES
                       </th>
@@ -192,7 +213,96 @@ const LeaderboardComponent = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {currentInvestors.map((investor) => (
+                    {myInvestor && (
+                      <>
+                        <tr className="bg-violet-100">
+                          <td className="py-4 h-16 text-gray-700 pr-2 pl-4">
+                            <div className="flex items-center">
+                              {myInvestor.rank <= 3 ? (
+                                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full mr-2 bg-amber-100 text-amber-800 font-bold">
+                                  {myInvestor.rank}
+                                </span>
+                              ) : (
+                                <span>{myInvestor.rank}</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-4 h-16 pr-2">
+                            <Link
+                              href={`/users/${myInvestor.address}`}
+                              className="flex items-center hover:opacity-80 transition-opacity"
+                            >
+                              <div className="w-8 h-8 rounded-full flex items-center justify-center mr-2 overflow-hidden">
+                                {myInvestor.nadAvatar &&
+                                myInvestor.nadAvatar !== "" &&
+                                isValidUrl(myInvestor.nadAvatar) ? (
+                                  <Image
+                                    src={myInvestor.nadAvatar}
+                                    alt="User Avatar"
+                                    width={32}
+                                    height={32}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <Image
+                                    src={`/avatar_${myInvestor.rank % 6}.png`}
+                                    alt="User Avatar"
+                                    width={32}
+                                    height={32}
+                                    className="w-full h-full object-cover"
+                                  />
+                                )}
+                              </div>
+                              <span className="text-gray-700 font-bold truncate max-w-[200px] md:max-w-full">
+                                {myInvestor?.nadName || myInvestor.address}
+                              </span>
+                            </Link>
+                          </td>
+                          <td className="py-4 h-16 text-center text-gray-700 pr-2">
+                            <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium rounded-full bg-blue-50 text-blue-700">
+                              {myInvestor.activitiesList.length}
+                            </span>
+                          </td>
+                          <td className="py-4 h-16 text-gray-700 pr-2 font-bold">
+                            {myInvestor.points}
+                          </td>
+                          <td className="py-4 h-16 text-gray-700">
+                            {myInvestor.activitiesList &&
+                              myInvestor.activitiesList.length > 0 && (
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-medium">
+                                    {
+                                      myInvestor.activitiesList[
+                                        myInvestor.activitiesList.length - 1
+                                      ].name
+                                    }
+                                    <span className="ml-2 text-xs font-normal text-blue-600">
+                                      +
+                                      {
+                                        myInvestor.activitiesList[
+                                          myInvestor.activitiesList.length - 1
+                                        ].points
+                                      }
+                                      pts
+                                    </span>
+                                  </span>
+                                  <span className="text-xs text-gray-500">
+                                    {getTimeAgo(
+                                      myInvestor.activitiesList[
+                                        myInvestor.activitiesList.length - 1
+                                      ].date
+                                    )}
+                                  </span>
+                                </div>
+                              )}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td colSpan={5} style={{ height: 16 }}></td>
+                        </tr>
+                      </>
+                    )}
+                    {pageInvestors.map((investor) => (
                       //log investor
                       <tr
                         key={investor.address}
@@ -251,7 +361,7 @@ const LeaderboardComponent = () => {
                                 />
                               )}
                             </div>
-                            <span className="text-gray-700 font-bold truncate max-w-[200px] md:max-w-full">
+                            <span className="text-gray-700 font-bold truncate max-w-[10px] md:max-w-full">
                               {investor?.nadName || investor.address}
                             </span>
                           </Link>
@@ -314,7 +424,98 @@ const LeaderboardComponent = () => {
 
                 {/* Mobile View */}
                 <div className="sm:hidden space-y-4">
-                  {currentInvestors.map((investor) => (
+                  {myInvestor && (
+                    <>
+                      <div
+                        className="border rounded-lg px-3 py-2 bg-violet-100 border-violet-300"
+                        style={{ marginBottom: 8 }}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1">
+                            {myInvestor.rank <= 3 ? (
+                              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-800 font-bold text-xs">
+                                {myInvestor.rank}
+                              </span>
+                            ) : (
+                              <span className="text-gray-700 font-medium text-xs">
+                                {myInvestor.rank}
+                              </span>
+                            )}
+                            <div className="w-6 h-6 rounded-full flex items-center justify-center overflow-hidden">
+                              {myInvestor.nadAvatar &&
+                              myInvestor.nadAvatar !== "" &&
+                              isValidUrl(myInvestor.nadAvatar) ? (
+                                <Image
+                                  src={myInvestor.nadAvatar}
+                                  alt="User Avatar"
+                                  width={24}
+                                  height={24}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <Image
+                                  src={`/avatar_${myInvestor.rank % 6}.png`}
+                                  alt="User Avatar"
+                                  width={24}
+                                  height={24}
+                                  className="w-full h-full object-cover"
+                                />
+                              )}
+                            </div>
+                            <Link
+                              href={`/users/${myInvestor.address}`}
+                              className="text-gray-800 font-semibold text-xs hover:underline"
+                            >
+                              {myInvestor?.nadName || myInvestor.address}
+                            </Link>
+                          </div>
+                          <div className="flex flex-col items-end min-w-[40px]">
+                            <span className="text-violet-700 font-bold text-sm leading-tight">
+                              {myInvestor.points}
+                            </span>
+                            <span className="text-[9px] text-gray-400 leading-none">
+                              pts
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between mt-1">
+                          <span className="text-[10px] text-gray-400">
+                            {myInvestor.activitiesList.length} activities
+                          </span>
+                          {myInvestor.activitiesList &&
+                            myInvestor.activitiesList.length > 0 && (
+                              <span className="text-[10px] text-gray-500 text-right">
+                                <span className="font-medium text-gray-700">
+                                  {
+                                    myInvestor.activitiesList[
+                                      myInvestor.activitiesList.length - 1
+                                    ].name
+                                  }
+                                </span>
+                                <span className="ml-1 text-blue-600 font-medium">
+                                  +
+                                  {
+                                    myInvestor.activitiesList[
+                                      myInvestor.activitiesList.length - 1
+                                    ].points
+                                  }
+                                </span>
+                                <span className="ml-1">
+                                  {getTimeAgo(
+                                    myInvestor.activitiesList[
+                                      myInvestor.activitiesList.length - 1
+                                    ].date
+                                  )}
+                                </span>
+                              </span>
+                            )}
+                        </div>
+                      </div>
+                      <div style={{ height: 8 }}></div>
+                    </>
+                  )}
+                  {pageInvestors.map((investor) => (
                     <div
                       key={investor.address}
                       className={`border rounded-lg px-3 py-2 bg-white hover:border-gray-300 transition-colors ${

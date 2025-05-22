@@ -161,6 +161,8 @@ router.post("/trade-points", async (req, res) => {
     userActivity.points += points;
     await userActivity.save();
 
+    await trackOnDiscordXpGained(address, points);
+
     //update intent status to completed
     intent.status = "completed";
     intent.txHash = txHash;
