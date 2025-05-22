@@ -52,18 +52,18 @@ export default function RootLayout({
           to see what&apos;s new.
         </div>
         <Providers>{children}</Providers>
-        {/* <Script
-            id="crate-widget"
-            src="https://cdn.jsdelivr.net/npm/@widgetbot/crate@3"
-            async
-            defer
-            strategy="afterInteractive"
-          >
-            {`new Crate({
+        <Script
+          id="crate-widget"
+          src="https://cdn.jsdelivr.net/npm/@widgetbot/crate@3"
+          async
+          defer
+          strategy="afterInteractive"
+        >
+          {`new Crate({
               server: '1322537506427895859', // Gorillionaire
               channel: '1322537507115765823' // #🦍general
             })`}
-          </Script> */}
+        </Script>
       </body>
     </html>
   );
