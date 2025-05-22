@@ -1,5 +1,7 @@
 const UserActivity = require("../models/UserActivity");
 const { WebhookClient } = require("discord.js");
+const { defineChain, createPublicClient, http } = require("viem");
+const { NNS } = require("@nadnameservice/nns-viem-sdk");
 
 async function awardRefuseSignalPoints(address, signalId) {
   const userActivity = await UserActivity.findOne({
@@ -18,7 +20,7 @@ async function awardRefuseSignalPoints(address, signalId) {
     signalId: signalId,
   });
   await userActivity.save();
-  await trackOnDiscordXpGained(address, 5);
+  await trackOnDiscordXpGained("Signal Refused", address, 5);
 }
 
 /**
@@ -28,25 +30,64 @@ async function awardRefuseSignalPoints(address, signalId) {
  * @returns {Promise<void>} - A promise that resolves when the message is sent
  */
 
-async function trackOnDiscordXpGained(address, points) {
+const monadChain = defineChain({
+  id: 10143,
+  name: "Monad testnet",
+  network: "monad",
+  nativeCurrency: {
+    decimals: 18,
+    name: "Monad",
+    symbol: "MON",
+  },
+  rpcUrls: {
+    default: {
+      http: ["https://testnet-rpc.monad.xyz"],
+    },
+    public: {
+      http: ["https://testnet-rpc.monad.xyz"],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "MonadExplorer",
+      url: "https://testnet.monadexplorer.com",
+    },
+  },
+});
+
+async function trackOnDiscordXpGained(action, address, points) {
   try {
     // Discord webhook URL (store this securely in environment variables)
     const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
     const webhook = new WebhookClient({ url: webhookUrl });
 
-    console.log("TRACKING XP GAINED:", address, points);
+    //I want to get the nad domain
+    // Get NNS profile for the current user
+    const viemClient = createPublicClient({
+      chain: monadChain,
+      transport: http(),
+    });
+    const nnsClient = new NNS(viemClient);
+    const nadProfile = await nnsClient.getProfiles([address]);
 
-    // Format the address for privacy/readability
-    const formattedAddress = `${address.substring(0, 6)}...${address.substring(
-      address.length - 4
-    )}`;
+    console.log("nadProfile", nadProfile);
 
     // Send a simple message to the Discord channel
     await webhook.send({
-      content: `🦍 XP Gained: \`${formattedAddress}\` earned \`${points}\` points`,
+      content: `🦍 ${action}: \`${
+        nadProfile && nadProfile[0].primaryName
+          ? nadProfile[0].primaryName
+          : address
+      }\` earned \`${points}\` points, check profile at https://app.gorillionai.re/users/${address} `,
     });
 
-    console.log(`Notification sent: ${formattedAddress} gained ${points} XP`);
+    console.log(
+      `Notification sent: ${
+        nadProfile && nadProfile[0].primaryName
+          ? nadProfile[0].primaryName
+          : address
+      }} ${action} ${points} XP`
+    );
   } catch (error) {
     console.error("Discord notification error:", error);
   }

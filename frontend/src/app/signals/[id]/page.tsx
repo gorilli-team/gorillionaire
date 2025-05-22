@@ -98,6 +98,7 @@ export default function SignalDetails() {
     useState<string>("");
   const [currentDexOutputAmount, setCurrentDexOutputAmount] =
     useState<string>("");
+  const [selectedToken, setSelectedToken] = useState<Token | null>(null);
 
   // Add state for token balances and prices
   const [moyakiBalance, setMoyakiBalance] = useState<number>(0);
@@ -152,14 +153,6 @@ export default function SignalDetails() {
   // Add fetchPriceData function
   const fetchPriceData = async () => {
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/pyth/mon-price`
-      );
-      const monData = await res.json();
-      const monPrice = monData?.price?.price;
-      const scaledMonPrice = Number(monPrice) / 1e8;
-      setMonPrice(scaledMonPrice);
-
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/events/prices/latest`
       );
@@ -178,6 +171,8 @@ export default function SignalDetails() {
             setDakPrice(item.price?.price);
           } else if (item.symbol === "YAKI") {
             setMoyakiPrice(item.price?.price);
+          } else if (item.symbol === "WMON") {
+            setMonPrice(item.price?.price);
           }
         }
       );
@@ -260,8 +255,6 @@ export default function SignalDetails() {
         );
         const data = await response.json();
 
-        console.log("data", data);
-
         if (data) {
           // Parse signal text to extract type, token, amount and confidence
           const type = data.signal.signal_text.startsWith("BUY")
@@ -282,6 +275,9 @@ export default function SignalDetails() {
             userSignals: data.userSignals || [],
           };
           setSignal(formattedData);
+
+          const { symbol } = parseSignalText(formattedData.signal_text);
+          setSelectedToken(tokens.find((t) => symbol === t.symbol) || null);
         } else {
           console.error("Unexpected API response structure:", data);
           setError("Invalid signal data received");
@@ -723,6 +719,33 @@ export default function SignalDetails() {
                   </div>
                 </div>
 
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <div className="text-sm text-gray-500 mb-1">MON Price</div>
+                    <div className="text-lg font-medium">
+                      ${monPrice || "0"}
+                    </div>
+                  </div>
+                  {signal && (
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <div className="text-sm text-gray-500 mb-1">
+                        {selectedToken?.symbol} Price
+                      </div>
+                      <div className="text-lg font-medium">
+                        {selectedToken?.symbol === "CHOG"
+                          ? `$${chogPrice || "0"}`
+                          : selectedToken?.symbol === "DAK"
+                          ? `$${dakPrice || "0"}`
+                          : selectedToken?.symbol === "YAKI"
+                          ? `$${moyakiPrice || "0"}`
+                          : selectedToken?.symbol === "WMON"
+                          ? `$${monPrice || "0"}`
+                          : "0"}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {signal.events &&
                   signal.events.length > 0 &&
                   signal.events[0].length > 0 && (
@@ -790,7 +813,6 @@ export default function SignalDetails() {
                   Created:{" "}
                   {(() => {
                     try {
-                      console.log("signal", signal);
                       const date = new Date(signal.created_at);
                       return date.toLocaleString();
                     } catch (e) {
