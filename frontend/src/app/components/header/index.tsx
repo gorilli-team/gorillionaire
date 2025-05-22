@@ -50,6 +50,7 @@ export default function Header() {
       await response.json();
     },
   });
+  const [monPrice, setMonPrice] = useState<number>(0);
   const [monPriceFormatted, setMonPriceFormatted] = useState<string>("0.00");
   const [isFlashing, setIsFlashing] = useState(false);
 
@@ -195,24 +196,36 @@ export default function Header() {
   // Memoize fetchPrice to prevent unnecessary recreations
   const fetchPrice = useCallback(async () => {
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/pyth/mon-price`
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/events/prices/latest`
       );
-      const data = await res.json();
-      const price = data?.price?.price;
-      const scaledPrice = Number(price) / 1e8;
-      const newPrice = new Intl.NumberFormat("en-US", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }).format(scaledPrice || 0);
+      const data = await response.json();
 
-      if (newPrice !== monPriceFormatted) {
-        setMonPriceFormatted(newPrice);
-        setIsFlashing(true);
-        setTimeout(() => setIsFlashing(false), 5000);
-      }
+      data.data.forEach(
+        (item: {
+          symbol: string;
+          price: {
+            price: number;
+          };
+        }) => {
+          if (item.symbol === "WMON") {
+            const newPrice = item.price?.price;
+            setMonPrice(newPrice);
+            const formattedPrice = new Intl.NumberFormat("en-US", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            }).format(newPrice || 0);
+
+            if (formattedPrice !== monPriceFormatted) {
+              setMonPriceFormatted(formattedPrice);
+              setIsFlashing(true);
+              setTimeout(() => setIsFlashing(false), 5000);
+            }
+          }
+        }
+      );
     } catch (error) {
-      console.error("Error fetching price:", error);
+      console.error("Error fetching price data:", error);
     }
   }, [monPriceFormatted]);
 

@@ -3,6 +3,11 @@ const PriceData = require("../models/PriceData");
 
 const TOKENS = [
   {
+    symbol: "WMON",
+    address: "0x760afe86e5de5fa0ee542fc7b7b713e1c5425701",
+    networkId: 10143,
+  },
+  {
     symbol: "YAKI",
     address: "0xfe140e1dCe99Be9F4F15d657CD9b7BF622270C50",
     networkId: 10143,

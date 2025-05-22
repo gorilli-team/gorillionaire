@@ -191,14 +191,6 @@ const Signals = () => {
 
   const fetchPriceData = async () => {
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/pyth/mon-price`
-      );
-      const monData = await res.json();
-      const monPrice = monData?.price?.price;
-      const scaledMonPrice = Number(monPrice) / 1e8;
-      setMonPrice(scaledMonPrice);
-
       console.log("Fetching price data");
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/events/prices/latest`
@@ -218,6 +210,8 @@ const Signals = () => {
             setDakPrice(item.price?.price);
           } else if (item.symbol === "YAKI") {
             setMoyakiPrice(item.price?.price);
+          } else if (item.symbol === "WMON") {
+            setMonPrice(item.price?.price);
           }
         }
       );
