@@ -1,7 +1,6 @@
 "use client";
 import { useLogin, usePrivy } from "@privy-io/react-auth";
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import Image from "next/image";
 import { ToastContainer, toast, Bounce } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import LeaderboardBadge from "../leaderboard_badge";
@@ -195,24 +194,35 @@ export default function Header() {
   // Memoize fetchPrice to prevent unnecessary recreations
   const fetchPrice = useCallback(async () => {
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/pyth/mon-price`
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/events/prices/latest`
       );
-      const data = await res.json();
-      const price = data?.price?.price;
-      const scaledPrice = Number(price) / 1e8;
-      const newPrice = new Intl.NumberFormat("en-US", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }).format(scaledPrice || 0);
+      const data = await response.json();
 
-      if (newPrice !== monPriceFormatted) {
-        setMonPriceFormatted(newPrice);
-        setIsFlashing(true);
-        setTimeout(() => setIsFlashing(false), 5000);
-      }
+      data.data.forEach(
+        (item: {
+          symbol: string;
+          price: {
+            price: number;
+          };
+        }) => {
+          if (item.symbol === "WMON") {
+            const newPrice = item.price?.price;
+            const formattedPrice = new Intl.NumberFormat("en-US", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            }).format(newPrice || 0);
+
+            if (formattedPrice !== monPriceFormatted) {
+              setMonPriceFormatted(formattedPrice);
+              setIsFlashing(true);
+              setTimeout(() => setIsFlashing(false), 5000);
+            }
+          }
+        }
+      );
     } catch (error) {
-      console.error("Error fetching price:", error);
+      console.error("Error fetching price data:", error);
     }
   }, [monPriceFormatted]);
 
@@ -265,17 +275,6 @@ export default function Header() {
                 >
                   ${monPriceFormatted}
                 </span>
-              </div>
-
-              <div className="hidden sm:flex items-center gap-1 ml-2">
-                <span className="text-xs text-violet-900">Powered by</span>
-                <Image
-                  src="/Pyth_Logotype_Dark.png"
-                  alt="Pyth"
-                  width={64}
-                  height={16}
-                  className="ml-1"
-                />
               </div>
             </div>
           )}

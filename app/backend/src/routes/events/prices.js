@@ -26,7 +26,7 @@ router.get("/", async (req, res) => {
 
 router.get("/latest", async (req, res) => {
   try {
-    const symbols = ["CHOG", "DAK", "YAKI"];
+    const symbols = ["CHOG", "DAK", "YAKI", "WMON"];
 
     //for each symbol, get the latest price
     const prices = await Promise.all(
