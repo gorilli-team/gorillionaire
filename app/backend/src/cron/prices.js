@@ -7,7 +7,6 @@ function initPriceUpdateCron() {
     try {
       const priceOracle = new PriceOracle();
       await priceOracle.updatePrices();
-      console.log("Successfully updated prices");
     } catch (error) {
       console.error("Failed to update prices:", error);
     }

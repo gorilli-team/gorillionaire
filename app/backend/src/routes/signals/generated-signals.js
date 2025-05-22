@@ -140,7 +140,6 @@ router.get("/:id", async (req, res) => {
   const userSignals = await UserSignal.find({
     signalId: signal._id,
   });
-  console.log("userSignals", userSignals);
   res.json({ signal, userSignals });
 });
 
