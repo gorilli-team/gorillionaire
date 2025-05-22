@@ -1,7 +1,6 @@
 "use client";
 import { useLogin, usePrivy } from "@privy-io/react-auth";
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import Image from "next/image";
 import { ToastContainer, toast, Bounce } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import LeaderboardBadge from "../leaderboard_badge";
@@ -50,7 +49,6 @@ export default function Header() {
       await response.json();
     },
   });
-  const [monPrice, setMonPrice] = useState<number>(0);
   const [monPriceFormatted, setMonPriceFormatted] = useState<string>("0.00");
   const [isFlashing, setIsFlashing] = useState(false);
 
@@ -210,7 +208,6 @@ export default function Header() {
         }) => {
           if (item.symbol === "WMON") {
             const newPrice = item.price?.price;
-            setMonPrice(newPrice);
             const formattedPrice = new Intl.NumberFormat("en-US", {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
