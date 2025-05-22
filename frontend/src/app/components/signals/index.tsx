@@ -27,6 +27,8 @@ import Cookies from "js-cookie";
 import { nnsClient } from "@/app/providers";
 import { HexString } from "@/app/types";
 import { getTokenImage } from "@/app/utils/tokens";
+import Link from "next/link";
+import DexModal from "../ui/DexModal";
 
 type Token = {
   symbol: string;
@@ -83,7 +85,7 @@ type TradeSignal = {
   };
 };
 
-const MAX_SIGNALS = 5;
+//const MAX_SIGNALS = 5;
 //const SIGNAL_EXPIRATION_TIME = 1 * 1 * 60 * 60 * 1000;
 
 const parseSignalText = (signalText: string) => {
@@ -144,8 +146,19 @@ const Signals = () => {
   const [dakPrice, setDakPrice] = useState<number>(0);
   const [moyakiPrice, setMoyakiPrice] = useState<number>(0);
   const [monPrice, setMonPrice] = useState<number>(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [buyTotalPages, setBuyTotalPages] = useState(1);
+  const [sellTotalPages, setSellTotalPages] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
+  const [buySignals, setBuySignals] = useState<TradeSignal[]>([]);
+  const [sellSignals, setSellSignals] = useState<TradeSignal[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentDexToken, setCurrentDexToken] = useState<Token | null>(null);
+  const [currentDexAmount, setCurrentDexAmount] = useState(0);
+  const [currentDexType, setCurrentDexType] = useState<"Buy" | "Sell">("Buy");
+  const [currentSignalId, setCurrentSignalId] = useState<string>("");
 
-  const fetchHolderData = async () => {
+  const fetchHolderData = useCallback(async () => {
     try {
       if (!user?.wallet?.address) {
         console.log("No wallet address available");
@@ -165,33 +178,37 @@ const Signals = () => {
         Array.isArray(data.result.data)
       ) {
         data.result.data.forEach((token: ApiTokenHolder) => {
-          console.log(`Setting ${token.symbol} balance to ${token.balance}`);
+          // Convert balance string to number considering decimals
+          const balance = parseFloat(token.balance);
+
           if (token.symbol === "MON") {
-            setMonBalance(parseFloat(token.balance));
+            setMonBalance(balance);
           } else if (token.symbol === "CHOG") {
-            setChogBalance(parseFloat(token.balance));
+            setChogBalance(balance);
           } else if (token.symbol === "DAK") {
-            setDakBalance(parseFloat(token.balance));
+            setDakBalance(balance);
           } else if (token.symbol === "YAKI") {
-            setMoyakiBalance(parseFloat(token.balance));
+            setMoyakiBalance(balance);
           }
         });
       }
     } catch (error) {
       console.error("Error fetching token holders data:", error);
     }
-  };
+  }, [user?.wallet?.address]);
 
+  // Add a refresh interval for token balances
   useEffect(() => {
     if (user?.wallet?.address) {
-      console.log("User logged in, fetching holder data");
       fetchHolderData();
+      // Refresh balances every 30 seconds
+      const interval = setInterval(fetchHolderData, 30000);
+      return () => clearInterval(interval);
     }
-  }, [user?.wallet?.address]);
+  }, [user?.wallet?.address, fetchHolderData]);
 
   const fetchPriceData = async () => {
     try {
-      console.log("Fetching price data");
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/events/prices/latest`
       );
@@ -221,7 +238,6 @@ const Signals = () => {
   };
 
   useEffect(() => {
-    console.log("Fetching price data");
     fetchPriceData();
   }, []);
 
@@ -307,57 +323,54 @@ const Signals = () => {
     fetchCompletedTrades();
   }, []);
 
-  const [tradeSignals, setTradeSignals] = useState<TradeSignal[]>([]);
-  const [pastSignals, setPastSignals] = useState<TradeSignal[]>([]);
-
-  const [isLoading, setIsLoading] = useState(true);
-
   useEffect(() => {
     const fetchSignals = async () => {
       try {
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/signals/generated-signals?userAddress=${user?.wallet?.address}`
+          `${process.env.NEXT_PUBLIC_API_URL}/signals/generated-signals?userAddress=${user?.wallet?.address}&page=${currentPage}&limit=5`
         );
         const data = await response.json();
-        if (data && Array.isArray(data)) {
-          // pastSignals are signals that have a userSignal or that are 3 days old
-          const pastSignals = data.filter((signal) => signal.userSignal);
-          setTradeSignals(
-            data.filter(
-              (signal) => !pastSignals.map((s) => s._id).includes(signal._id)
-            )
-          );
-          setPastSignals(pastSignals);
+        if (data && data.buySignals && data.sellSignals) {
+          // Set all signals without filtering out user actions
+          setBuySignals(data.buySignals);
+          setSellSignals(data.sellSignals);
+
+          // Set pagination info
+          setBuyTotalPages(data.pagination.buy.pages);
+          setSellTotalPages(data.pagination.sell.pages);
           setIsLoading(false);
         }
       } catch (error) {
-        console.error("Error fetching past signals:", error);
+        console.error("Error fetching signals:", error);
+        setIsLoading(false);
       }
     };
 
     fetchSignals();
-  }, [user?.wallet?.address]);
+  }, [user?.wallet?.address, currentPage]);
 
   // State for Yes/No buttons
   const [selectedOptions, setSelectedOptions] = useState<
     Record<string, string>
   >({});
 
-  const onNo = useCallback(
-    (signalId: string) => {
-      // Move signal to pastSignals
-      setPastSignals((prev) => {
-        const signal = tradeSignals.find((s) => s._id === signalId);
-        if (!signal) return prev;
-        return [{ ...signal, userSignal: { choice: "No" } }, ...prev];
-      });
-
-      setTradeSignals((prev) =>
-        prev.filter((signal) => signal._id !== signalId)
-      );
-    },
-    [tradeSignals]
-  );
+  const onNo = useCallback((signalId: string) => {
+    // Update the signal's userSignal property without removing it
+    setBuySignals((prev) =>
+      prev.map((signal) =>
+        signal._id === signalId
+          ? { ...signal, userSignal: { choice: "No" } }
+          : signal
+      )
+    );
+    setSellSignals((prev) =>
+      prev.map((signal) =>
+        signal._id === signalId
+          ? { ...signal, userSignal: { choice: "No" } }
+          : signal
+      )
+    );
+  }, []);
 
   const onYes = useCallback(
     async (token: Token, amount: number, type: "Buy" | "Sell") => {
@@ -377,13 +390,29 @@ const Signals = () => {
         return;
       }
 
-      // for sells we need to convert percentage to amount, for buys change gets handled backend/side
-      const sellAmount =
-        type === "Sell" ? (token.totalHolding * amount) / 100 : amount;
+      // Open DEX modal instead of executing trade directly
+      setCurrentDexToken(token);
+      setCurrentDexAmount(amount);
+      setCurrentDexType(type);
+      setIsModalOpen(true);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [user?.wallet?.address]
+  );
+
+  // New function to execute trade after DEX modal confirmation
+  const executeTrade = useCallback(
+    async (inputAmount: string) => {
+      if (!currentDexToken || !user?.wallet?.address) return;
+
+      const token = currentDexToken;
+      const type = currentDexType;
+      // Use the inputAmount from DexModal for the API call
+      const amount = parseFloat(inputAmount);
 
       const params = new URLSearchParams({
         token: token.symbol,
-        amount: sellAmount.toString(),
+        amount: amount.toString(),
         type: type.toLowerCase(),
         userAddress: user?.wallet?.address,
       });
@@ -391,15 +420,29 @@ const Signals = () => {
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/trade/0x-quote?${params.toString()}`
       );
-      const quote = await res.json();
+      const quoteData = await res.json();
+      console.log("QUOTE DATA:", quoteData);
 
-      if (!quote) return;
+      if (!quoteData) return;
 
-      if (quote.issues?.balance) {
+      if (quoteData.issues?.balance) {
         return toast.error("Insufficient balance");
       }
 
-      // Show notification when trade request is being sent to the blockchain
+      // Defensive: check for transaction before proceeding
+      const isNativeSell =
+        quoteData.sellToken?.toLowerCase() === MON_ADDRESS.toLowerCase();
+      if (isNativeSell && !quoteData.transaction) {
+        toast.error("Trade quote did not return a transaction object.");
+        return;
+      }
+
+      if (!isNativeSell && !quoteData.transaction) {
+        toast.error("Trade quote did not return a transaction object.");
+        return;
+      }
+
+      // Show notification when trade request is being sent to the blockchain (only if transaction exists)
       toast(
         <div>
           <div>Trade request in progress...</div>
@@ -416,18 +459,18 @@ const Signals = () => {
         }
       );
 
-      // Different flow if sell token is native token
-      if (quote.sellToken?.toLowerCase() === MON_ADDRESS.toLowerCase()) {
+      // Native token flow
+      if (isNativeSell) {
         const txHash = await sendTransactionAsync({
           account: user?.wallet?.address as `0x${string}`,
-          gas: quote?.transaction.gas
-            ? BigInt(quote.transaction.gas)
+          gas: quoteData.transaction.gas
+            ? BigInt(quoteData.transaction.gas)
             : undefined,
-          to: quote?.transaction.to,
-          data: quote.transaction.data,
-          value: BigInt(quote.transaction.value),
-          gasPrice: quote?.transaction.gasPrice
-            ? BigInt(quote.transaction.gasPrice)
+          to: quoteData.transaction.to,
+          data: quoteData.transaction.data,
+          value: BigInt(quoteData.transaction.value),
+          gasPrice: quoteData.transaction.gasPrice
+            ? BigInt(quoteData.transaction.gasPrice)
             : undefined,
           chainId: MONAD_CHAIN_ID,
         });
@@ -436,9 +479,44 @@ const Signals = () => {
           hash: txHash,
           confirmations: 1,
         });
-        const privyToken = Cookies.get("privy-token");
         await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/activity/track/trade-points`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${Cookies.get("privy-token")}`,
+            },
+            body: JSON.stringify({
+              address: user?.wallet?.address,
+              txHash,
+              intentId: quoteData.intentId,
+              signalId: currentSignalId,
+            }),
+          }
+        );
+
+        // Update the signals state to add the user's choice
+        if (currentSignalId) {
+          setBuySignals((prevSignals) =>
+            prevSignals.map((signal) =>
+              signal._id === currentSignalId
+                ? { ...signal, userSignal: { choice: "Yes" } }
+                : signal
+            )
+          );
+          setSellSignals((prevSignals) =>
+            prevSignals.map((signal) =>
+              signal._id === currentSignalId
+                ? { ...signal, userSignal: { choice: "Yes" } }
+                : signal
+            )
+          );
+        }
+
+        const privyToken = Cookies.get("privy-token");
+        await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/signals/generated-signals/user-signal`,
           {
             method: "POST",
             headers: {
@@ -446,16 +524,25 @@ const Signals = () => {
               Authorization: `Bearer ${privyToken}`,
             },
             body: JSON.stringify({
-              address: user?.wallet?.address,
-              txHash,
-              intentId: quote.intentId,
+              userAddress: user?.wallet?.address,
+              signalId: currentSignalId,
+              choice: "Yes",
+              type: type,
+              token: token.symbol,
+              amount: amount.toString(),
             }),
           }
         );
+
+        return;
+      } else if (
+        quoteData.sellToken?.toLowerCase() === MON_ADDRESS.toLowerCase()
+      ) {
+        toast.error("Trade quote did not return a transaction object.");
         return;
       }
 
-      if (quote.issues && quote.issues.allowance !== null) {
+      if (quoteData.issues && quoteData.issues.allowance !== null) {
         try {
           const hash = await writeContractAsync({
             abi: erc20Abi,
@@ -463,7 +550,7 @@ const Signals = () => {
             functionName: "approve",
             args: [
               PERMIT2_ADDRESS,
-              parseUnits(sellAmount.toString(), token.decimals),
+              parseUnits(amount.toString(), token.decimals),
             ],
           });
 
@@ -472,29 +559,35 @@ const Signals = () => {
             confirmations: 1,
           });
         } catch (error) {
-          console.log("Error approving Permit2:", error);
+          console.error("Error approving Permit2:", error);
         }
       }
 
-      const transaction = quote?.transaction;
-      const signature = await signTypedDataAsync(quote?.permit2.eip712);
-      const signatureLengthInHex = numberToHex(size(signature), {
-        signed: false,
-        size: 32,
-      });
-      transaction.data = concat([
-        transaction.data,
-        signatureLengthInHex,
-        signature,
-      ]);
+      const transaction = quoteData?.transaction;
+      if (!transaction) {
+        toast.error("Trade quote did not return a transaction object.");
+        return;
+      }
+      let signature;
+      let signatureLengthInHex;
+      if (quoteData?.permit2?.eip712) {
+        signature = await signTypedDataAsync(quoteData.permit2.eip712);
+        signatureLengthInHex = numberToHex(size(signature), {
+          signed: false,
+          size: 32,
+        });
+        transaction.data = concat([
+          transaction.data,
+          signatureLengthInHex,
+          signature,
+        ]);
+      }
 
       const hash = await sendTransactionAsync({
         account: user?.wallet?.address as `0x${string}`,
-        gas: !!quote.transaction.gas
-          ? BigInt(quote.transaction.gas)
-          : undefined,
-        to: quote.transaction.to,
-        data: quote.transaction.data,
+        gas: transaction.gas ? BigInt(transaction.gas) : undefined,
+        to: transaction.to,
+        data: transaction.data,
         chainId: MONAD_CHAIN_ID,
       });
 
@@ -515,18 +608,42 @@ const Signals = () => {
           body: JSON.stringify({
             address: user?.wallet?.address,
             txHash: hash,
-            intentId: quote.intentId,
+            intentId: quoteData.intentId,
+            signalId: currentSignalId,
           }),
         }
       );
+
+      // Update the signals state to add the user's choice
+      if (currentSignalId) {
+        setBuySignals((prevSignals) =>
+          prevSignals.map((signal) =>
+            signal._id === currentSignalId
+              ? { ...signal, userSignal: { choice: "Yes" } }
+              : signal
+          )
+        );
+        setSellSignals((prevSignals) =>
+          prevSignals.map((signal) =>
+            signal._id === currentSignalId
+              ? { ...signal, userSignal: { choice: "Yes" } }
+              : signal
+          )
+        );
+      }
+
+      // Close the modal
+      setIsModalOpen(false);
     },
     [
+      currentDexToken,
+      currentDexType,
       user?.wallet?.address,
       sendTransactionAsync,
       signTypedDataAsync,
       wagmiConfig,
       writeContractAsync,
-      chainId,
+      currentSignalId,
     ]
   );
 
@@ -538,37 +655,53 @@ const Signals = () => {
       });
 
       if (option === "Yes") {
-        const signal = tradeSignals.find((s) => s._id === signalId);
+        const signal =
+          buySignals.find((s) => s._id === signalId) ||
+          sellSignals.find((s) => s._id === signalId);
         if (!signal) return;
 
         const { symbol, amount } = parseSignalText(signal.signal_text);
         const token = tokens.find((t) => symbol === t.symbol);
         if (!token) return;
 
+        // Set current signal ID for later updates
+        setCurrentSignalId(signalId);
         await onYes(token, amount, signal.type);
       } else {
         onNo(signalId);
-      }
 
-      const privyToken = Cookies.get("privy-token");
-      await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/signals/generated-signals/user-signal`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${privyToken}`,
-          },
-          body: JSON.stringify({
-            userAddress: user?.wallet?.address,
-            signalId,
-            choice: option,
-          }),
-        }
-      );
+        const privyToken = Cookies.get("privy-token");
+        await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/signals/generated-signals/user-signal`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${privyToken}`,
+            },
+            body: JSON.stringify({
+              userAddress: user?.wallet?.address,
+              signalId,
+              choice: option,
+            }),
+          }
+        );
+      }
     },
-    [tradeSignals, selectedOptions, onYes, onNo, tokens, user?.wallet?.address]
+    [
+      selectedOptions,
+      buySignals,
+      sellSignals,
+      tokens,
+      onYes,
+      onNo,
+      user?.wallet?.address,
+    ]
   );
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+  };
 
   if (isLoading) {
     return <LoadingOverlay />;
@@ -696,21 +829,24 @@ const Signals = () => {
         {/* Main Signals Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
           <div className="bg-white rounded-lg shadow p-4">
-            <div className="mb-4 flex items-center">
-              <span className="text-yellow-500 text-2xl mr-2">💰</span>
-              <span className="font-bold text-2xl">Buy Signals</span>
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex items-center">
+                <span className="text-yellow-500 text-2xl mr-2">💰</span>
+                <span className="font-bold text-2xl">Buy Signals</span>
+              </div>
+              <span className="text-sm text-gray-500">
+                Page {currentPage} of {buyTotalPages}
+              </span>
             </div>
 
             <div className="space-y-6">
-              {tradeSignals
-                .filter((signal) => signal.type === "Buy")
-                .slice(0, MAX_SIGNALS)
-                .map((signal, index) => (
-                  <div
-                    key={index}
-                    className="border-b pb-4 last:border-b-0 last:pb-0"
-                  >
-                    <div className="flex justify-between items-center mb-3">
+              {buySignals.map((signal, index) => (
+                <div
+                  key={index}
+                  className="border-b pb-4 last:border-b-0 last:pb-0"
+                >
+                  <Link href={`/signals/${signal._id}`}>
+                    <div className="flex justify-between items-center mb-3 cursor-pointer hover:bg-gray-50 p-3 rounded-lg transition-all duration-200 border border-gray-100 hover:border-violet-200 hover:shadow-sm group">
                       <div className="flex items-center">
                         <div className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0 relative mr-2">
                           <Image
@@ -723,182 +859,99 @@ const Signals = () => {
                             className="object-cover rounded-full"
                           />
                         </div>
-                        <span className="font-medium">
+                        <span className="font-medium text-gray-900 group-hover:text-violet-700 transition-colors">
                           {signal.signal_text}
                         </span>
-                      </div>
-                      <span
-                        className={`text-xs px-2 py-1 rounded ${
-                          mapConfidenceScoreToRisk(signal.confidenceScore) ===
-                          "Moderate"
-                            ? "bg-yellow-100 text-yellow-800"
-                            : mapConfidenceScoreToRisk(
-                                signal.confidenceScore
-                              ) === "Conservative"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-red-100 text-red-800"
-                        }`}
-                      >
-                        {mapConfidenceScoreToRisk(signal.confidenceScore)}
-                      </span>
-                    </div>
-
-                    {chainId === MONAD_CHAIN_ID ? (
-                      <div className="flex items-center mb-3">
-                        <div className="inline-flex rounded-full border border-gray-300 overflow-hidden">
-                          <button
-                            className={`px-3 py-1 text-sm flex items-center justify-center w-16 ${
-                              selectedOptions[signal._id] === "No"
-                                ? "bg-gray-200 text-gray-700"
-                                : "bg-white text-gray-500"
-                            }`}
-                            onClick={() => handleOptionSelect(signal._id, "No")}
-                          >
-                            <span>No</span>
-                            {selectedOptions[signal._id] === "No" && (
-                              <span className="ml-1">•</span>
-                            )}
-                          </button>
-                          <button
-                            className={`px-3 py-1 text-sm flex items-center justify-center w-16 ${
-                              selectedOptions[signal._id] === "Yes" ||
-                              !selectedOptions[signal._id]
-                                ? "bg-violet-700 text-white"
-                                : "bg-white text-gray-500"
-                            }`}
-                            onClick={() =>
-                              handleOptionSelect(signal._id, "Yes")
-                            }
-                          >
-                            <span>Yes</span>
-                            {selectedOptions[signal._id] === "Yes" && (
-                              <span className="ml-1">•</span>
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <button
-                        className={`px-3 py-1 mb-3 text-sm flex items-center justify-center bg-violet-700 text-white rounded-full`}
-                        onClick={() => switchChain({ chainId: MONAD_CHAIN_ID })}
-                      >
-                        Switch to Monad
-                      </button>
-                    )}
-
-                    {signal.events.length > 0 &&
-                      signal.events[0].length > 0 && (
-                        <div className="flex flex-wrap items-center gap-2">
-                          {signal.events.slice(0, 2).map((event, idx) => (
-                            <div
-                              key={idx}
-                              className="text-xs bg-gray-100 px-2 py-1 rounded-full whitespace-normal break-words"
-                            >
-                              {event}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                    <div className="text-xs text-gray-400 mt-2">
-                      {getTimeAgo(signal.created_at)}
-                    </div>
-                  </div>
-                ))}
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="mb-4 flex items-center">
-              <span className="text-gray-500 text-2xl mr-2">💸</span>
-              <span className="font-bold text-2xl">Sell Signals</span>
-            </div>
-
-            <div className="space-y-6">
-              {tradeSignals
-                .filter((signal) => signal.type === "Sell")
-                .slice(0, MAX_SIGNALS)
-                .map((signal, index) => (
-                  <div
-                    key={index}
-                    className="border-b pb-4 last:border-b-0 last:pb-0"
-                  >
-                    <div className="flex justify-between items-center mb-3">
-                      <div className="flex items-center">
-                        <div className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0 relative mr-2">
-                          <Image
-                            src={
-                              fetchImageFromSignalText(signal.signal_text) || ""
-                            }
-                            alt={signal.signal_text || "signal image"}
-                            width={24}
-                            height={24}
-                            className="object-cover rounded-full"
+                        <svg
+                          className="w-4 h-4 ml-2 text-gray-400 group-hover:text-violet-500 transition-colors"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 5l7 7-7 7"
                           />
-                        </div>
-                        <span className="font-medium">
-                          {signal.signal_text}
+                        </svg>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {signal.userSignal?.choice && (
+                          <span
+                            className={`text-xs px-2 py-1 rounded ${
+                              signal.userSignal.choice === "Yes"
+                                ? "bg-green-200 text-green-700"
+                                : "bg-red-200 text-red-700"
+                            }`}
+                          >
+                            {signal.userSignal.choice === "Yes"
+                              ? "Accepted"
+                              : "Rejected"}
+                          </span>
+                        )}
+                        <span
+                          className={`text-xs px-2 py-1 rounded ${
+                            mapConfidenceScoreToRisk(signal.confidenceScore) ===
+                            "Moderate"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : mapConfidenceScoreToRisk(
+                                  signal.confidenceScore
+                                ) === "Conservative"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-red-100 text-red-800"
+                          }`}
+                        >
+                          {mapConfidenceScoreToRisk(signal.confidenceScore)}
                         </span>
                       </div>
-                      <span
-                        className={`text-xs px-2 py-1 rounded ${
-                          mapConfidenceScoreToRisk(signal.confidenceScore) ===
-                          "Moderate"
-                            ? "bg-yellow-100 text-yellow-800"
-                            : mapConfidenceScoreToRisk(
-                                signal.confidenceScore
-                              ) === "Conservative"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-red-100 text-red-800"
-                        }`}
-                      >
-                        {mapConfidenceScoreToRisk(signal.confidenceScore)}
-                      </span>
                     </div>
+                  </Link>
 
-                    {chainId === MONAD_CHAIN_ID ? (
-                      <div className="flex items-center mb-3">
-                        <div className="inline-flex rounded-full border border-gray-300 overflow-hidden">
-                          <button
-                            className={`px-3 py-1 text-sm flex items-center justify-center w-16 ${
-                              selectedOptions[signal._id] === "No"
-                                ? "bg-gray-200 text-gray-700"
-                                : "bg-white text-gray-500"
-                            }`}
-                            onClick={() => handleOptionSelect(signal._id, "No")}
-                          >
-                            <span>No</span>
-                            {selectedOptions[signal._id] === "No" && (
-                              <span className="ml-1">•</span>
-                            )}
-                          </button>
-                          <button
-                            className={`px-3 py-1 text-sm flex items-center justify-center w-16 ${
-                              selectedOptions[signal._id] === "Yes" ||
-                              !selectedOptions[signal._id]
-                                ? "bg-violet-700 text-white"
-                                : "bg-white text-gray-500"
-                            }`}
-                            onClick={() =>
-                              handleOptionSelect(signal._id, "Yes")
-                            }
-                          >
-                            <span>Yes</span>
-                            {selectedOptions[signal._id] === "Yes" && (
-                              <span className="ml-1">•</span>
-                            )}
-                          </button>
-                        </div>
+                  {!signal.userSignal && chainId === MONAD_CHAIN_ID && (
+                    <div className="flex items-center mb-3">
+                      <div className="inline-flex rounded-full border border-gray-300 overflow-hidden">
+                        <button
+                          className={`px-3 py-1 text-sm flex items-center justify-center w-16 ${
+                            selectedOptions[signal._id] === "No"
+                              ? "bg-gray-200 text-gray-700"
+                              : "bg-white text-gray-500"
+                          }`}
+                          onClick={() => handleOptionSelect(signal._id, "No")}
+                        >
+                          <span>Refuse</span>
+                          {selectedOptions[signal._id] === "No" && (
+                            <span className="ml-1">•</span>
+                          )}
+                        </button>
+                        <button
+                          className={`px-3 py-1 text-sm flex items-center justify-center w-16 ${
+                            selectedOptions[signal._id] === "Yes" ||
+                            !selectedOptions[signal._id]
+                              ? "bg-violet-700 text-white"
+                              : "bg-white text-gray-500"
+                          }`}
+                          onClick={() => handleOptionSelect(signal._id, "Yes")}
+                        >
+                          <span>Trade</span>
+                          {selectedOptions[signal._id] === "Yes" && (
+                            <span className="ml-1">•</span>
+                          )}
+                        </button>
                       </div>
-                    ) : (
-                      <button
-                        className={`px-3 py-1 mb-3 text-sm flex items-center justify-center bg-violet-700 text-white rounded-full`}
-                        onClick={() => switchChain({ chainId: MONAD_CHAIN_ID })}
-                      >
-                        Switch to Monad
-                      </button>
-                    )}
+                    </div>
+                  )}
 
+                  {!signal.userSignal && chainId !== MONAD_CHAIN_ID && (
+                    <button
+                      className={`px-3 py-1 mb-3 text-sm flex items-center justify-center bg-violet-700 text-white rounded-full`}
+                      onClick={() => switchChain({ chainId: MONAD_CHAIN_ID })}
+                    >
+                      Switch to Monad
+                    </button>
+                  )}
+
+                  {signal.events.length > 0 && signal.events[0].length > 0 && (
                     <div className="flex flex-wrap items-center gap-2">
                       {signal.events.slice(0, 2).map((event, idx) => (
                         <div
@@ -909,31 +962,35 @@ const Signals = () => {
                         </div>
                       ))}
                     </div>
-                    <div className="text-xs text-gray-400 mt-2">
-                      {getTimeAgo(signal.created_at)}
-                    </div>
+                  )}
+
+                  <div className="text-xs text-gray-400 mt-2">
+                    {getTimeAgo(signal.created_at)}
                   </div>
-                ))}
+                </div>
+              ))}
             </div>
           </div>
-        </div>
 
-        {pastSignals.length > 0 && (
-          <div className="mb-6">
-            <div className="bg-white rounded-lg shadow p-4">
-              <div className="flex items-center m-4 px-4">
-                <span className="text-yellow-500 text-2xl mr-2">🕰️</span>
-                <span className="font-bold text-2xl">
-                  Your Signal Decisions
-                </span>
+          <div className="bg-white rounded-lg shadow p-4">
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex items-center">
+                <span className="text-gray-500 text-2xl mr-2">💸</span>
+                <span className="font-bold text-2xl">Sell Signals</span>
               </div>
-              <div>
-                {pastSignals.map((signal, index) => (
-                  <div
-                    key={index}
-                    className="flex flex-col bg-gray-50 m-4 p-4 rounded-lg"
-                  >
-                    <div className="flex justify-between items-center">
+              <span className="text-sm text-gray-500">
+                Page {currentPage} of {sellTotalPages}
+              </span>
+            </div>
+
+            <div className="space-y-6">
+              {sellSignals.map((signal, index) => (
+                <div
+                  key={index}
+                  className="border-b pb-4 last:border-b-0 last:pb-0"
+                >
+                  <Link href={`/signals/${signal._id}`}>
+                    <div className="flex justify-between items-center mb-3 cursor-pointer hover:bg-gray-50 p-3 rounded-lg transition-all duration-200 border border-gray-100 hover:border-violet-200 hover:shadow-sm group">
                       <div className="flex items-center">
                         <div className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0 relative mr-2">
                           <Image
@@ -946,30 +1003,100 @@ const Signals = () => {
                             className="object-cover rounded-full"
                           />
                         </div>
-                        <div className="flex flex-col">
-                          <span className="font-medium">
-                            {signal.signal_text}
-                          </span>
-                          <span className="text-xs text-gray-400">
-                            {getTimeAgo(signal.created_at)}
-                          </span>
-                        </div>
+                        <span className="font-medium text-gray-900 group-hover:text-violet-700 transition-colors">
+                          {signal.signal_text}
+                        </span>
+                        <svg
+                          className="w-4 h-4 ml-2 text-gray-400 group-hover:text-violet-500 transition-colors"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 5l7 7-7 7"
+                          />
+                        </svg>
                       </div>
-                      {signal.userSignal?.choice === "Yes" ? (
-                        <span className="text-xs px-2 py-1 rounded bg-green-200 text-green-700">
-                          Accepted
+                      <div className="flex items-center gap-2">
+                        {signal.userSignal?.choice && (
+                          <span
+                            className={`text-xs px-2 py-1 rounded ${
+                              signal.userSignal.choice === "Yes"
+                                ? "bg-green-200 text-green-700"
+                                : "bg-red-200 text-red-700"
+                            }`}
+                          >
+                            {signal.userSignal.choice === "Yes"
+                              ? "Accepted"
+                              : "Rejected"}
+                          </span>
+                        )}
+                        <span
+                          className={`text-xs px-2 py-1 rounded ${
+                            mapConfidenceScoreToRisk(signal.confidenceScore) ===
+                            "Moderate"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : mapConfidenceScoreToRisk(
+                                  signal.confidenceScore
+                                ) === "Conservative"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-red-100 text-red-800"
+                          }`}
+                        >
+                          {mapConfidenceScoreToRisk(signal.confidenceScore)}
                         </span>
-                      ) : signal.userSignal?.choice === "No" ? (
-                        <span className="text-xs px-2 py-1 rounded bg-red-200 text-red-700">
-                          Rejected
-                        </span>
-                      ) : (
-                        <span className="text-xs px-2 py-1 rounded bg-gray-200 text-gray-700">
-                          Expired
-                        </span>
-                      )}
+                      </div>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2 mt-3">
+                  </Link>
+
+                  {!signal.userSignal && chainId === MONAD_CHAIN_ID && (
+                    <div className="flex items-center mb-3">
+                      <div className="inline-flex rounded-full border border-gray-300 overflow-hidden">
+                        <button
+                          className={`px-3 py-1 text-sm flex items-center justify-center w-16 ${
+                            selectedOptions[signal._id] === "No"
+                              ? "bg-gray-200 text-gray-700"
+                              : "bg-white text-gray-500"
+                          }`}
+                          onClick={() => handleOptionSelect(signal._id, "No")}
+                        >
+                          <span>Refuse</span>
+                          {selectedOptions[signal._id] === "No" && (
+                            <span className="ml-1">•</span>
+                          )}
+                        </button>
+                        <button
+                          className={`px-3 py-1 text-sm flex items-center justify-center w-16 ${
+                            selectedOptions[signal._id] === "Yes" ||
+                            !selectedOptions[signal._id]
+                              ? "bg-violet-700 text-white"
+                              : "bg-white text-gray-500"
+                          }`}
+                          onClick={() => handleOptionSelect(signal._id, "Yes")}
+                        >
+                          <span>Trade</span>
+                          {selectedOptions[signal._id] === "Yes" && (
+                            <span className="ml-1">•</span>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {!signal.userSignal && chainId !== MONAD_CHAIN_ID && (
+                    <button
+                      className={`px-3 py-1 mb-3 text-sm flex items-center justify-center bg-violet-700 text-white rounded-full`}
+                      onClick={() => switchChain({ chainId: MONAD_CHAIN_ID })}
+                    >
+                      Switch to Monad
+                    </button>
+                  )}
+
+                  {signal.events.length > 0 && signal.events[0].length > 0 && (
+                    <div className="flex flex-wrap items-center gap-2">
                       {signal.events.slice(0, 2).map((event, idx) => (
                         <div
                           key={idx}
@@ -979,12 +1106,45 @@ const Signals = () => {
                         </div>
                       ))}
                     </div>
+                  )}
+
+                  <div className="text-xs text-gray-400 mt-2">
+                    {getTimeAgo(signal.created_at)}
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
           </div>
-        )}
+        </div>
+
+        {/* Pagination Controls */}
+        <div className="flex justify-center items-center space-x-2 mt-4 mb-6">
+          <button
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className={`px-3 py-1 rounded ${
+              currentPage === 1
+                ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                : "bg-violet-700 text-white hover:bg-violet-800"
+            }`}
+          >
+            Previous
+          </button>
+          <span className="text-gray-600">
+            Page {currentPage} of {Math.max(buyTotalPages, sellTotalPages)}
+          </span>
+          <button
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage >= Math.max(buyTotalPages, sellTotalPages)}
+            className={`px-3 py-1 rounded ${
+              currentPage >= Math.max(buyTotalPages, sellTotalPages)
+                ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                : "bg-violet-700 text-white hover:bg-violet-800"
+            }`}
+          >
+            Next
+          </button>
+        </div>
       </div>
 
       {/* CSS for ticker animation */}
@@ -1030,6 +1190,29 @@ const Signals = () => {
           }
         }
       `}</style>
+
+      {/* Add DEX Modal */}
+      {currentDexToken && (
+        <DexModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onConfirm={executeTrade}
+          token={currentDexToken}
+          amount={currentDexAmount}
+          type={currentDexType}
+          monBalance={monBalance}
+          monPrice={monPrice}
+          signalText={
+            buySignals.find((s) => s._id === currentSignalId)?.signal_text ||
+            sellSignals.find((s) => s._id === currentSignalId)?.signal_text
+          }
+          confidenceScore={
+            buySignals.find((s) => s._id === currentSignalId)
+              ?.confidenceScore ||
+            sellSignals.find((s) => s._id === currentSignalId)?.confidenceScore
+          }
+        />
+      )}
     </div>
   );
 };

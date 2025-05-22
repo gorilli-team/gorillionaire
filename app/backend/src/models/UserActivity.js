@@ -6,6 +6,7 @@ const userActivitySchema = new mongoose.Schema(
     address: {
       type: String,
       required: true,
+      unique: true,
       index: true,
     },
     nonce: {
@@ -29,6 +30,10 @@ const userActivitySchema = new mongoose.Schema(
           ref: "Intent",
         },
         txHash: String,
+        signalId: {
+          type: ObjectId,
+          ref: "GeneratedSignal",
+        },
       },
     ],
     streak: {

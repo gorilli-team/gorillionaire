@@ -7,6 +7,7 @@ import Image from "next/image";
 import { getTimeAgo } from "@/app/utils/time";
 import { nnsClient } from "@/app/providers";
 import Link from "next/link";
+import MobilePagination from "@/app/components/ui/MobilePagination";
 
 interface Investor {
   rank: number;
@@ -34,12 +35,11 @@ const isValidUrl = (urlString: string): boolean => {
 
 const LeaderboardComponent = () => {
   const [currentPage, setCurrentPage] = useState(1);
-  const [activitiesPage, setActivitiesPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredInvestors, setFilteredInvestors] = useState<Investor[]>([]);
   const [investors, setInvestors] = useState<Investor[]>([]);
-  const [activities, setActivities] = useState<Activity[]>([]);
   const [investorCount, setInvestorCount] = useState(0);
+  const [myData, setMyData] = useState<Investor | null>(null);
 
   const { address } = useAccount();
 
@@ -47,8 +47,6 @@ const LeaderboardComponent = () => {
     setCurrentPage(page);
     fetchLeaderboard(page);
   };
-
-  const onActivitiesPageChange = (page: number) => setActivitiesPage(page);
 
   const fetchLeaderboard = async (currentPage: number) => {
     try {
@@ -61,13 +59,14 @@ const LeaderboardComponent = () => {
         data.users?.map((u: Investor) => u.address)
       );
 
-      setInvestors(
+      const processedInvestors =
         data.users.map((u: Investor, i: number) => ({
           ...u,
           nadName: nadProfiles[i]?.primaryName,
           nadAvatar: nadProfiles[i]?.avatar || `/avatar_${i % 6}.png`,
-        })) || []
-      );
+        })) || [];
+
+      setInvestors(processedInvestors);
       setInvestorCount(data.pagination.total);
     } catch (error) {
       console.error("Error fetching leaderboard:", error);
@@ -82,11 +81,24 @@ const LeaderboardComponent = () => {
         `${process.env.NEXT_PUBLIC_API_URL}/activity/track/me?address=${address}`
       );
       const data = await response.json();
-      console.log("userActivity:", data);
-      setActivities(data?.userActivity.activitiesList || []);
+
+      // Get NNS profile for the current user
+      const nadProfile = await nnsClient.getProfiles([address]);
+
+      // Create investor object from /me response
+      const myInvestorData: Investor = {
+        rank: data.userActivity?.rank || 0, // Access rank from userActivity object
+        address: address,
+        nadName: nadProfile[0]?.primaryName,
+        nadAvatar:
+          nadProfile[0]?.avatar || `/avatar_${data.userActivity?.rank % 6}.png`,
+        points: data.userActivity?.points || 0,
+        activitiesList: data.userActivity?.activitiesList || [],
+      };
+
+      setMyData(myInvestorData);
     } catch (error) {
       console.error("Error fetching user activity:", error);
-      setActivities([]);
     }
   };
 
@@ -128,15 +140,6 @@ const LeaderboardComponent = () => {
   const totalInvestorPages = Math.ceil(investorCount / itemsPerPage);
   const currentInvestors = filteredInvestors; // Use directly, no slicing
 
-  // Pagination logic for activities - this stays as client-side pagination
-  const totalActivityPages = Math.ceil(activities.length / itemsPerPage);
-  const indexOfLastActivity = activitiesPage * itemsPerPage;
-  const indexOfFirstActivity = indexOfLastActivity - itemsPerPage;
-  const currentActivities = activities.slice(
-    indexOfFirstActivity,
-    indexOfLastActivity
-  );
-
   // Function to create empty rows to maintain height
   const getEmptyRows = <T,>(items: T[], itemsPerPage: number): null[] => {
     const currentItemCount = items.length;
@@ -148,7 +151,10 @@ const LeaderboardComponent = () => {
 
   // Empty rows for both tables
   const emptyInvestorRows = getEmptyRows(currentInvestors, itemsPerPage);
-  const emptyActivityRows = getEmptyRows(currentActivities, itemsPerPage);
+
+  // Use myData instead of finding in investors list
+  const myInvestor = myData;
+  const pageInvestors = currentInvestors;
 
   // Function to check if the current wallet address matches an investor
   const isCurrentUserAddress = (investorAddress: string): boolean => {
@@ -198,7 +204,7 @@ const LeaderboardComponent = () => {
                   <thead className="sticky top-0 bg-white z-10">
                     <tr className="text-left text-sm text-gray-500 border-b">
                       <th className="pb-2 pr-2 font-medium">RANK</th>
-                      <th className="pb-2 pr-2 font-medium">INVESTOR</th>
+                      <th className="pb-2 pr-2 font-medium">INVESTORZ</th>
                       <th className="pb-2 pr-2 font-medium text-center">
                         ACTIVITIES
                       </th>
@@ -207,7 +213,96 @@ const LeaderboardComponent = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {currentInvestors.map((investor) => (
+                    {myInvestor && (
+                      <>
+                        <tr className="bg-violet-100">
+                          <td className="py-4 h-16 text-gray-700 pr-2 pl-4">
+                            <div className="flex items-center">
+                              {myInvestor.rank <= 3 ? (
+                                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full mr-2 bg-amber-100 text-amber-800 font-bold">
+                                  {myInvestor.rank}
+                                </span>
+                              ) : (
+                                <span>{myInvestor.rank}</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-4 h-16 pr-2">
+                            <Link
+                              href={`/users/${myInvestor.address}`}
+                              className="flex items-center hover:opacity-80 transition-opacity"
+                            >
+                              <div className="w-8 h-8 rounded-full flex items-center justify-center mr-2 overflow-hidden">
+                                {myInvestor.nadAvatar &&
+                                myInvestor.nadAvatar !== "" &&
+                                isValidUrl(myInvestor.nadAvatar) ? (
+                                  <Image
+                                    src={myInvestor.nadAvatar}
+                                    alt="User Avatar"
+                                    width={32}
+                                    height={32}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <Image
+                                    src={`/avatar_${myInvestor.rank % 6}.png`}
+                                    alt="User Avatar"
+                                    width={32}
+                                    height={32}
+                                    className="w-full h-full object-cover"
+                                  />
+                                )}
+                              </div>
+                              <span className="text-gray-700 font-bold truncate max-w-[200px] md:max-w-full">
+                                {myInvestor?.nadName || myInvestor.address}
+                              </span>
+                            </Link>
+                          </td>
+                          <td className="py-4 h-16 text-center text-gray-700 pr-2">
+                            <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium rounded-full bg-blue-50 text-blue-700">
+                              {myInvestor.activitiesList.length}
+                            </span>
+                          </td>
+                          <td className="py-4 h-16 text-gray-700 pr-2 font-bold">
+                            {myInvestor.points}
+                          </td>
+                          <td className="py-4 h-16 text-gray-700">
+                            {myInvestor.activitiesList &&
+                              myInvestor.activitiesList.length > 0 && (
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-medium">
+                                    {
+                                      myInvestor.activitiesList[
+                                        myInvestor.activitiesList.length - 1
+                                      ].name
+                                    }
+                                    <span className="ml-2 text-xs font-normal text-blue-600">
+                                      +
+                                      {
+                                        myInvestor.activitiesList[
+                                          myInvestor.activitiesList.length - 1
+                                        ].points
+                                      }
+                                      pts
+                                    </span>
+                                  </span>
+                                  <span className="text-xs text-gray-500">
+                                    {getTimeAgo(
+                                      myInvestor.activitiesList[
+                                        myInvestor.activitiesList.length - 1
+                                      ].date
+                                    )}
+                                  </span>
+                                </div>
+                              )}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td colSpan={5} style={{ height: 16 }}></td>
+                        </tr>
+                      </>
+                    )}
+                    {pageInvestors.map((investor) => (
                       //log investor
                       <tr
                         key={investor.address}
@@ -266,7 +361,7 @@ const LeaderboardComponent = () => {
                                 />
                               )}
                             </div>
-                            <span className="text-gray-700 font-bold truncate max-w-[200px] md:max-w-full">
+                            <span className="text-gray-700 font-bold truncate max-w-[10px] md:max-w-full">
                               {investor?.nadName || investor.address}
                             </span>
                           </Link>
@@ -329,97 +424,186 @@ const LeaderboardComponent = () => {
 
                 {/* Mobile View */}
                 <div className="sm:hidden space-y-4">
-                  {currentInvestors.map((investor) => (
-                    <div
-                      key={investor.address}
-                      className={`border rounded-lg p-3 space-y-3 hover:border-gray-300 transition-colors ${
-                        isCurrentUserAddress(investor.address)
-                          ? "bg-violet-200"
-                          : ""
-                      }`}
-                    >
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center">
-                          {investor.rank <= 3 ? (
-                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full mr-2 bg-amber-100 text-amber-800 font-bold">
-                              {investor.rank}
+                  {myInvestor && (
+                    <>
+                      <div
+                        className="border rounded-lg px-3 py-2 bg-violet-100 border-violet-300"
+                        style={{ marginBottom: 8 }}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1">
+                            {myInvestor.rank <= 3 ? (
+                              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-800 font-bold text-xs">
+                                {myInvestor.rank}
+                              </span>
+                            ) : (
+                              <span className="text-gray-700 font-medium text-xs">
+                                {myInvestor.rank}
+                              </span>
+                            )}
+                            <div className="w-6 h-6 rounded-full flex items-center justify-center overflow-hidden">
+                              {myInvestor.nadAvatar &&
+                              myInvestor.nadAvatar !== "" &&
+                              isValidUrl(myInvestor.nadAvatar) ? (
+                                <Image
+                                  src={myInvestor.nadAvatar}
+                                  alt="User Avatar"
+                                  width={24}
+                                  height={24}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <Image
+                                  src={`/avatar_${myInvestor.rank % 6}.png`}
+                                  alt="User Avatar"
+                                  width={24}
+                                  height={24}
+                                  className="w-full h-full object-cover"
+                                />
+                              )}
+                            </div>
+                            <Link
+                              href={`/users/${myInvestor.address}`}
+                              className="text-gray-800 font-semibold text-xs hover:underline"
+                            >
+                              {myInvestor?.nadName || myInvestor.address}
+                            </Link>
+                          </div>
+                          <div className="flex flex-col items-end min-w-[40px]">
+                            <span className="text-violet-700 font-bold text-sm leading-tight">
+                              {myInvestor.points}
                             </span>
-                          ) : (
-                            <span className="mr-2 text-gray-700 font-medium">
-                              {investor.rank}
+                            <span className="text-[9px] text-gray-400 leading-none">
+                              pts
                             </span>
-                          )}
-                          <div className="w-7 h-7 rounded-full flex items-center justify-center mr-2 overflow-hidden">
-                            <Image
-                              src={`/avatar_${investor.rank % 6}.png`}
-                              alt="User Avatar"
-                              width={28}
-                              height={28}
-                              className="w-full h-full object-cover"
-                            />
                           </div>
                         </div>
-                        <div className="flex flex-col items-end">
-                          <span className="text-gray-900 font-bold">
-                            {investor.points}
-                          </span>
-                          <span className="text-xs text-gray-500">points</span>
-                        </div>
-                      </div>
 
-                      <div>
-                        <span className="text-xs text-gray-500 block mb-1">
-                          INVESTOR
-                        </span>
-                        <Link
-                          href={`/users/${investor.address}`}
-                          className="text-gray-700 font-medium text-sm break-all hover:opacity-80 transition-opacity"
-                        >
-                          {investor.address}
-                        </Link>
-                      </div>
-
-                      <div className="flex justify-between items-center pt-1">
-                        <div>
-                          <span className="text-xs text-gray-500 block mb-1">
-                            ACTIVITIES
+                        <div className="flex items-center justify-between mt-1">
+                          <span className="text-[10px] text-gray-400">
+                            {myInvestor.activitiesList.length} activities
                           </span>
-                          <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium rounded-full bg-blue-50 text-blue-700">
-                            {investor.activitiesList.length}
-                          </span>
-                        </div>
-
-                        {investor.activitiesList &&
-                          investor.activitiesList.length > 0 && (
-                            <div className="flex flex-col items-end">
-                              <span className="text-xs text-gray-500 block mb-1">
-                                LATEST ACTIVITY
-                              </span>
-                              <div className="text-right">
-                                <span className="text-sm font-medium">
+                          {myInvestor.activitiesList &&
+                            myInvestor.activitiesList.length > 0 && (
+                              <span className="text-[10px] text-gray-500 text-right">
+                                <span className="font-medium text-gray-700">
                                   {
-                                    investor.activitiesList[
-                                      investor.activitiesList.length - 1
+                                    myInvestor.activitiesList[
+                                      myInvestor.activitiesList.length - 1
                                     ].name
                                   }
                                 </span>
-                                <span className="ml-1 text-xs font-medium text-blue-600">
+                                <span className="ml-1 text-blue-600 font-medium">
                                   +
                                   {
-                                    investor.activitiesList[
-                                      investor.activitiesList.length - 1
+                                    myInvestor.activitiesList[
+                                      myInvestor.activitiesList.length - 1
                                     ].points
                                   }
                                 </span>
-                                <span className="text-xs text-gray-500 block">
+                                <span className="ml-1">
                                   {getTimeAgo(
-                                    investor.activitiesList[
-                                      investor.activitiesList.length - 1
+                                    myInvestor.activitiesList[
+                                      myInvestor.activitiesList.length - 1
                                     ].date
                                   )}
                                 </span>
-                              </div>
-                            </div>
+                              </span>
+                            )}
+                        </div>
+                      </div>
+                      <div style={{ height: 8 }}></div>
+                    </>
+                  )}
+                  {pageInvestors.map((investor) => (
+                    <div
+                      key={investor.address}
+                      className={`border rounded-lg px-3 py-2 bg-white hover:border-gray-300 transition-colors ${
+                        isCurrentUserAddress(investor.address)
+                          ? "bg-violet-100 border-violet-300"
+                          : ""
+                      }`}
+                      style={{ marginBottom: 8 }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1">
+                          {investor.rank <= 3 ? (
+                            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-800 font-bold text-xs">
+                              {investor.rank}
+                            </span>
+                          ) : (
+                            <span className="text-gray-700 font-medium text-xs">
+                              {investor.rank}
+                            </span>
+                          )}
+                          <div className="w-6 h-6 rounded-full flex items-center justify-center overflow-hidden">
+                            {investor.nadAvatar &&
+                            investor.nadAvatar !== "" &&
+                            isValidUrl(investor.nadAvatar) ? (
+                              <Image
+                                src={investor.nadAvatar}
+                                alt="User Avatar"
+                                width={24}
+                                height={24}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <Image
+                                src={`/avatar_${investor.rank % 6}.png`}
+                                alt="User Avatar"
+                                width={24}
+                                height={24}
+                                className="w-full h-full object-cover"
+                              />
+                            )}
+                          </div>
+                          <Link
+                            href={`/users/${investor.address}`}
+                            className="text-gray-800 font-semibold text-xs hover:underline"
+                          >
+                            {investor?.nadName || investor.address}
+                          </Link>
+                        </div>
+                        <div className="flex flex-col items-end min-w-[40px]">
+                          <span className="text-violet-700 font-bold text-sm leading-tight">
+                            {investor.points}
+                          </span>
+                          <span className="text-[9px] text-gray-400 leading-none">
+                            pts
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between mt-1">
+                        <span className="text-[10px] text-gray-400">
+                          {investor.activitiesList.length} activities
+                        </span>
+                        {investor.activitiesList &&
+                          investor.activitiesList.length > 0 && (
+                            <span className="text-[10px] text-gray-500 text-right">
+                              <span className="font-medium text-gray-700">
+                                {
+                                  investor.activitiesList[
+                                    investor.activitiesList.length - 1
+                                  ].name
+                                }
+                              </span>
+                              <span className="ml-1 text-blue-600 font-medium">
+                                +
+                                {
+                                  investor.activitiesList[
+                                    investor.activitiesList.length - 1
+                                  ].points
+                                }
+                              </span>
+                              <span className="ml-1">
+                                {getTimeAgo(
+                                  investor.activitiesList[
+                                    investor.activitiesList.length - 1
+                                  ].date
+                                )}
+                              </span>
+                            </span>
                           )}
                       </div>
                     </div>
@@ -437,182 +621,33 @@ const LeaderboardComponent = () => {
             </div>
           </div>
 
-          <div className="mt-3 sm:mt-4 flex flex-col sm:flex-row items-center justify-between px-1 sm:px-0">
-            <span className="text-sm text-gray-500 mb-3 sm:mb-0 font-bold">
-              <span className="font-normal">Showing</span>{" "}
+          <div className="mt-2 flex flex-col items-center w-full gap-1">
+            <span className="text-xs text-gray-500 text-center w-full">
+              Showing{" "}
               {investors.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}-
-              {Math.min(currentPage * itemsPerPage, investorCount)}{" "}
-              <span className="font-normal">of</span> {investorCount}
+              {Math.min(currentPage * itemsPerPage, investorCount)} of{" "}
+              {investorCount}
             </span>
-            <div className="flex-grow flex justify-center">
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalInvestorPages > 0 ? totalInvestorPages : 1}
-                onPageChange={onPageChange}
-                showIcons={true}
-              />
-            </div>
-            <div className="hidden sm:block sm:w-32"></div>
-          </div>
-        </div>
-
-        {/* Activity Section */}
-        <div className="bg-white rounded-lg shadow-sm p-1 sm:p-3 md:p-6 mt-4 sm:mt-6 mb-6">
-          <h2 className="text-lg sm:text-xl font-medium mb-3 sm:mb-4 ml-1 sm:ml-0">
-            My activities
-          </h2>
-
-          <div className="overflow-x-auto -mx-1 sm:-mx-3 md:-mx-6">
-            <div className="px-1 sm:px-3 md:px-6">
-              <div className="h-[300px] sm:h-[400px] md:h-[500px] lg:h-[680px] overflow-auto">
-                {/* Desktop/Tablet View */}
-                <table className="w-full border-collapse hidden sm:table">
-                  <thead className="sticky top-0 bg-white z-10">
-                    <tr className="text-left text-sm text-gray-500 border-b">
-                      <th className="pb-2 font-medium">ACTIVITY</th>
-                      <th className="pb-2 font-medium text-right">DATE</th>
-                      <th className="pb-2 font-medium text-right">POINTS</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {currentActivities.length > 0 ? (
-                      currentActivities.map((activity, index) => (
-                        <tr
-                          key={index}
-                          className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
-                        >
-                          <td className="py-4 h-16">
-                            <div className="flex items-center">
-                              <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center mr-3 text-blue-600">
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="h-4 w-4"
-                                  viewBox="0 0 20 20"
-                                  fill="currentColor"
-                                >
-                                  <path
-                                    fillRule="evenodd"
-                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                    clipRule="evenodd"
-                                  />
-                                </svg>
-                              </div>
-                              <span className="truncate max-w-[250px] md:max-w-full font-medium">
-                                {activity.name}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="py-4 h-16 text-right text-gray-500">
-                            {getTimeAgo(activity.date)}
-                          </td>
-                          <td className="py-4 h-16 text-right">
-                            <span className="inline-flex items-center justify-center px-2.5 py-1 text-xs font-medium rounded-full bg-green-50 text-green-700">
-                              +{activity.points} Points
-                            </span>
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr className="border-b border-gray-100">
-                        <td
-                          colSpan={3}
-                          className="py-8 text-center text-gray-500"
-                        >
-                          No activities yet
-                        </td>
-                      </tr>
-                    )}
-
-                    {/* Empty rows */}
-                    {emptyActivityRows.map((_, index) => (
-                      <tr
-                        key={`empty-${index}`}
-                        className="border-b border-gray-100"
-                      >
-                        <td className="h-16"></td>
-                        <td className="h-16"></td>
-                        <td className="h-16"></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-
-                {/* Mobile View */}
-                <div className="sm:hidden space-y-3">
-                  {currentActivities.length > 0 ? (
-                    currentActivities.map((activity, index) => (
-                      <div
-                        key={index}
-                        className="border rounded-lg p-3 hover:border-gray-300 transition-colors"
-                      >
-                        <div className="flex items-center mb-2">
-                          <div className="w-7 h-7 rounded-full bg-blue-50 flex items-center justify-center mr-2 text-blue-600">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-3.5 w-3.5"
-                              viewBox="0 0 20 20"
-                              fill="currentColor"
-                            >
-                              <path
-                                fillRule="evenodd"
-                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                clipRule="evenodd"
-                              />
-                            </svg>
-                          </div>
-                          <span className="font-medium text-gray-800">
-                            {activity.name}
-                          </span>
-                        </div>
-
-                        <div className="flex justify-between items-center mt-3">
-                          <div className="text-sm text-gray-500">
-                            {getTimeAgo(activity.date)}
-                          </div>
-                          <div>
-                            <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium rounded-full bg-green-50 text-green-700">
-                              +{activity.points} Points
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="py-8 text-center text-gray-500 border rounded-lg">
-                      No activities yet
-                    </div>
-                  )}
-
-                  {/* Empty state indicator for mobile if needed */}
-                  {emptyActivityRows.length > 0 &&
-                    currentActivities.length === 0 && (
-                      <div className="text-center text-gray-500 text-sm py-4">
-                        No more activities to display
-                      </div>
-                    )}
+            <div className="w-full overflow-x-auto">
+              <div className="flex justify-center min-w-[320px]">
+                <div className="w-full sm:hidden">
+                  <MobilePagination
+                    currentPage={currentPage}
+                    totalPages={totalInvestorPages > 0 ? totalInvestorPages : 1}
+                    onPageChange={onPageChange}
+                  />
+                </div>
+                <div className="hidden sm:block">
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalInvestorPages > 0 ? totalInvestorPages : 1}
+                    onPageChange={onPageChange}
+                    showIcons={true}
+                  />
                 </div>
               </div>
             </div>
-          </div>
-
-          <div className="mt-3 sm:mt-4 flex flex-col sm:flex-row items-center justify-between px-1 sm:px-0">
-            <span className="text-sm text-gray-500 mb-3 sm:mb-0">
-              <span className="font-normal">Showing</span>{" "}
-              <span className="font-bold">
-                {activities.length > 0 ? indexOfFirstActivity + 1 : 0}-
-                {Math.min(indexOfLastActivity, activities.length)}
-              </span>{" "}
-              <span className="font-normal">of</span>{" "}
-              <span className="font-bold">{activities.length}</span>
-            </span>
-            <div className="flex-grow flex justify-center">
-              <Pagination
-                currentPage={activitiesPage}
-                totalPages={totalActivityPages > 0 ? totalActivityPages : 1}
-                onPageChange={onActivitiesPageChange}
-                showIcons={true}
-              />
-            </div>
+            <hr className="w-full border-t border-gray-200 mt-2" />
           </div>
         </div>
       </div>

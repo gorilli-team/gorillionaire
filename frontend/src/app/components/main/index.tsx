@@ -14,12 +14,6 @@ interface MainProps {
 }
 
 export default function Main({ selectedPage, setSelectedPage }: MainProps) {
-  const account = useAccount();
-
-  useEffect(() => {
-    console.log("useAccount() Data:", account);
-  }, [account]);
-
   const renderContent = () => {
     switch (selectedPage) {
       case "Tokens":

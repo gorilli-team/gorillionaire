@@ -62,7 +62,7 @@ export default function RootLayout({
           {`new Crate({
               server: '1322537506427895859', // Gorillionaire
               channel: '1322537507115765823' // #🦍general
-          })`}
+            })`}
         </Script>
       </body>
     </html>

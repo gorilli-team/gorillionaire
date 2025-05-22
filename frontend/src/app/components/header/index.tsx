@@ -118,22 +118,14 @@ export default function Header() {
     }
 
     const wsUrl = `${process.env.NEXT_PUBLIC_API_URL}/events/notifications`;
-    console.log(`Connecting to WebSocket: ${wsUrl}`);
     wsRef.current = new WebSocket(wsUrl);
-
-    wsRef.current.onopen = () => {
-      console.log("WebSocket connection established");
-    };
 
     wsRef.current.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data) as Notification;
-        console.log("WebSocket notification received:", message);
 
         // Debug logging to see the address comparison
         const notificationAddress = message.data?.data?.userAddress;
-        console.log("Notification address:", notificationAddress);
-        console.log("Current user address:", userAddress);
 
         if (
           message.type === "NOTIFICATION" &&
@@ -145,8 +137,6 @@ export default function Header() {
           const { action, tokenAmount, tokenPrice, tokenSymbol } =
             message.data.data || {};
 
-          console.log("Address match, showing notification");
-
           // Choose emoji based on action
           const actionEmoji = action === "buy" ? "💰" : "💸";
 
@@ -157,22 +147,10 @@ export default function Header() {
 
           // Show toast notification with formatted message
           showCustomNotification(notificationMessage, "Trade Signal");
-        } else {
-          console.log(
-            "Not showing notification, address doesn't match or not a notification type"
-          );
         }
       } catch (error) {
         console.error("Error processing WebSocket message:", error);
       }
-    };
-
-    wsRef.current.onclose = () => {
-      console.log("WebSocket connection closed");
-    };
-
-    wsRef.current.onerror = (error) => {
-      console.error("WebSocket error:", error);
     };
 
     return () => {
@@ -183,13 +161,6 @@ export default function Header() {
       }
     };
   }, [authenticated, userAddress]);
-
-  // Handle address changes
-  useEffect(() => {
-    if (userAddress) {
-      console.log("Address updated:", userAddress);
-    }
-  }, [userAddress]);
 
   // Memoize fetchPrice to prevent unnecessary recreations
   const fetchPrice = useCallback(async () => {

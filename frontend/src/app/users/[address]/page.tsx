@@ -26,6 +26,7 @@ interface UserActivity {
     txHash: string;
     tokenPrice: number;
   };
+  signalId: string;
 }
 
 interface UserProfile {
@@ -52,7 +53,7 @@ const UserProfilePage = () => {
   const [selectedPage, setSelectedPage] = useState("Leaderboard");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 5;
 
   // Read NFT balance for the V2 contract
   const { data: v2NFTBalance } = useReadContract({
@@ -280,18 +281,6 @@ const UserProfilePage = () => {
                       </div>
 
                       <div className="flex flex-wrap items-center gap-2 mt-2">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-violet-100 text-violet-800">
-                          <svg
-                            className="w-3 h-3 mr-1"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                          >
-                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118l-2.799-2.034c-.784-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                          </svg>
-                          Rank {userProfile.rank}
-                          {getOrdinalSuffix(userProfile.rank)}
-                        </span>
-
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
                           <svg
                             className="w-3 h-3 mr-1"
@@ -388,7 +377,7 @@ const UserProfilePage = () => {
                 <div className="bg-white rounded-2xl shadow-lg p-6 h-full">
                   <div className="flex justify-between items-center mb-6">
                     <h2 className="text-2xl font-bold text-gray-900">
-                      Transaction History
+                      Activity History
                     </h2>
                   </div>
 
@@ -469,7 +458,21 @@ const UserProfilePage = () => {
                               </div>
 
                               {activity?.intentId && (
-                                <div className="mt-3 grid grid-cols-2 gap-2">
+                                <div className="mt-3 flex flex-row flex-wrap gap-2">
+                                  <div className="flex items-center space-x-2 bg-white p-2 rounded-lg shadow-sm border border-gray-100">
+                                    <span className="text-xs font-medium text-gray-500">
+                                      Action:
+                                    </span>
+                                    <span
+                                      className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                        activity.intentId.action === "buy"
+                                          ? "bg-green-100 text-green-800"
+                                          : "bg-red-100 text-red-800"
+                                      }`}
+                                    >
+                                      {activity.intentId.action.toUpperCase()}
+                                    </span>
+                                  </div>
                                   <div className="flex items-center space-x-2 bg-white p-2 rounded-lg shadow-sm border border-gray-100">
                                     <span className="text-xs font-medium text-gray-500">
                                       Token:
@@ -494,30 +497,17 @@ const UserProfilePage = () => {
                                       ${activity.intentId.tokenPrice}
                                     </span>
                                   </div>
-                                  <div className="flex items-center space-x-2 bg-white p-2 rounded-lg shadow-sm border border-gray-100">
-                                    <span className="text-xs font-medium text-gray-500">
-                                      Action:
-                                    </span>
-                                    <span
-                                      className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                                        activity.intentId.action === "buy"
-                                          ? "bg-green-100 text-green-800"
-                                          : "bg-red-100 text-red-800"
-                                      }`}
-                                    >
-                                      {activity.intentId.action.toUpperCase()}
-                                    </span>
-                                  </div>
                                 </div>
                               )}
 
-                              {activity.intentId?.txHash && (
-                                <div className="mt-2">
+                              <div className="flex flex-row justify-between items-center gap-2 mt-2">
+                                {activity.intentId?.txHash && (
                                   <a
                                     href={`https://testnet.monadexplorer.com/tx/${activity.intentId.txHash}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="inline-flex items-center text-xs text-violet-600 hover:text-violet-800 font-medium transition-colors duration-200"
+                                    style={{ flex: 1 }}
                                   >
                                     <svg
                                       className="w-3 h-3 mr-1"
@@ -534,8 +524,34 @@ const UserProfilePage = () => {
                                     </svg>
                                     View Transaction
                                   </a>
-                                </div>
-                              )}
+                                )}
+                                {activity.signalId && (
+                                  <a
+                                    href={`/signals/${activity.signalId}`}
+                                    className="inline-flex items-center text-xs text-violet-600 hover:text-violet-800 hover:underline font-medium transition-colors duration-200 justify-end"
+                                    style={{
+                                      flex: 1,
+                                      justifyContent: "flex-end",
+                                      textAlign: "right",
+                                    }}
+                                  >
+                                    <svg
+                                      className="w-4 h-4 mr-1"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth="2"
+                                        d="M9 5l7 7-7 7"
+                                      />
+                                    </svg>
+                                    View Related Signal
+                                  </a>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>

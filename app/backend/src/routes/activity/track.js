@@ -5,6 +5,7 @@ const UserActivity = require("../../models/UserActivity");
 const Intent = require("../../models/Intent");
 const { broadcastNotification } = require("../../websocket");
 const UserAuth = require("../../models/UserAuth");
+const { trackOnDiscordXpGained } = require("../../controllers/points");
 
 //track user signin
 router.post("/signin", async (req, res) => {
@@ -45,6 +46,7 @@ router.post("/signin", async (req, res) => {
         ],
       });
       await newUserActivity.save();
+      await trackOnDiscordXpGained("Account Connected", address, 50, 50);
       res.json({ message: "User activity created" });
     } else {
       //update user activity
@@ -83,7 +85,12 @@ router.post("/signin", async (req, res) => {
 
 router.post("/trade-points", async (req, res) => {
   try {
-    const { address, txHash, intentId } = req.body;
+    const { address, txHash, intentId, signalId } = req.body;
+
+    if (!signalId) {
+      return res.status(400).json({ error: "Signal ID is required" });
+    }
+
     const privyToken = req.headers.authorization.replace("Bearer ", "");
     if (!address || !txHash || !intentId) {
       return res
@@ -148,10 +155,14 @@ router.post("/trade-points", async (req, res) => {
       points: points,
       date: new Date(),
       intentId: intentId,
+      signalId: signalId,
       txHash: txHash,
     });
+    const totalPoints = userActivity.points + points;
     userActivity.points += points;
     await userActivity.save();
+
+    await trackOnDiscordXpGained("Trade", address, points, totalPoints);
 
     //update intent status to completed
     intent.status = "completed";
@@ -202,15 +213,15 @@ router.get("/points", async (req, res) => {
 
 router.get("/leaderboard", async (req, res) => {
   try {
-    const twoDaysAgo = new Date();
-    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
-
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
     const [users, total] = await Promise.all([
-      UserActivity.find().sort({ points: -1 }).skip(skip).limit(limit),
+      UserActivity.find()
+        .sort({ points: -1, createdAt: 1 })
+        .skip(skip)
+        .limit(limit),
       UserActivity.countDocuments(),
     ]);
 

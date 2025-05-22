@@ -10,6 +10,7 @@ import {
   RunnableSequence,
 } from "@langchain/core/runnables";
 import { MongoClient } from "mongodb";
+import sendTelegramNotification from "./telegram.js";
 
 // Environment variables
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
@@ -531,6 +532,11 @@ async function saveSignal(signal, events, tokenSymbol, parsedSignal) {
       signal_text: signal,
       events: events,
     };
+
+    // const message = `New Signal Generated: ${tokenSymbol} ${parsedSignal?.action} ${parsedSignal?.quantity} ${parsedSignal?.confidence}`;
+    // console.log("message", message);
+
+    // await sendTelegramNotification(message);
 
     const result = await generatedSignals.insertOne(data);
     console.log(
