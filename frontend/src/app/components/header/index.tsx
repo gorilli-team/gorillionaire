@@ -279,17 +279,6 @@ export default function Header() {
                   ${monPriceFormatted}
                 </span>
               </div>
-
-              <div className="hidden sm:flex items-center gap-1 ml-2">
-                <span className="text-xs text-violet-900">Powered by</span>
-                <Image
-                  src="/Pyth_Logotype_Dark.png"
-                  alt="Pyth"
-                  width={64}
-                  height={16}
-                  className="ml-1"
-                />
-              </div>
             </div>
           )}
 
