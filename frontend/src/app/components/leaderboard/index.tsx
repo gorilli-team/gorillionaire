@@ -204,7 +204,7 @@ const LeaderboardComponent = () => {
                   <thead className="sticky top-0 bg-white z-10">
                     <tr className="text-left text-sm text-gray-500 border-b">
                       <th className="pb-2 pr-2 font-medium">RANK</th>
-                      <th className="pb-2 pr-2 font-medium">INVESTORZ</th>
+                      <th className="pb-2 pr-2 font-medium">INVESTOR</th>
                       <th className="pb-2 pr-2 font-medium text-center">
                         ACTIVITIES
                       </th>
