@@ -46,7 +46,7 @@ router.post("/signin", async (req, res) => {
         ],
       });
       await newUserActivity.save();
-      await trackOnDiscordXpGained("Account Connected", address, 50);
+      await trackOnDiscordXpGained("Account Connected", address, 50, 50);
       res.json({ message: "User activity created" });
     } else {
       //update user activity
@@ -158,10 +158,11 @@ router.post("/trade-points", async (req, res) => {
       signalId: signalId,
       txHash: txHash,
     });
+    const totalPoints = userActivity.points + points;
     userActivity.points += points;
     await userActivity.save();
 
-    await trackOnDiscordXpGained("Trade", address, points);
+    await trackOnDiscordXpGained("Trade", address, points, totalPoints);
 
     //update intent status to completed
     intent.status = "completed";

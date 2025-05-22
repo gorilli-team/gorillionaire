@@ -12,6 +12,7 @@ async function awardRefuseSignalPoints(address, signalId) {
     throw new Error("User activity not found");
   }
 
+  const totalPoints = userActivity.points + 5;
   userActivity.points += 5;
   userActivity.activitiesList.push({
     name: "Signal Refused",
@@ -20,7 +21,7 @@ async function awardRefuseSignalPoints(address, signalId) {
     signalId: signalId,
   });
   await userActivity.save();
-  await trackOnDiscordXpGained("Signal Refused", address, 5);
+  await trackOnDiscordXpGained("Signal Refused", address, 5, totalPoints);
 }
 
 /**
@@ -55,7 +56,7 @@ const monadChain = defineChain({
   },
 });
 
-async function trackOnDiscordXpGained(action, address, points) {
+async function trackOnDiscordXpGained(action, address, points, totalPoints) {
   try {
     // Discord webhook URL (store this securely in environment variables)
     const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
@@ -70,24 +71,14 @@ async function trackOnDiscordXpGained(action, address, points) {
     const nnsClient = new NNS(viemClient);
     const nadProfile = await nnsClient.getProfiles([address]);
 
-    console.log("nadProfile", nadProfile);
-
     // Send a simple message to the Discord channel
     await webhook.send({
       content: `🦍 ${action}: \`${
         nadProfile && nadProfile[0].primaryName
           ? nadProfile[0].primaryName
           : address
-      }\` earned \`${points}\` points, check profile at https://app.gorillionai.re/users/${address} `,
+      }\` earned \`${points}\` points (Total: \`${totalPoints}\`), check profile at https://app.gorillionai.re/users/${address} `,
     });
-
-    console.log(
-      `Notification sent: ${
-        nadProfile && nadProfile[0].primaryName
-          ? nadProfile[0].primaryName
-          : address
-      }} ${action} ${points} XP`
-    );
   } catch (error) {
     console.error("Discord notification error:", error);
   }
