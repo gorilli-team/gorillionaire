@@ -83,7 +83,6 @@ class PriceOracle {
       const prices = await this.getTokenPrices(TOKENS);
 
       for (const priceData of prices) {
-        console.log({ priceData });
         const token = TOKENS.find(
           (t) => t.address.toLowerCase() === priceData.address.toLowerCase()
         );

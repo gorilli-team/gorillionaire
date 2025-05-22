@@ -13,15 +13,6 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.get("/:token", async (req, res) => {
-  try {
-    console.log("req.params.token", req.params.token);
-  } catch (error) {
-    console.error("Error fetching transfers:", error);
-    res.status(500).json({ error: "Failed to fetch transfers" });
-  }
-});
-
 // Example of how to broadcast a new event when it's created
 router.post("/", async (req, res) => {
   try {
