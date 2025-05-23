@@ -1,6 +1,7 @@
 import React from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { usePrivy } from "@privy-io/react-auth";
 
 interface SidebarProps {
   selectedPage: string;
@@ -12,6 +13,8 @@ export default function Sidebar({
   setSelectedPage,
 }: SidebarProps) {
   const router = useRouter();
+  const { user } = usePrivy();
+  const address = user?.wallet?.address;
 
   const handleGorillionaireClick = () => {
     window.location.reload();
@@ -19,7 +22,11 @@ export default function Sidebar({
 
   const handlePageChange = (page: string) => {
     setSelectedPage(page);
-    router.push(`/${page.toLowerCase()}`);
+    if (page === "Profile") {
+      router.push(`/users/${address}`);
+    } else {
+      router.push(`/${page.toLowerCase()}`);
+    }
   };
 
   return (
@@ -58,6 +65,17 @@ export default function Sidebar({
             >
               <i className="fa-solid fa-coins pr-2"></i>
               <span>Tokens</span>
+            </button>
+          </li>
+          <li>
+            <button
+              className={`w-full text-left px-3 py-2 rounded-lg hover:bg-gray-200 ${
+                selectedPage === "Profile" ? "bg-gray-200" : ""
+              }`}
+              onClick={() => handlePageChange("Profile")}
+            >
+              <i className="fa-solid fa-user pr-2"></i>
+              <span>Profile</span>
             </button>
           </li>
           <li>
