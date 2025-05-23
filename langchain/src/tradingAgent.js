@@ -208,20 +208,6 @@ function filterDocumentsByToken(docs, tokenSymbol) {
     }
   }
 
-  // Log what we're trying to filter for
-  console.log(`Filtering documents for token: ${tokenSymbol}`);
-  console.log(`Total documents before filtering: ${docs.length}`);
-
-  // Print a sample of the documents to see what we're working with
-  if (docs.length > 0) {
-    console.log(
-      "Sample document content (first 200 chars):",
-      docs[0].pageContent
-        ? docs[0].pageContent.substring(0, 200)
-        : "No pageContent found"
-    );
-  }
-
   // More aggressive filtering - only keep documents that are primarily about the target token
   const filteredDocs = docs.filter((doc) => {
     // Make sure doc has pageContent
@@ -234,11 +220,6 @@ function filterDocumentsByToken(docs, tokenSymbol) {
     const chogCount = (doc.pageContent.match(/\bCHOG\b/g) || []).length;
     const dakCount = (doc.pageContent.match(/\bDAK\b/g) || []).length;
     const yakiCount = (doc.pageContent.match(/\bYAKI\b/g) || []).length;
-
-    // Debugging output
-    console.log(
-      `Document token counts - CHOG: ${chogCount}, DAK: ${dakCount}, YAKI: ${yakiCount}`
-    );
 
     // Determine which token this document is primarily about
     let primaryToken = "NONE";
@@ -259,23 +240,15 @@ function filterDocumentsByToken(docs, tokenSymbol) {
 
     // Check if this document matches our target token
     const isMatch = primaryToken === tokenSymbol;
-    console.log(
-      `Document primary token: ${primaryToken}, Target: ${tokenSymbol}, Match: ${isMatch}`
-    );
 
     return isMatch;
   });
-
-  console.log(`Filtered documents count: ${filteredDocs.length}`);
 
   // If we have filtered docs, use them, otherwise fall back to original behavior
   // with an additional logging message
   if (filteredDocs.length > 0) {
     return filteredDocs;
   } else {
-    console.log(
-      `WARNING: No documents match token ${tokenSymbol}. Using all available documents.`
-    );
     return docs;
   }
 }
@@ -287,7 +260,6 @@ function createTradingChain(TEMPLATE) {
 
   // Extract token symbol from template for context filtering
   const tokenSymbol = extractTokenFromTemplate(TEMPLATE);
-  console.log(`Creating trading chain for token: ${tokenSymbol}`);
 
   // Modify the standalone question to include the token symbol
   const standaloneQuestionPrompt = PromptTemplate.fromTemplate(
@@ -305,15 +277,11 @@ function createTradingChain(TEMPLATE) {
     (prevResult) => {
       // Explicitly add token to query to help retrieval
       const enhancedQuery = `${prevResult.standalone_question} about ${tokenSymbol} token`;
-      console.log(`Enhanced retrieval query: ${enhancedQuery}`);
       return enhancedQuery;
     },
     async (query) => {
       try {
         const docs = await retriever.getRelevantDocuments(query);
-        console.log(
-          `Retrieved ${docs?.length || 0} documents for ${tokenSymbol}`
-        );
         return docs;
       } catch (error) {
         console.error(`Error retrieving documents for ${tokenSymbol}:`, error);
@@ -399,11 +367,6 @@ export async function getTradingSignal(question) {
         const tempResult = await chain.invoke({ question });
 
         if (!tempResult || !tempResult.answer) {
-          console.log(
-            `No valid result for ${extractTokenFromTemplate(
-              TEMPLATE
-            )}, skipping`
-          );
           continue;
         }
 
@@ -415,11 +378,6 @@ export async function getTradingSignal(question) {
           parsedSignal: signalInfo,
           confidence: signalInfo.confidence,
         });
-
-        // Log for debugging
-        console.log(
-          `Generated ${signalInfo.action} signal for ${signalInfo.symbol} with confidence ${signalInfo.confidence}`
-        );
       } catch (err) {
         console.error(
           `Error generating signal for template ${extractTokenFromTemplate(
@@ -439,19 +397,6 @@ export async function getTradingSignal(question) {
     // Find the result with the highest confidence score across all templates and signals
     allResults.sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
     const highestConfidenceResult = allResults[0];
-
-    console.log(
-      "All results sorted by confidence:",
-      allResults.map((r) => ({
-        symbol: r.parsedSignal.symbol,
-        action: r.parsedSignal.action,
-        confidence: r.confidence,
-      }))
-    );
-
-    console.log(
-      `Selected highest confidence result: ${highestConfidenceResult.parsedSignal.symbol} ${highestConfidenceResult.parsedSignal.action} with confidence ${highestConfidenceResult.confidence}`
-    );
 
     // Save only the highest confidence result to the database
     await saveSignal(
@@ -482,13 +427,6 @@ export async function generateBuySignal() {
     const answer = await getTradingSignal(
       "Give me the best trading signal you can deduce from the context you have. Make it a BUY signal. Range from 1000 to 5000, always add two decimals. Like 3000.00. Min Value for Yaki is 1000 Unit. Make sure the signal is different from previous ones. Remember that both BUY and SELL signals are equally important for making money in trading. Base your signal on the actual market data and events in the context."
     );
-
-    console.log(`[${timestamp}] TRADING SIGNAL:`);
-    console.log("-".repeat(50));
-    console.log(answer.signal.answer);
-    console.log("-".repeat(50));
-    console.log(`Token: ${answer.tokenSymbol}`);
-    console.log("-".repeat(50));
   } catch (error) {
     console.error(`[${timestamp}] Error generating signal:`, error);
   }
@@ -503,13 +441,6 @@ export async function generateSellSignal() {
     const answer = await getTradingSignal(
       "Give me the best trading signal you can deduce from the context you have. Make it a SELL signal. Make sure the signal is different from previous ones. Remember that both BUY and SELL signals are equally important for making money in trading. Base your signal on the actual market data and events in the context."
     );
-
-    console.log(`[${timestamp}] TRADING SIGNAL:`);
-    console.log("-".repeat(50));
-    console.log(answer.signal.answer);
-    console.log("-".repeat(50));
-    console.log(`Token: ${answer.tokenSymbol}`);
-    console.log("-".repeat(50));
   } catch (error) {
     console.error(`[${timestamp}] Error generating signal:`, error);
   }
@@ -533,18 +464,21 @@ async function saveSignal(signal, events, tokenSymbol, parsedSignal) {
       events: events,
     };
 
-    // const message = `New Signal Generated: ${tokenSymbol} ${parsedSignal?.action} ${parsedSignal?.quantity} ${parsedSignal?.confidence}`;
-    // console.log("message", message);
+    const message = `🚨 New Trading Signal Generated 🚨
 
-    // await sendTelegramNotification(message);
+Token: ${tokenSymbol}
+Action: ${parsedSignal?.action === "BUY" ? "🟢 BUY" : "🔴 SELL"}
+${
+  parsedSignal?.action === "BUY" ? "Suggested Amount:" : "Sell % of Holdings:"
+} ${parsedSignal?.quantity}
+Confidence Score: ${parsedSignal?.confidence}/10
+
+Generated at: ${new Date().toLocaleString()}
+Go to https://app.gorillionai.re/signals to see the signal`;
+
+    await sendTelegramNotification(message);
 
     const result = await generatedSignals.insertOne(data);
-    console.log(
-      `Highest confidence signal saved to MongoDB: ${result.insertedId}`
-    );
-    console.log(
-      `Token: ${tokenSymbol}, Action: ${parsedSignal?.action}, Confidence: ${parsedSignal?.confidence}`
-    );
   } catch (error) {
     console.error(`Error saving signal to MongoDB:`, error);
   } finally {
