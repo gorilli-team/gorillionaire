@@ -4,13 +4,13 @@ import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import { nnsClient } from "@/app/providers";
-import { getTimeAgo } from "@/app/utils/time";
-import { getTokenImage } from "@/app/utils/tokens";
+// import { getTimeAgo } from "@/app/utils/time";
+// import { getTokenImage } from "@/app/utils/tokens";
 import { HexString } from "@/app/types";
 import Sidebar from "@/app/components/sidebar";
 import Header from "@/app/components/header";
-import { Pagination } from "flowbite-react";
-import ActivitiesChart from "@/app/components/activities-chart";
+// import { Pagination } from "flowbite-react";
+// import ActivitiesChart from "@/app/components/activities-chart";
 import { useReadContract } from "wagmi";
 import { abi } from "@/app/abi/early-nft";
 import { NFT_ACCESS_ADDRESS } from "@/app/utils/constants";
@@ -48,11 +48,12 @@ interface UserProfile {
 const UserProfilePage = () => {
   const params = useParams();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [allActivities, setAllActivities] = useState<UserActivity[]>([]);
+  // const [allActivities, setAllActivities] = useState<UserActivity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedPage, setSelectedPage] = useState("Leaderboard");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
+  // const [currentPage, setCurrentPage] = useState(1);
+  const currentPage = 1;
   const itemsPerPage = 5;
 
   // Read NFT balance for the V2 contract
@@ -98,7 +99,8 @@ const UserProfilePage = () => {
           `${process.env.NEXT_PUBLIC_API_URL}/activity/track/me?address=${address}&limit=1000`
         );
         const data = await response.json();
-        setAllActivities(data.userActivity?.activitiesList || []);
+        console.log(data);
+        // setAllActivities(data.userActivity?.activitiesList || []);
       } catch (error) {
         console.error("Error fetching all activities:", error);
       }
@@ -110,9 +112,9 @@ const UserProfilePage = () => {
     }
   }, [params.address, currentPage, v2NFTBalance]);
 
-  const onPageChange = (page: number) => {
-    setCurrentPage(page);
-  };
+  // const onPageChange = (page: number) => {
+  //   setCurrentPage(page);
+  // };
 
   // Helper function to format address
   const formatAddress = (address: string) => {
@@ -191,28 +193,26 @@ const UserProfilePage = () => {
       </button>
 
       {/* Sidebar */}
-      <div
+      <aside
         className={`
-          fixed lg:static
+          fixed inset-y-0 left-0 z-40
+          w-72
+          transform transition-transform duration-300 ease-in-out
           ${
             isMobileMenuOpen
               ? "translate-x-0"
               : "-translate-x-full lg:translate-x-0"
           }
-          transition-transform duration-300 ease-in-out
-          z-40 lg:z-0
-          bg-white
-          shadow-xl lg:shadow-none
-          w-72 lg:w-auto
-          h-screen lg:h-auto
-          overflow-y-auto
+          bg-white shadow-xl lg:shadow-none
         `}
       >
-        <Sidebar
-          selectedPage={selectedPage}
-          setSelectedPage={setSelectedPage}
-        />
-      </div>
+        <div className="h-full overflow-y-auto">
+          <Sidebar
+            selectedPage={selectedPage}
+            setSelectedPage={setSelectedPage}
+          />
+        </div>
+      </aside>
 
       {/* Overlay */}
       {isMobileMenuOpen && (
@@ -223,20 +223,21 @@ const UserProfilePage = () => {
       )}
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col min-h-screen">
+      <main className="flex-1 lg:ml-72">
         <Header />
         <div className="flex-1 overflow-y-auto">
-          <div className="w-full px-4 py-8">
+          <div className="w-full px-4 pt-4 pb-8">
             {/* Two-column layout for desktop */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              {/* Left Column: Profile & Activity Chart */}
-              <div className="lg:col-span-6 space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+              {/* Left Column: Profile & Activity Chart - 3/5 width */}
+              <div className="lg:col-span-3 space-y-6">
                 {/* Profile Header */}
-                <div className="bg-white rounded-2xl shadow-lg px-10 py-4 transform transition-all duration-300 hover:shadow-xl">
-                  <div className="flex flex-row items-center flex-wrap gap-4">
-                    {/* Left Column: Avatar and Name */}
-                    <div className="flex flex-col items-center">
-                      <div className="relative mb-2">
+                <div className="bg-white rounded-2xl shadow-lg p-8 transform transition-all duration-300 hover:shadow-xl">
+                  {/* Top Section: Avatar, Name, Badges, and Social Buttons */}
+                  <div className="flex items-start justify-between mb-6">
+                    {/* Left: Avatar and Name */}
+                    <div className="flex items-center gap-4">
+                      <div className="relative">
                         <div className="w-20 h-20 rounded-full overflow-hidden border-4 border-violet-200 shadow-md">
                           <Image
                             src={
@@ -249,41 +250,69 @@ const UserProfilePage = () => {
                             className="w-full h-full object-cover"
                           />
                         </div>
-                        <div className="absolute -bottom-1 -right-1 bg-violet-600 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg text-sm">
-                          <span className="font-bold">{userProfile.rank}</span>
-                          <span className="text-xs">
-                            {getOrdinalSuffix(userProfile.rank)}
-                          </span>
-                        </div>
                       </div>
 
-                      <h1 className="text-xl font-bold text-gray-900 leading-tight">
-                        {userProfile.nadName ||
-                          formatAddress(userProfile.address)}
-                      </h1>
+                      <div>
+                        <h1 className="text-2xl font-bold text-gray-900 mb-1">
+                          {userProfile.nadName ||
+                            formatAddress(userProfile.address)}
+                        </h1>
 
-                      {userProfile.nadName && (
-                        <p className="text-gray-500 text-sm font-mono mt-0.5">
-                          {formatAddress(userProfile.address)}
-                        </p>
-                      )}
+                        {userProfile.nadName && (
+                          <p className="text-gray-500 text-sm font-mono mb-2">
+                            {formatAddress(userProfile.address)}
+                          </p>
+                        )}
+
+                        {/* Social Connection Buttons */}
+                        <div className="flex gap-2">
+                          <button className="flex items-center gap-2 px-3 py-1.5 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors">
+                            <svg
+                              className="w-4 h-4"
+                              viewBox="0 0 24 24"
+                              fill="currentColor"
+                            >
+                              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                            </svg>
+                            Connect X
+                          </button>
+                          <button className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors">
+                            <svg
+                              className="w-4 h-4"
+                              viewBox="0 0 24 24"
+                              fill="currentColor"
+                            >
+                              <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z" />
+                            </svg>
+                            Connect Discord
+                          </button>
+                        </div>
+                      </div>
                     </div>
 
-                    {/* Right Column: Points and Badges */}
-                    <div className="flex-1 flex flex-col items-end">
-                      <div className="p-3 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-xl text-center shadow-lg w-80">
-                        <div className="text-3xl font-bold text-white">
-                          {userProfile.points}
-                        </div>
-                        <div className="text-violet-100 text-sm">
-                          Total Points
-                        </div>
-                      </div>
+                    {/* Right: Badges */}
+                    <div className="flex gap-2">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
+                        <svg
+                          className="w-4 h-4 mr-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                        Verified
+                      </span>
 
-                      <div className="flex flex-wrap items-center gap-2 mt-2">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                      {userProfile.hasV2NFT && (
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-pink-100 text-pink-800">
                           <svg
-                            className="w-3 h-3 mr-1"
+                            className="w-4 h-4 mr-1"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -292,37 +321,123 @@ const UserProfilePage = () => {
                               strokeLinecap="round"
                               strokeLinejoin="round"
                               strokeWidth="2"
-                              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                              d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
                             />
                           </svg>
-                          Verified
+                          V2 Access
                         </span>
+                      )}
+                    </div>
+                  </div>
 
-                        {userProfile.hasV2NFT && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                            <svg
-                              className="w-3 h-3 mr-1"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth="2"
-                                d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
-                              />
-                            </svg>
-                            V2 Access
-                          </span>
-                        )}
+                  {/* Level Progress Bar */}
+                  <div className="mb-6">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm font-medium text-gray-700">
+                        Level 12
+                      </span>
+                      <span className="text-sm text-gray-500">
+                        {userProfile.points}/4,000 XP
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                      <div
+                        className="bg-gradient-to-r from-violet-500 to-indigo-600 h-2 rounded-full transition-all duration-300"
+                        style={{
+                          width: `${Math.min(
+                            (userProfile.points / 4000) * 100,
+                            100
+                          )}%`,
+                        }}
+                      ></div>
+                    </div>
+                  </div>
+
+                  {/* Stats Section */}
+                  <div className="grid grid-cols-3 gap-6">
+                    {/* Total Volume */}
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-500 mb-1">
+                        Total Volume
+                      </h3>
+                      <div className="text-2xl font-bold text-gray-900 mb-1">
+                        $1,721
+                      </div>
+                      <div className="flex items-center text-sm text-green-600">
+                        <svg
+                          className="w-4 h-4 mr-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M7 11l5-5m0 0l5 5m-5-5v12"
+                          />
+                        </svg>
+                        +$197 this week
+                      </div>
+                    </div>
+
+                    {/* Total Points */}
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-500 mb-1">
+                        Total Points
+                      </h3>
+                      <div className="text-2xl font-bold text-gray-900 mb-1">
+                        {userProfile.points.toLocaleString()}
+                      </div>
+                      <div className="flex items-center text-sm text-green-600">
+                        <svg
+                          className="w-4 h-4 mr-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M7 11l5-5m0 0l5 5m-5-5v12"
+                          />
+                        </svg>
+                        +386 points this week
+                      </div>
+                    </div>
+
+                    {/* Global Rank */}
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-500 mb-1">
+                        Global Rank
+                      </h3>
+                      <div className="text-2xl font-bold text-gray-900 mb-1">
+                        {userProfile.rank}
+                        {getOrdinalSuffix(userProfile.rank)}
+                      </div>
+                      <div className="flex items-center text-sm text-red-600">
+                        <svg
+                          className="w-4 h-4 mr-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M17 13l-5 5m0 0l-5-5m5 5V6"
+                          />
+                        </svg>
+                        2 positions this week
                       </div>
                     </div>
                   </div>
                 </div>
 
                 {/* Activities Chart Card */}
-                <div className="bg-white rounded-2xl shadow-lg p-6">
+                {/* <div className="bg-white rounded-2xl shadow-lg p-6">
                   <div className="flex justify-between items-center mb-6">
                     <h2 className="text-xl font-bold text-gray-900">
                       Activity Overview
@@ -336,7 +451,6 @@ const UserProfilePage = () => {
                     <ActivitiesChart activities={allActivities} />
                   </div>
 
-                  {/* Summary Stats */}
                   <div className="grid grid-cols-2 gap-4 mt-6">
                     <div className="p-4 bg-white rounded-xl border border-gray-200 shadow-sm">
                       <div className="text-sm text-gray-700 font-medium">
@@ -369,224 +483,17 @@ const UserProfilePage = () => {
                       </div>
                     </div>
                   </div>
-                </div>
+                </div> */}
               </div>
 
-              {/* Right Column: Activities List */}
-              <div className="lg:col-span-6">
-                <div className="bg-white rounded-2xl shadow-lg p-6 h-full">
-                  <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-2xl font-bold text-gray-900">
-                      Activity History
-                    </h2>
-                  </div>
-
-                  {/* Activities List */}
-                  <div className="space-y-4">
-                    {userProfile.activitiesList.length > 0 ? (
-                      userProfile.activitiesList.map((activity, index) => (
-                        <div
-                          key={index}
-                          className={`p-4 rounded-xl hover:shadow-md transition-all duration-300 border border-l-2 border-l-purple-500 border-gray-200"`}
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className="shrink-0 mt-1">
-                              <div
-                                className={`w-10 h-10 rounded-full flex items-center justify-center shadow-md bg-gradient-to-br from-violet-500 to-violet-600`}
-                              >
-                                {activity.intentId?.tokenSymbol ? (
-                                  <Image
-                                    src={getTokenImage(
-                                      activity.intentId.tokenSymbol
-                                    )}
-                                    alt={activity.intentId.tokenSymbol}
-                                    width={48}
-                                    height={48}
-                                    className="rounded-full"
-                                    onError={(e) => {
-                                      e.currentTarget.style.display = "none";
-                                      e.currentTarget.parentElement!.innerHTML = `
-                                        <span class="text-white font-bold">
-                                          ${activity.name
-                                            .charAt(0)
-                                            .toUpperCase()}
-                                        </span>
-                                      `;
-                                    }}
-                                  />
-                                ) : (
-                                  <span className="text-white font-bold">
-                                    {activity.name.charAt(0).toUpperCase()}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-
-                            <div className="flex-1">
-                              <div className="flex justify-between">
-                                <div>
-                                  <div className="font-semibold text-gray-900 flex items-center gap-2">
-                                    {activity.name}
-                                    {activity.intentId?.tokenSymbol && (
-                                      <div className="flex items-center gap-1.5 bg-gray-100 px-2 py-0.5 rounded-full">
-                                        <Image
-                                          src={`/tokens/${activity.intentId.tokenSymbol.toLowerCase()}.png`}
-                                          alt={activity.intentId.tokenSymbol}
-                                          width={16}
-                                          height={16}
-                                          className="rounded-full"
-                                          onError={(e) => {
-                                            e.currentTarget.style.display =
-                                              "none";
-                                          }}
-                                        />
-                                        <span className="text-xs font-medium text-gray-700">
-                                          {activity.intentId.tokenSymbol}
-                                        </span>
-                                      </div>
-                                    )}
-                                  </div>
-                                  <div className="text-xs text-gray-500">
-                                    {getTimeAgo(activity.date)}
-                                  </div>
-                                </div>
-                                <div>
-                                  <div className="inline-flex items-center px-2 py-1 bg-violet-100 text-violet-800 rounded-full text-xs font-medium">
-                                    +{activity.points} pts
-                                  </div>
-                                </div>
-                              </div>
-
-                              {activity?.intentId && (
-                                <div className="mt-3 flex flex-row flex-wrap gap-2">
-                                  <div className="flex items-center space-x-2 bg-white p-2 rounded-lg shadow-sm border border-gray-100">
-                                    <span className="text-xs font-medium text-gray-500">
-                                      Action:
-                                    </span>
-                                    <span
-                                      className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                                        activity.intentId.action === "buy"
-                                          ? "bg-green-100 text-green-800"
-                                          : "bg-red-100 text-red-800"
-                                      }`}
-                                    >
-                                      {activity.intentId.action.toUpperCase()}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center space-x-2 bg-white p-2 rounded-lg shadow-sm border border-gray-100">
-                                    <span className="text-xs font-medium text-gray-500">
-                                      Token:
-                                    </span>
-                                    <span className="text-xs font-semibold text-gray-900">
-                                      {activity.intentId.tokenSymbol}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center space-x-2 bg-white p-2 rounded-lg shadow-sm border border-gray-100">
-                                    <span className="text-xs font-medium text-gray-500">
-                                      Amount:
-                                    </span>
-                                    <span className="text-xs font-semibold text-gray-900">
-                                      {activity.intentId.tokenAmount}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center space-x-2 bg-white p-2 rounded-lg shadow-sm border border-gray-100">
-                                    <span className="text-xs font-medium text-gray-500">
-                                      Price:
-                                    </span>
-                                    <span className="text-xs font-semibold text-gray-900">
-                                      ${activity.intentId.tokenPrice}
-                                    </span>
-                                  </div>
-                                </div>
-                              )}
-
-                              <div className="flex flex-row justify-between items-center gap-2 mt-2">
-                                {activity.intentId?.txHash && (
-                                  <a
-                                    href={`https://testnet.monadexplorer.com/tx/${activity.intentId.txHash}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center text-xs text-violet-600 hover:text-violet-800 font-medium transition-colors duration-200"
-                                    style={{ flex: 1 }}
-                                  >
-                                    <svg
-                                      className="w-3 h-3 mr-1"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth="2"
-                                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                                      />
-                                    </svg>
-                                    View Transaction
-                                  </a>
-                                )}
-                                {activity.signalId && (
-                                  <a
-                                    href={`/signals/${activity.signalId}`}
-                                    className="inline-flex items-center text-xs text-violet-600 hover:text-violet-800 hover:underline font-medium transition-colors duration-200 justify-end"
-                                    style={{
-                                      flex: 1,
-                                      justifyContent: "flex-end",
-                                      textAlign: "right",
-                                    }}
-                                  >
-                                    <svg
-                                      className="w-4 h-4 mr-1"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth="2"
-                                        d="M9 5l7 7-7 7"
-                                      />
-                                    </svg>
-                                    View Related Signal
-                                  </a>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-center p-12 bg-gray-50 rounded-xl">
-                        <div className="text-5xl mb-4">📊</div>
-                        <h3 className="text-xl font-semibold text-gray-800 mb-2">
-                          No Activities Yet
-                        </h3>
-                        <p className="text-gray-600">
-                          This user has not recorded any activities yet.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Pagination */}
-                  {userProfile.pagination &&
-                    userProfile.pagination.totalPages > 1 && (
-                      <div className="mt-6">
-                        <Pagination
-                          currentPage={currentPage}
-                          totalPages={userProfile.pagination.totalPages}
-                          onPageChange={onPageChange}
-                          showIcons={true}
-                        />
-                      </div>
-                    )}
-                </div>
+              {/* Right Column: Empty - 2/5 width */}
+              <div className="lg:col-span-2">
+                {/* Empty column for future content */}
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 };
