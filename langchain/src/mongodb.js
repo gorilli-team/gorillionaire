@@ -32,36 +32,44 @@ export async function fetchData() {
     const transfers = db.collection("transfers");
     const pricedatas = db.collection("pricedatas");
 
-    const oneDayAgoUNIX = Math.floor(Date.now() / 1000) - 24 * 60 * 60;
-    const oneDayAgoISO = new Date();
-    oneDayAgoISO.setUTCDate(oneDayAgoISO.getUTCDate() - 1);
+    const oneHourAgoUNIX = Math.floor(Date.now() / 1000) - 60 * 60;
+    const oneHourAgoISO = new Date();
+    oneHourAgoISO.setUTCHours(oneHourAgoISO.getUTCHours() - 1);
 
+    console.log("oneHourAgoUNIX", oneHourAgoUNIX);
+    console.log("oneHourAgoISO", oneHourAgoISO);
     const spikesDocuments = await spikes
       .find({
         blockTimestamp: {
-          $gte: oneDayAgoUNIX,
+          $gte: oneHourAgoUNIX,
         },
       })
       .sort({ blockTimestamp: -1 })
       .toArray();
+
+    console.log("spikesDocuments", spikesDocuments.length);
 
     const transfersDocuments = await transfers
       .find({
         blockTimestamp: {
-          $gte: oneDayAgoUNIX,
+          $gte: oneHourAgoUNIX,
         },
       })
       .sort({ blockTimestamp: -1 })
       .toArray();
 
+    console.log("transfersDocuments", transfersDocuments.length);
+
     const pricedatasDocuments = await pricedatas
       .find({
         timestamp: {
-          $gte: oneDayAgoISO,
+          $gte: oneHourAgoISO,
         },
       })
       .sort({ blockTimestamp: -1 })
       .toArray();
+
+    console.log("pricedatasDocuments", pricedatasDocuments.length);
 
     if (
       spikesDocuments.length === 0 &&

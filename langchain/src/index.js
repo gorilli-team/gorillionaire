@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { fetchData, closeConnection } from "./mongodb.js";
-import { processAndStoreData } from "./vectorstore.js";
+import { processAndStoreData } from "./vectorStore.js";
 import { startSignalPolling } from "./tradingAgent.js";
 
 const DATA_POLLING_INTERVAL = 30 * 60 * 1000; // 30 minutes
@@ -9,8 +9,6 @@ async function fetchAndUpdateData() {
   try {
     console.log("Fetching data from MongoDB...");
     const data = await fetchData();
-
-    console.log("Data:", data);
 
     if (data === "") {
       console.log("No data found in MongoDB");
