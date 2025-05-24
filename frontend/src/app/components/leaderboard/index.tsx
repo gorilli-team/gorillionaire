@@ -17,6 +17,12 @@ interface Investor {
   nadAvatar?: string;
   points: number;
   activitiesList: Activity[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
 }
 
 interface Activity {
@@ -102,6 +108,12 @@ const LeaderboardComponent = () => {
           nadProfile[0]?.avatar || `/avatar_${data.userActivity?.rank % 6}.png`,
         points: data.userActivity?.points || 0,
         activitiesList: data.userActivity?.activitiesList || [],
+        pagination: data.userActivity?.pagination || {
+          total: 0,
+          page: 1,
+          limit: 10,
+          totalPages: 1,
+        },
       };
 
       setMyData(myInvestorData);
@@ -268,37 +280,26 @@ const LeaderboardComponent = () => {
                           </td>
                           <td className="py-4 h-16 text-center text-gray-700 pr-2">
                             <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium rounded-full bg-blue-50 text-blue-700">
-                              {myInvestor.activitiesList.length}
+                              {myInvestor.pagination.total}
                             </span>
                           </td>
                           <td className="py-4 h-16 text-gray-700 pr-2 font-bold">
                             {myInvestor.points}
                           </td>
                           <td className="py-4 h-16 text-gray-700">
-                            {myInvestor.activitiesList &&
-                              myInvestor.activitiesList.length > 0 && (
+                            {myInvestor.pagination &&
+                              myInvestor.pagination.total > 0 && (
                                 <div className="flex flex-col">
                                   <span className="text-sm font-medium">
-                                    {
-                                      myInvestor.activitiesList[
-                                        myInvestor.activitiesList.length - 1
-                                      ].name
-                                    }
+                                    {myInvestor.activitiesList[0].name}
                                     <span className="ml-2 text-xs font-normal text-blue-600">
-                                      +
-                                      {
-                                        myInvestor.activitiesList[
-                                          myInvestor.activitiesList.length - 1
-                                        ].points
-                                      }
+                                      +{myInvestor.activitiesList[0].points}
                                       pts
                                     </span>
                                   </span>
                                   <span className="text-xs text-gray-500">
                                     {getTimeAgo(
-                                      myInvestor.activitiesList[
-                                        myInvestor.activitiesList.length - 1
-                                      ].date
+                                      myInvestor.activitiesList[0].date
                                     )}
                                   </span>
                                 </div>
@@ -436,87 +437,84 @@ const LeaderboardComponent = () => {
                   {myInvestor && (
                     <>
                       <div
-                        className="border rounded-lg px-3 py-2 bg-violet-100 border-violet-300"
+                        className={`border rounded-lg px-4 py-3 bg-white hover:border-gray-300 transition-colors ${
+                          isCurrentUserAddress(myInvestor.address)
+                            ? "bg-violet-100 border-violet-300"
+                            : ""
+                        }`}
                         style={{ marginBottom: 8 }}
                       >
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-2">
                             {myInvestor.rank <= 3 ? (
-                              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-800 font-bold text-xs">
+                              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-100 text-amber-800 font-bold text-sm">
                                 {myInvestor.rank}
                               </span>
                             ) : (
-                              <span className="text-gray-700 font-medium text-xs">
+                              <span className="text-gray-700 font-medium text-sm">
                                 {myInvestor.rank}
                               </span>
                             )}
-                            <div className="w-6 h-6 rounded-full flex items-center justify-center overflow-hidden">
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden border border-gray-100">
                               {myInvestor.nadAvatar &&
                               myInvestor.nadAvatar !== "" &&
                               isValidUrl(myInvestor.nadAvatar) ? (
                                 <Image
                                   src={myInvestor.nadAvatar}
                                   alt="User Avatar"
-                                  width={24}
-                                  height={24}
+                                  width={32}
+                                  height={32}
                                   className="w-full h-full object-cover"
                                 />
                               ) : (
                                 <Image
                                   src={`/avatar_${myInvestor.rank % 6}.png`}
                                   alt="User Avatar"
-                                  width={24}
-                                  height={24}
+                                  width={32}
+                                  height={32}
                                   className="w-full h-full object-cover"
                                 />
                               )}
                             </div>
-                            <Link
-                              href={`/users/${myInvestor.address}`}
-                              className="text-gray-800 font-semibold text-xs hover:underline"
-                            >
-                              {myInvestor?.nadName ||
-                                shortenAddress(myInvestor.address)}
-                            </Link>
-                          </div>
-                          <div className="flex flex-col items-end min-w-[40px]">
-                            <span className="text-violet-700 font-bold text-sm leading-tight">
-                              Level {getLevelInfo(myInvestor.points).level}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center justify-between mt-1">
-                          <span className="text-[10px] text-gray-400">
-                            {myInvestor.activitiesList.length} activities
-                          </span>
-                          {myInvestor.activitiesList &&
-                            myInvestor.activitiesList.length > 0 && (
-                              <span className="text-[10px] text-gray-500 text-right">
-                                <span className="font-medium text-gray-700">
-                                  {
-                                    myInvestor.activitiesList[
-                                      myInvestor.activitiesList.length - 1
-                                    ].name
-                                  }
-                                </span>
-                                <span className="ml-1 text-blue-600 font-medium">
-                                  +
-                                  {
-                                    myInvestor.activitiesList[
-                                      myInvestor.activitiesList.length - 1
-                                    ].points
-                                  }
-                                </span>
-                                <span className="ml-1">
-                                  {getTimeAgo(
-                                    myInvestor.activitiesList[
-                                      myInvestor.activitiesList.length - 1
-                                    ].date
-                                  )}
-                                </span>
+                            <div className="flex flex-col">
+                              <Link
+                                href={`/users/${myInvestor.address}`}
+                                className="text-gray-800 font-semibold text-sm hover:underline"
+                              >
+                                {myInvestor?.nadName ||
+                                  shortenAddress(myInvestor.address)}
+                              </Link>
+                              <span className="text-[10px] text-gray-500">
+                                {myInvestor.pagination.total} activities
                               </span>
-                            )}
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-violet-700 font-bold text-sm">
+                                Level {getLevelInfo(myInvestor.points).level}
+                              </span>
+                              <span className="text-[10px] text-gray-500">
+                                ({myInvestor.points} pts)
+                              </span>
+                            </div>
+                            {myInvestor.activitiesList &&
+                              myInvestor.activitiesList.length > 0 && (
+                                <span className="text-[10px] text-gray-500 text-right mt-0.5">
+                                  <span className="font-medium text-gray-700">
+                                    {myInvestor.activitiesList[0].name}
+                                  </span>
+                                  <span className="ml-1 text-blue-600 font-medium">
+                                    +{myInvestor.activitiesList[0].points}
+                                  </span>
+                                  <span className="ml-1">
+                                    {getTimeAgo(
+                                      myInvestor.activitiesList[0].date
+                                    )}
+                                  </span>
+                                </span>
+                              )}
+                          </div>
                         </div>
                       </div>
                       <div style={{ height: 8 }}></div>
