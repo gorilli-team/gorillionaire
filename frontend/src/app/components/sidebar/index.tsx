@@ -67,6 +67,7 @@ export default function Sidebar({
               <span>Tokens</span>
             </button>
           </li>
+          {address && (
           <li>
             <button
               className={`w-full text-left px-3 py-2 rounded-lg hover:bg-gray-200 ${
@@ -78,6 +79,7 @@ export default function Sidebar({
               <span>Profile</span>
             </button>
           </li>
+          )}
           <li>
             <button
               className={`w-full text-left px-3 py-2 rounded-lg hover:bg-gray-200 ${
