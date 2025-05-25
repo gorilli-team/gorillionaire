@@ -63,7 +63,7 @@ export function getXpProgress(currentXp: number): number {
 }
 
 export function getXpForNextLevel(currentXp: number): number {
-  const { level, xpRequired, xpForNextLevel } = getLevelInfo(currentXp);
+  const { level, xpForNextLevel } = getLevelInfo(currentXp);
   return level < MAX_LEVEL ? xpForNextLevel : 0;
 }
 
