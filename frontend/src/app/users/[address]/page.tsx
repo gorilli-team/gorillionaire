@@ -199,27 +199,25 @@ const UserProfilePage = () => {
         </svg>
       </button>
 
-      {/* Sidebar */}
-      <aside
+      {/* Sidebar with adjusted width and positioning */}
+      <div
         className={`
-          fixed inset-y-0 left-0 z-40
-          w-72
-          transform transition-transform duration-300 ease-in-out
-          ${
-            isMobileMenuOpen
-              ? "translate-x-0"
-              : "-translate-x-full lg:translate-x-0"
-          }
-          bg-white shadow-xl lg:shadow-none
+          fixed lg:static
+          w-64
+          h-full
+          ${isMobileMenuOpen ? "left-0" : "-left-64 lg:left-0"}
+          top-0
+          z-40 lg:z-0
+          bg-white
+          shadow-xl lg:shadow-none
+          transition-all duration-300 ease-in-out
         `}
       >
-        <div className="h-full overflow-y-auto">
-          <Sidebar
-            selectedPage={selectedPage}
-            setSelectedPage={setSelectedPage}
-          />
-        </div>
-      </aside>
+        <Sidebar
+          selectedPage={selectedPage}
+          setSelectedPage={setSelectedPage}
+        />
+      </div>
 
       {/* Overlay */}
       {isMobileMenuOpen && (
@@ -230,7 +228,7 @@ const UserProfilePage = () => {
       )}
 
       {/* Main content */}
-      <main className="flex-1 lg:ml-72">
+      <main className="flex-1">
         <Header />
         <div className="flex-1 overflow-y-auto">
           <div className="w-full px-4 pt-4 pb-8">
