@@ -233,11 +233,11 @@ const UserProfilePage = () => {
         <div className="flex-1 overflow-y-auto">
           <div className="w-full px-4 pt-4 pb-8">
             {/* Two-column layout for desktop */}
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
               {/* Left Column: Profile & Activity Chart - 3/5 width */}
               <div className="lg:col-span-3 space-y-6">
                 {/* Profile Header */}
-                <div className="bg-white rounded-2xl shadow-lg p-8 transform transition-all duration-300 hover:shadow-xl">
+                <div className="bg-white rounded-lg shadow-lg p-8 transform transition-all duration-300 hover:shadow-xl">
                   {/* Top Section: Avatar, Name, Badges, and Social Buttons */}
                   <div className="flex items-start justify-between mb-6">
                     {/* Left: Avatar and Name */}
@@ -444,60 +444,23 @@ const UserProfilePage = () => {
                     </div>
                   </div>
                 </div>
-
-                {/* Activities Chart Card */}
-                {/* <div className="bg-white rounded-2xl shadow-lg p-6">
-                  <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-xl font-bold text-gray-900">
-                      Activity Overview
-                    </h2>
-                    <span className="px-3 py-1 bg-violet-100 text-violet-800 rounded-full text-sm font-medium">
-                      {userProfile.pagination?.total || 0} Total
-                    </span>
-                  </div>
-
-                  <div className="bg-gray-50 rounded-xl">
-                    <ActivitiesChart activities={allActivities} />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 mt-6">
-                    <div className="p-4 bg-white rounded-xl border border-gray-200 shadow-sm">
-                      <div className="text-sm text-gray-700 font-medium">
-                        Buy Transactions
-                      </div>
-                      <div className="flex items-center mt-1">
-                        <span className="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
-                        <span className="text-2xl font-bold text-gray-900">
-                          {
-                            allActivities.filter(
-                              (a) => a.intentId?.action === "buy"
-                            ).length
-                          }
-                        </span>
-                      </div>
-                    </div>
-                    <div className="p-4 bg-white rounded-xl border border-gray-200 shadow-sm">
-                      <div className="text-sm text-gray-700 font-medium">
-                        Sell Transactions
-                      </div>
-                      <div className="flex items-center mt-1">
-                        <span className="w-3 h-3 bg-red-500 rounded-full mr-2"></span>
-                        <span className="text-2xl font-bold text-gray-900">
-                          {
-                            allActivities.filter(
-                              (a) => a.intentId?.action === "sell"
-                            ).length
-                          }
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div> */}
               </div>
 
               {/* Right Column: Empty - 2/5 width */}
               <div className="lg:col-span-2">
                 {/* Empty column for future content */}
+                <div className="bg-white rounded-lg shadow-lg p-8 transform transition-all duration-300 hover:shadow-xl">
+                  <h2 className="text-xl font-bold text-gray-900">
+                    Activity Overview
+                  </h2>
+                  <div className="bg-gray-50 rounded-xl">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
