@@ -286,7 +286,7 @@ const LeaderboardComponent = () => {
                           <td className="py-4 h-16 text-gray-700 pr-2 font-bold">
                             <div className="flex items-center gap-1.5">
                               <span>{myInvestor.points}</span>
-                              <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium rounded-full bg-violet-50 text-violet-700">
+                              <span className="inline-flex items-center justify-center px-2 py-0.5 text-[10px] font-medium rounded-full bg-white border border-violet-200 text-violet-700">
                                 Level {getLevelInfo(myInvestor.points).level}
                               </span>
                             </div>
@@ -389,7 +389,7 @@ const LeaderboardComponent = () => {
                         <td className="py-4 h-16 text-gray-700 pr-2 font-bold">
                           <div className="flex items-center gap-1.5">
                             <span>{investor.points}</span>
-                            <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium rounded-full bg-violet-50 text-violet-700">
+                            <span className="inline-flex items-center justify-center px-2 py-0.5 text-[10px] font-medium rounded-full bg-white border border-violet-200 text-violet-700">
                               Level {getLevelInfo(investor.points).level}
                             </span>
                           </div>
@@ -503,7 +503,7 @@ const LeaderboardComponent = () => {
                               <span className="text-violet-700 font-bold text-sm">
                                 {myInvestor.points} pts
                               </span>
-                              <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium rounded-full bg-violet-50 text-violet-700">
+                              <span className="inline-flex items-center justify-center px-2 py-0.5 text-[10px] font-medium rounded-full bg-white border border-violet-200 text-violet-700">
                                 Level {getLevelInfo(myInvestor.points).level}
                               </span>
                             </div>
@@ -588,7 +588,7 @@ const LeaderboardComponent = () => {
                             <span className="text-violet-700 font-bold text-sm">
                               {investor.points} pts
                             </span>
-                            <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium rounded-full bg-violet-50 text-violet-700">
+                            <span className="inline-flex items-center justify-center px-2 py-0.5 text-[10px] font-medium rounded-full bg-white border border-violet-200 text-violet-700">
                               Level {getLevelInfo(investor.points).level}
                             </span>
                           </div>
