@@ -284,7 +284,12 @@ const LeaderboardComponent = () => {
                             </span>
                           </td>
                           <td className="py-4 h-16 text-gray-700 pr-2 font-bold">
-                            {myInvestor.points}
+                            <div className="flex items-center gap-1.5">
+                              <span>{myInvestor.points}</span>
+                              <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium rounded-full bg-violet-50 text-violet-700">
+                                Level {getLevelInfo(myInvestor.points).level}
+                              </span>
+                            </div>
                           </td>
                           <td className="py-4 h-16 text-gray-700">
                             {myInvestor.pagination &&
@@ -382,7 +387,12 @@ const LeaderboardComponent = () => {
                           </span>
                         </td>
                         <td className="py-4 h-16 text-gray-700 pr-2 font-bold">
-                          {investor.points}
+                          <div className="flex items-center gap-1.5">
+                            <span>{investor.points}</span>
+                            <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium rounded-full bg-violet-50 text-violet-700">
+                              Level {getLevelInfo(investor.points).level}
+                            </span>
+                          </div>
                         </td>
                         <td className="py-4 h-16 text-gray-700">
                           {investor.activitiesList &&
@@ -433,7 +443,7 @@ const LeaderboardComponent = () => {
                 </table>
 
                 {/* Mobile View */}
-                <div className="sm:hidden space-y-4">
+                <div className="sm:hidden space-y-3">
                   {myInvestor && (
                     <>
                       <div
@@ -442,7 +452,6 @@ const LeaderboardComponent = () => {
                             ? "bg-violet-100 border-violet-300"
                             : ""
                         }`}
-                        style={{ marginBottom: 8 }}
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
@@ -492,10 +501,10 @@ const LeaderboardComponent = () => {
                           <div className="flex flex-col items-end">
                             <div className="flex items-center gap-1.5">
                               <span className="text-violet-700 font-bold text-sm">
-                                Level {getLevelInfo(myInvestor.points).level}
+                                {myInvestor.points} pts
                               </span>
-                              <span className="text-[10px] text-gray-500">
-                                ({myInvestor.points} pts)
+                              <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium rounded-full bg-violet-50 text-violet-700">
+                                Level {getLevelInfo(myInvestor.points).level}
                               </span>
                             </div>
                             {myInvestor.activitiesList &&
@@ -528,7 +537,6 @@ const LeaderboardComponent = () => {
                           ? "bg-violet-100 border-violet-300"
                           : ""
                       }`}
-                      style={{ marginBottom: 8 }}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -578,10 +586,10 @@ const LeaderboardComponent = () => {
                         <div className="flex flex-col items-end">
                           <div className="flex items-center gap-1.5">
                             <span className="text-violet-700 font-bold text-sm">
-                              Level {getLevelInfo(investor.points).level}
+                              {investor.points} pts
                             </span>
-                            <span className="text-[10px] text-gray-500">
-                              ({investor.points} pts)
+                            <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium rounded-full bg-violet-50 text-violet-700">
+                              Level {getLevelInfo(investor.points).level}
                             </span>
                           </div>
                           {investor.activitiesList &&
