@@ -166,6 +166,21 @@ router.post("/user-signal", async (req, res) => {
     return res.status(400).json({ error: "User not found" });
   }
 
+  if (choice === "No") {
+    //check if user has already 5 No signals in the last 24 hours
+    const userSignals = await UserSignal.find({
+      userAddress,
+      choice: "No",
+      created_at: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+    });
+
+    if (userSignals.length >= 5) {
+      return res
+        .status(400)
+        .json({ error: "User has already 5 No signals in the last 24 hours" });
+    }
+  }
+
   const userSignal = await UserSignal.findOne({
     userAddress,
     signalId,

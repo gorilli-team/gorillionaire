@@ -566,11 +566,9 @@ export default function SignalDetails() {
 
         await onYes(token, amount, signal.type as "Buy" | "Sell");
       } else {
-        onNo();
-
         // Only make API call for "No" option, "Yes" is handled in executeTrade
         const privyToken = Cookies.get("privy-token");
-        await fetch(
+        const response = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/signals/generated-signals/user-signal`,
           {
             method: "POST",
@@ -585,6 +583,13 @@ export default function SignalDetails() {
             }),
           }
         );
+
+        if (response.status === 400) {
+          toast.error("You have already 5 No signals in the last 24 hours");
+          return;
+        } else {
+          onNo();
+        }
       }
     },
     [signal, tokens, onYes, onNo, user?.wallet?.address]

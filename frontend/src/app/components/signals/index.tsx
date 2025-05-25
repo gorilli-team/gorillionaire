@@ -668,10 +668,8 @@ const Signals = () => {
         setCurrentSignalId(signalId);
         await onYes(token, amount, signal.type);
       } else {
-        onNo(signalId);
-
         const privyToken = Cookies.get("privy-token");
-        await fetch(
+        const response = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/signals/generated-signals/user-signal`,
           {
             method: "POST",
@@ -686,6 +684,13 @@ const Signals = () => {
             }),
           }
         );
+
+        if (response.status === 400) {
+          toast.error("You have already 5 No signals in the last 24 hours");
+          return;
+        }
+
+        onNo(signalId);
       }
     },
     [
