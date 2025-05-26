@@ -21,8 +21,6 @@ router.get("/user/:userAddress", async (req, res) => {
     const userAddress = req.params.userAddress;
     const data = await retrieveAddressTokens({ address: userAddress });
 
-    console.log(data);
-
     res.json(data);
   } catch (error) {
     console.error("Error fetching holders:", error);

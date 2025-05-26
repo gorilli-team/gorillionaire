@@ -19,15 +19,10 @@ async function startServer() {
       .join("/");
     const connectionString = `${cleanConnectionString}/signals`;
 
-    console.log("Attempting to connect to gorillionaire database...");
-
     await mongoose.connect(connectionString, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });
-
-    // Verify connection
-    console.log("Connected to database:", mongoose.connection.db.databaseName);
 
     // Create HTTP server
     const server = http.createServer(app);
@@ -41,7 +36,6 @@ async function startServer() {
     // Start server
     server.listen(PORT, () => {
       console.log(`HTTP server running on port ${PORT}`);
-      console.log(`WebSocket server initialized`);
     });
 
     // Error handling for the server

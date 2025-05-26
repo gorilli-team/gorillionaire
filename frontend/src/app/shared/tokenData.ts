@@ -19,7 +19,6 @@ export const fetchAllTokens = async () => {
     `${process.env.NEXT_PUBLIC_API_URL}/events/token`
   );
   const data = await response.json();
-  console.log("data", data);
   return data;
 };
 

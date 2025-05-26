@@ -36,8 +36,6 @@ export async function fetchData() {
     const oneHourAgoISO = new Date();
     oneHourAgoISO.setUTCHours(oneHourAgoISO.getUTCHours() - 1);
 
-    console.log("oneHourAgoUNIX", oneHourAgoUNIX);
-    console.log("oneHourAgoISO", oneHourAgoISO);
     const spikesDocuments = await spikes
       .find({
         blockTimestamp: {
@@ -46,8 +44,6 @@ export async function fetchData() {
       })
       .sort({ blockTimestamp: -1 })
       .toArray();
-
-    console.log("spikesDocuments", spikesDocuments.length);
 
     const transfersDocuments = await transfers
       .find({
@@ -58,8 +54,6 @@ export async function fetchData() {
       .sort({ blockTimestamp: -1 })
       .toArray();
 
-    console.log("transfersDocuments", transfersDocuments.length);
-
     const pricedatasDocuments = await pricedatas
       .find({
         timestamp: {
@@ -68,8 +62,6 @@ export async function fetchData() {
       })
       .sort({ blockTimestamp: -1 })
       .toArray();
-
-    console.log("pricedatasDocuments", pricedatasDocuments.length);
 
     if (
       spikesDocuments.length === 0 &&

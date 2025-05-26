@@ -110,8 +110,6 @@ router.post("/", async (req, res) => {
 
 router.get("/:token", async (req, res) => {
   try {
-    console.log("req.params.token", req.params.token);
-
     // Get pagination parameters from query string
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 25;

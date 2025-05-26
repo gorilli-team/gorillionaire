@@ -39,12 +39,6 @@ const retrieveTokenHolders = async ({
       { new: true, upsert: true }
     );
 
-    if (updatedTokenHolders) {
-      console.log("Token holders updated successfully");
-    } else {
-      console.log("Token holders created successfully");
-    }
-
     return response.data;
   } catch (error) {
     console.error(

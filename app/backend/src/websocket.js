@@ -11,8 +11,6 @@ function initWebSocketServer(server) {
 
   wss.on("connection", (ws, req) => {
     const pathname = url.parse(req.url).pathname;
-    console.log(`WebSocket connection established: ${pathname}`);
-
     // Extract token name from URL path
     // Expected format: /events/token/TokenName or /events/notifications
     const pathParts = pathname.split("/");
@@ -34,8 +32,6 @@ function initWebSocketServer(server) {
           timestamp: new Date().toISOString(),
         })
       );
-
-      console.log(`Client subscribed to token: ${tokenName}`);
     } else if (pathname === "/events/notifications") {
       // Store client with notifications subscription
       clients.set(ws, { notifications: true });
@@ -48,8 +44,6 @@ function initWebSocketServer(server) {
           timestamp: new Date().toISOString(),
         })
       );
-
-      console.log("Client subscribed to notifications");
     } else {
       ws.send(
         JSON.stringify({
@@ -64,7 +58,6 @@ function initWebSocketServer(server) {
     ws.on("message", (message) => {
       try {
         const data = JSON.parse(message);
-        console.log("Received message:", data);
 
         // Handle ping/pong for keeping connection alive
         if (data.type === "PING") {
@@ -82,7 +75,6 @@ function initWebSocketServer(server) {
 
     // Handle client disconnect
     ws.on("close", () => {
-      console.log("Client disconnected");
       clients.delete(ws);
     });
 
@@ -111,8 +103,6 @@ function initWebSocketServer(server) {
 
 // Function to broadcast event to subscribed clients
 function broadcastEvent(tokenName, event) {
-  console.log(`Broadcasting event for ${tokenName}:`, event);
-
   let recipientCount = 0;
 
   clients.forEach((client, ws) => {
@@ -127,14 +117,10 @@ function broadcastEvent(tokenName, event) {
       recipientCount++;
     }
   });
-
-  console.log(`Event broadcast to ${recipientCount} clients`);
 }
 
 // Function to broadcast notifications to subscribed clients
 function broadcastNotification(notification) {
-  console.log("Broadcasting notification:", notification);
-
   let recipientCount = 0;
 
   clients.forEach((client, ws) => {
@@ -149,8 +135,6 @@ function broadcastNotification(notification) {
       recipientCount++;
     }
   });
-
-  console.log(`Notification broadcast to ${recipientCount} clients`);
 }
 
 module.exports = {

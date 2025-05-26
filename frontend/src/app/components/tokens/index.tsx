@@ -109,7 +109,6 @@ const Tokens = () => {
         const data = await response.json();
 
         if (data.success && data.data) {
-          console.log({ data: data.data });
           // Transform the data into the format expected by the chart
           const chartData = data.data.map(
             (item: { timestamp: string; price: number }) => {

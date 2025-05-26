@@ -37,11 +37,9 @@ function initTokenHoldersCron() {
   // Run every hour at minute 0
   return cron.schedule("0 * * * *", async () => {
     try {
-      console.log("Fetching token holders...");
       for (const token of tokenContractAddresses) {
         await fetchTokenHolders(token.contractAddress, token.tokenName);
       }
-      console.log("Successfully fetched token holders");
     } catch (error) {
       console.error("Failed to fetch token holders:", error);
     }

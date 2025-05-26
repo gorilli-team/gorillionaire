@@ -133,7 +133,6 @@ router.get("/0x-quote", async (req, res) => {
     const quote = await getQuote(token, amount, type, userAddress);
     res.status(200).json(quote);
   } catch (e) {
-    console.log(e);
     res.status(500).json({ error: e });
   }
 });
