@@ -75,7 +75,6 @@ async function restartServer() {
   try {
     // Close existing connections
     await mongoose.connection.close();
-    console.log("MongoDB connection closed.");
 
     // Wait a bit before restarting
     await new Promise((resolve) => setTimeout(resolve, 5000));
