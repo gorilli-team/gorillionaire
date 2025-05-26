@@ -104,7 +104,7 @@ const Tokens = () => {
 
       try {
         const response = await fetch(
-          `/api/prices?symbol=${selectedToken.symbol}`
+          `${process.env.NEXT_PUBLIC_API_URL}/events/prices?symbol=${selectedToken.symbol}`
         );
         const data = await response.json();
 
