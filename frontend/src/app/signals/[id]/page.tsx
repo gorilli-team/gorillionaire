@@ -337,10 +337,15 @@ export default function SignalDetails() {
     const token = currentDexToken;
     const type = currentDexType;
     // Use the current input/output amounts from the modal
-    const amount =
+    let amount =
       type === "Buy"
         ? parseFloat(currentDexOutputAmount)
         : parseFloat(currentDexInputAmount);
+
+    //IF AMOUNT IS 0, SET IT TO THE CURRENT DEX AMOUNT
+    if (isNaN(amount)) {
+      amount = currentDexAmount;
+    }
 
     const params = new URLSearchParams({
       token: token.symbol,
