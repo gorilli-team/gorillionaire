@@ -22,6 +22,7 @@ export default function Sidebar({
 
   const handlePageChange = (page: string) => {
     setSelectedPage(page);
+    console.log("page", page);
     if (page === "Profile") {
       router.push(`/users/${address}`);
     } else {
@@ -68,17 +69,17 @@ export default function Sidebar({
             </button>
           </li>
           {address && (
-          <li>
-            <button
-              className={`w-full text-left px-3 py-2 rounded-lg hover:bg-gray-200 ${
-                selectedPage === "Profile" ? "bg-gray-200" : ""
-              }`}
-              onClick={() => handlePageChange("Profile")}
-            >
-              <i className="fa-solid fa-user pr-2"></i>
-              <span>Profile</span>
-            </button>
-          </li>
+            <li>
+              <button
+                className={`w-full text-left px-3 py-2 rounded-lg hover:bg-gray-200 ${
+                  selectedPage === "Profile" ? "bg-gray-200" : ""
+                }`}
+                onClick={() => handlePageChange("Profile")}
+              >
+                <i className="fa-solid fa-user pr-2"></i>
+                <span>Profile</span>
+              </button>
+            </li>
           )}
           <li>
             <button

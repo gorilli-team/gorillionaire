@@ -372,7 +372,7 @@ const UserProfilePage = () => {
                       <div className="text-2xl font-bold text-gray-900 mb-1">
                         $1,721
                       </div>
-                      <div className="flex items-center text-sm text-green-600">
+                      {/* <div className="flex items-center text-sm text-green-600">
                         <svg
                           className="w-4 h-4 mr-1"
                           fill="none"
@@ -387,7 +387,7 @@ const UserProfilePage = () => {
                           />
                         </svg>
                         +$197 this week
-                      </div>
+                      </div> */}
                     </div>
 
                     {/* Total Points */}
@@ -398,7 +398,7 @@ const UserProfilePage = () => {
                       <div className="text-2xl font-bold text-gray-900 mb-1">
                         {userProfile.points.toLocaleString()}
                       </div>
-                      <div className="flex items-center text-sm text-green-600">
+                      {/* <div className="flex items-center text-sm text-green-600">
                         <svg
                           className="w-4 h-4 mr-1"
                           fill="none"
@@ -413,7 +413,7 @@ const UserProfilePage = () => {
                           />
                         </svg>
                         +386 points this week
-                      </div>
+                      </div> */}
                     </div>
 
                     {/* Global Rank */}
@@ -425,7 +425,7 @@ const UserProfilePage = () => {
                         {userProfile.rank}
                         {getOrdinalSuffix(userProfile.rank)}
                       </div>
-                      <div className="flex items-center text-sm text-red-600">
+                      {/* <div className="flex items-center text-sm text-red-600">
                         <svg
                           className="w-4 h-4 mr-1"
                           fill="none"
@@ -440,7 +440,7 @@ const UserProfilePage = () => {
                           />
                         </svg>
                         2 positions this week
-                      </div>
+                      </div> */}
                     </div>
                   </div>
                 </div>
