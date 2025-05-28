@@ -1,22 +1,44 @@
 const express = require("express");
 const router = express.Router();
+const crypto = require("crypto");
 
 const TWITTER_CLIENT_ID = process.env.TWITTER_CLIENT_ID;
 const TWITTER_CLIENT_SECRET = process.env.TWITTER_CLIENT_SECRET;
-const REDIRECT_URI = `${process.env.NEXT_PUBLIC_API_URL}/social/twitter/callback`
-
-const SCOPE = "tweet.read users.read follows.read offline.access"
+const REDIRECT_URI = `${process.env.NEXT_PUBLIC_API_URL}/social/twitter/callback`;
+const BASIC_AUTH = Buffer.from(
+  `${TWITTER_CLIENT_ID}:${TWITTER_CLIENT_SECRET}`
+).toString("base64");
+const SCOPE = "tweet.read users.read follows.read offline.access";
 
 router.get("/connect", (req, res) => {
-  const authUrl = `https://twitter.com/i/oauth2/authorize?response_type=code&client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(SCOPE)}&state=some_random_state&code_challenge=challenge&code_challenge_method=plain`;
-  res.redirect(authUrl)
-})
+  const codeVerifier = crypto.randomBytes(64).toString("hex");
+  req.session.codeVerifier = codeVerifier;
+
+  const hash = crypto.createHash("sha256").update(codeVerifier).digest();
+  const base64url = hash
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+
+  const authUrl = `https://twitter.com/i/oauth2/authorize?response_type=code&client_id=${TWITTER_CLIENT_ID}&redirect_uri=${encodeURIComponent(
+    REDIRECT_URI
+  )}&scope=${encodeURIComponent(
+    SCOPE
+  )}&state=some_random_state&code_challenge=${base64url}&code_challenge_method=S256`;
+  res.redirect(authUrl);
+});
 
 router.get("/callback", async (req, res) => {
   const code = req.query.code;
+  const codeVerifier = req.session.codeVerifier
 
   if (!code) {
     return res.status(400).json({ error: "Authorization code is missing" });
+  }
+
+  if (!codeVerifier) {
+    return res.status(400).json({ error: "Code verifier is missing" });
   }
 
   try {
@@ -25,6 +47,7 @@ router.get("/callback", async (req, res) => {
     params.append("grant_type", "authorization_code");
     params.append("redirect_uri", REDIRECT_URI);
     params.append("client_id", TWITTER_CLIENT_ID);
+    params.append("code_verifier", codeVerifier)
 
     const response = await fetch("https://api.twitter.com/2/oauth2/token", {
       method: "POST",
@@ -49,7 +72,7 @@ router.get("/callback", async (req, res) => {
     // Add logic to store access_token in db here
 
     return res.status(200).json({
-      message: "Access token obtained successfully",
+      message: "Access token retrieved successfully",
       access_token,
       refresh_token,
     });
