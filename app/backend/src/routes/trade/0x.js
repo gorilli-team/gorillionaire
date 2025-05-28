@@ -107,7 +107,7 @@ async function getQuote(token, amount, type, userAddress) {
   }
 
   const intentObject = new Intent({
-    userAddress: userAddress,
+    userAddress: userAddress.toLowerCase(),
     tokenSymbol: token,
     tokenAmount: amount,
     tokenPrice: tokenPrice,

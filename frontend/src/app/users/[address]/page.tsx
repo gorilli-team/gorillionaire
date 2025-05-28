@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import { nnsClient } from "@/app/providers";
-// import { getTimeAgo } from "@/app/utils/time";
+import { getTimeAgo } from "@/app/utils/time";
 // import { getTokenImage } from "@/app/utils/tokens";
 import { HexString } from "@/app/types";
 import Sidebar from "@/app/components/sidebar";
@@ -15,7 +15,6 @@ import { useReadContract, useAccount } from "wagmi";
 import { abi } from "@/app/abi/early-nft";
 import { NFT_ACCESS_ADDRESS } from "@/app/utils/constants";
 import { getLevelInfo, getXpProgress } from "@/app/utils/xp";
-import Link from "next/link";
 
 interface UserActivity {
   name: string;
@@ -38,6 +37,7 @@ interface UserProfile {
   points: number;
   rank: string;
   activitiesList: UserActivity[];
+  dollarValue: number;
   pagination?: {
     total: number;
     page: number;
@@ -76,12 +76,17 @@ const UserProfilePage = () => {
     const fetchUserProfile = async () => {
       try {
         const address = params.address as string;
+
+        if (!address) return;
         const response = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/activity/track/me?address=${address}&page=${currentPage}&limit=${itemsPerPage}`
         );
         const data = await response.json();
 
-        const profile = await nnsClient.getProfile(address as HexString);
+        let profile = undefined;
+        if (typeof address === "string" && address.length > 0) {
+          profile = await nnsClient.getProfile(address as HexString);
+        }
 
         setUserProfile({
           address: data.userActivity?.address || address,
@@ -90,6 +95,7 @@ const UserProfilePage = () => {
           points: data.userActivity?.points || 0,
           rank: data.userActivity?.rank || "0",
           activitiesList: data.userActivity?.activitiesList || [],
+          dollarValue: data.userActivity?.dollarValue ?? 0,
           pagination: data.userActivity?.pagination,
           hasV2NFT: Number(v2NFTBalance) > 0,
         });
@@ -100,29 +106,10 @@ const UserProfilePage = () => {
       }
     };
 
-    const fetchAllActivities = async () => {
-      try {
-        const address = params.address as string;
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/activity/track/me?address=${address}&limit=1000`
-        );
-        const data = await response.json();
-        console.log(data);
-        // setAllActivities(data.userActivity?.activitiesList || []);
-      } catch (error) {
-        console.error("Error fetching all activities:", error);
-      }
-    };
-
     if (params.address) {
       fetchUserProfile();
-      fetchAllActivities();
     }
   }, [params.address, currentPage, v2NFTBalance]);
-
-  // const onPageChange = (page: number) => {
-  //   setCurrentPage(page);
-  // };
 
   // Helper function to format address
   const formatAddress = (address: string) => {
@@ -370,7 +357,13 @@ const UserProfilePage = () => {
                         Total Volume
                       </h3>
                       <div className="text-2xl font-bold text-gray-900 mb-1">
-                        $1,721
+                        $
+                        {typeof userProfile.dollarValue === "number"
+                          ? userProfile.dollarValue.toLocaleString(undefined, {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })
+                          : "0.00"}
                       </div>
                       {/* <div className="flex items-center text-sm text-green-600">
                         <svg
@@ -398,22 +391,6 @@ const UserProfilePage = () => {
                       <div className="text-2xl font-bold text-gray-900 mb-1">
                         {userProfile.points.toLocaleString()}
                       </div>
-                      {/* <div className="flex items-center text-sm text-green-600">
-                        <svg
-                          className="w-4 h-4 mr-1"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M7 11l5-5m0 0l5 5m-5-5v12"
-                          />
-                        </svg>
-                        +386 points this week
-                      </div> */}
                     </div>
 
                     {/* Global Rank */}
@@ -425,9 +402,26 @@ const UserProfilePage = () => {
                         {userProfile.rank}
                         {getOrdinalSuffix(userProfile.rank)}
                       </div>
-                      {/* <div className="flex items-center text-sm text-red-600">
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Empty - 2/5 width */}
+              <div className="lg:col-span-2">
+                <div className="bg-white rounded-lg shadow-lg transform transition-all duration-300 hover:shadow-xl">
+                  <div className="bg-white rounded-xl p-4">
+                    <div className="flex justify-between items-center mb-3">
+                      <h2 className="text-base font-bold text-gray-900">
+                        Latest Transactions
+                      </h2>
+                      <a
+                        href={`/transactions/${userProfile.address}`}
+                        className="text-violet-600 hover:text-violet-800 text-xs font-medium flex items-center gap-1"
+                      >
+                        See more
                         <svg
-                          className="w-4 h-4 mr-1"
+                          className="w-3 h-3"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -436,39 +430,124 @@ const UserProfilePage = () => {
                             strokeLinecap="round"
                             strokeLinejoin="round"
                             strokeWidth="2"
-                            d="M17 13l-5 5m0 0l-5-5m5 5V6"
+                            d="M9 5l7 7-7 7"
                           />
                         </svg>
-                        2 positions this week
-                      </div> */}
+                      </a>
                     </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Right Column: Empty - 2/5 width */}
-              <div className="lg:col-span-2">
-                <div className="bg-white rounded-lg shadow-lg p-8 transform transition-all duration-300 hover:shadow-xl">
-                  <h2 className="text-xl font-bold text-gray-900">
-                    Activity Overview
-                  </h2>
-                  <div className="bg-gray-50 rounded-xl">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-green-500 rounded-full">
-                          {/* give me the list of the last activities */}
-                          {userProfile.activitiesList.map((activity) => (
-                            <div key={activity.signalId}>
-                              {activity.name}
-                              {activity.intentId.tokenSymbol}
+                    {userProfile.activitiesList &&
+                    userProfile.activitiesList.length > 0 ? (
+                      <div className="space-y-3">
+                        {userProfile.activitiesList
+                          .slice(0, 5) //only the ones with buy or sell
+                          .filter(
+                            (activity) =>
+                              activity?.intentId?.action === "buy" ||
+                              activity?.intentId?.action === "sell"
+                          )
+                          .map((activity, index) => (
+                            <div
+                              key={activity.signalId + index}
+                              className="flex items-center bg-gray-50 rounded-xl border border-gray-100 px-3 py-2 shadow-sm gap-3"
+                            >
+                              <div
+                                className="shrink-0 flex items-center justify-center w-6 h-6 rounded-full"
+                                style={{
+                                  backgroundColor:
+                                    activity.intentId.action === "buy"
+                                      ? "#E9F9EE"
+                                      : "#FDECEC",
+                                }}
+                              >
+                                {activity.intentId.action === "buy" ? (
+                                  <svg
+                                    className="w-3.5 h-3.5 text-green-500"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth="2"
+                                      d="M5 10l7-7m0 0l7 7m-7-7v18"
+                                    />
+                                  </svg>
+                                ) : (
+                                  <svg
+                                    className="w-3.5 h-3.5 text-red-500"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth="2"
+                                      d="M19 14l-7 7m0 0l-7-7m7 7V3"
+                                    />
+                                  </svg>
+                                )}
+                              </div>
+                              {/* Action */}
+                              <span
+                                className={`font-medium text-xs ${
+                                  activity.intentId.action === "buy"
+                                    ? "text-green-600"
+                                    : "text-red-600"
+                                }`}
+                              >
+                                {activity.intentId.action
+                                  .charAt(0)
+                                  .toUpperCase() +
+                                  activity.intentId.action.slice(1)}
+                              </span>
+                              {/* Token Image */}
+                              {activity.intentId?.tokenSymbol && (
+                                <img
+                                  src={`/tokens/${activity.intentId.tokenSymbol.toLowerCase()}.png`}
+                                  alt={activity.intentId.tokenSymbol}
+                                  width={18}
+                                  height={18}
+                                  className="rounded-full"
+                                  onError={(e) => {
+                                    (
+                                      e.currentTarget as HTMLImageElement
+                                    ).style.display = "none";
+                                  }}
+                                />
+                              )}
+                              {/* Amount + Symbol */}
+                              <span className="font-semibold text-gray-900 text-xs">
+                                {activity.intentId.tokenAmount.toLocaleString()}{" "}
+                                {activity.intentId.tokenSymbol}
+                              </span>
+                              {/* Time ago */}
+                              <span className="text-[10px] text-gray-500 ml-auto">
+                                {getTimeAgo(activity.date)}
+                              </span>
+                              {/* Points pill */}
+                              <span className="ml-2 px-2 py-0.5 rounded-md bg-violet-50 text-violet-700 text-[10px] font-semibold">
+                                +{activity.points} pts
+                              </span>
+                              {/* Version pill */}
+                              <span
+                                className={`ml-2 px-2 py-0.5 rounded-md text-[10px] font-semibold ${
+                                  activity.intentId.tokenPrice > 1
+                                    ? "bg-pink-100 text-pink-600"
+                                    : "bg-orange-100 text-orange-600"
+                                }`}
+                              >
+                                {activity.intentId.tokenPrice > 1 ? "V2" : "V1"}
+                              </span>
                             </div>
                           ))}
-                        </div>
                       </div>
-                    </div>
-                    <Link href={`/transactions/${userProfile.address}`}>
-                      View all transactions
-                    </Link>
+                    ) : (
+                      <div className="text-center p-6 text-gray-400 text-sm">
+                        No recent trades.
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
