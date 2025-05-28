@@ -1,7 +1,65 @@
 const express = require("express");
 const router = express.Router();
 
-router.get("/", async (req, res) => {
+const TWITTER_CLIENT_ID = process.env.TWITTER_CLIENT_ID;
+const TWITTER_CLIENT_SECRET = process.env.TWITTER_CLIENT_SECRET;
+const REDIRECT_URI = `${process.env.NEXT_PUBLIC_API_URL}/social/twitter/callback`
+
+const SCOPE = "tweet.read users.read follows.read offline.access"
+
+router.get("/connect", (req, res) => {
+  const authUrl = `https://twitter.com/i/oauth2/authorize?response_type=code&client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(SCOPE)}&state=some_random_state&code_challenge=challenge&code_challenge_method=plain`;
+  res.redirect(authUrl)
+})
+
+router.get("/callback", async (req, res) => {
+  const code = req.query.code;
+
+  if (!code) {
+    return res.status(400).json({ error: "Authorization code is missing" });
+  }
+
+  try {
+    const params = new URLSearchParams();
+    params.append("code", code);
+    params.append("grant_type", "authorization_code");
+    params.append("redirect_uri", REDIRECT_URI);
+    params.append("client_id", TWITTER_CLIENT_ID);
+
+    const response = await fetch("https://api.twitter.com/2/oauth2/token", {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${BASIC_AUTH}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: params.toString(),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error("Token exchange failed", data);
+      return res
+        .status(500)
+        .json({ error: "Token exchange failed", details: data });
+    }
+
+    const { access_token, refresh_token, expires_in, token_type } = data;
+
+    // Add logic to store access_token in db here
+
+    return res.status(200).json({
+      message: "Access token obtained successfully",
+      access_token,
+      refresh_token,
+    });
+  } catch (err) {
+    console.error("Error exchanging code: ", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/check-following", async (req, res) => {
   const targetUsername = req.query.target;
   const authHeader = req.headers.authorization;
   const accessToken = authHeader?.replace("Bearer ", "");
