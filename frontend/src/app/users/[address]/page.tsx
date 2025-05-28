@@ -47,6 +47,14 @@ interface UserProfile {
   hasV2NFT?: boolean;
 }
 
+interface Quest {
+  questName: string;
+  questDescription: string;
+  questImage: string;
+  questType: string;
+  questRequirement: number;
+}
+
 const UserProfilePage = () => {
   const params = useParams();
   const { address: connectedAddress } = useAccount();
@@ -54,6 +62,7 @@ const UserProfilePage = () => {
   // const [allActivities, setAllActivities] = useState<UserActivity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedPage, setSelectedPage] = useState("Leaderboard");
+  const [quests, setQuests] = useState<Quest[]>([]);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   // const [currentPage, setCurrentPage] = useState(1);
   const currentPage = 1;
@@ -110,6 +119,22 @@ const UserProfilePage = () => {
       fetchUserProfile();
     }
   }, [params.address, currentPage, v2NFTBalance]);
+
+  useEffect(() => {
+    const fetchUserQuests = async () => {
+      console.log("fetching user quests");
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/activity/quests/${params.address}`
+      );
+      const data = await response.json();
+      console.log(data);
+      setQuests(data.quests);
+    };
+    if (params.address) {
+      fetchUserQuests();
+    }
+  }, [params.address]);
 
   // Helper function to format address
   const formatAddress = (address: string) => {
@@ -221,9 +246,9 @@ const UserProfilePage = () => {
         <div className="flex-1 overflow-y-auto">
           <div className="w-full px-4 pt-4 pb-8">
             {/* Two-column layout for desktop */}
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
               {/* Left Column: Profile & Activity Chart - 3/5 width */}
-              <div className="lg:col-span-3 space-y-3">
+              <div className="lg:col-span-2 space-y-3">
                 {/* Profile Header */}
                 <div className="bg-white rounded-lg shadow-lg p-8 transform transition-all duration-300 hover:shadow-xl">
                   {/* Top Section: Avatar, Name, Badges, and Social Buttons */}
@@ -260,7 +285,7 @@ const UserProfilePage = () => {
                         {/* Social Connection Buttons */}
                         {isOwnProfile && (
                           <div className="flex gap-2">
-                            <button className="flex items-center gap-2 px-3 py-1.5 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors">
+                            {/* <button className="flex items-center gap-2 px-3 py-1.5 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors">
                               <svg
                                 className="w-4 h-4"
                                 viewBox="0 0 24 24"
@@ -269,7 +294,7 @@ const UserProfilePage = () => {
                                 <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
                               </svg>
                               Connect X
-                            </button>
+                            </button> */}
                             <button className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors">
                               <svg
                                 className="w-4 h-4"
@@ -414,11 +439,55 @@ const UserProfilePage = () => {
                       </svg>
                     </a>
                   </div>
+                  <div className="space-y-3">
+                    {quests.map((quest, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center bg-white rounded-xl shadow p-4"
+                      >
+                        {/* Quest Icon */}
+                        <div className="w-12 h-12 flex items-center justify-center bg-violet-100 rounded-lg mr-4">
+                          <Image
+                            src={"/propic.png"}
+                            alt={quest.questName}
+                            width={32}
+                            height={32}
+                          />
+                        </div>
+                        {/* Quest Info */}
+                        <div className="flex-1 flex flex-col gap-1">
+                          <div className="flex items-center gap-2">
+                            <div className="font-semibold text-gray-900">
+                              {quest.questName}
+                            </div>
+                            <span className="px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 text-xs font-semibold">
+                              +{quest.questRequirement} pts
+                            </span>
+                          </div>
+                          <div className="text-gray-500 text-sm">
+                            {quest.questDescription}
+                          </div>
+                          <div className="mt-2 w-full">
+                            <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                              <div
+                                className="bg-gradient-to-r from-violet-500 to-indigo-600 h-2 rounded-full transition-all duration-300"
+                                style={{ width: "60%" }}
+                              ></div>
+                            </div>
+                          </div>
+                        </div>
+                        {/* Action Button */}
+                        <button className="ml-4 px-4 py-2 bg-violet-600 text-white rounded-lg font-medium hover:bg-violet-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                          Claim
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              {/* Right Column: Empty - 2/5 width */}
-              <div className="lg:col-span-2">
+              {/* Right Column: Empty - 1/5 width */}
+              <div className="lg:col-span-1">
                 <div className="bg-white rounded-lg shadow-lg transform transition-all duration-300 hover:shadow-xl">
                   <div className="bg-white rounded-xl p-4">
                     <div className="flex justify-between items-center mb-3">
@@ -565,27 +634,75 @@ const UserProfilePage = () => {
                   <div className="bg-white rounded-xl p-4">
                     <div className="flex justify-between items-center mb-3">
                       <h2 className="text-base font-bold text-gray-900">
-                        Latest Badges
+                        Badges
                       </h2>
-                      <a
-                        href={`/badges/${userProfile.address}`}
-                        className="text-violet-600 hover:text-violet-800 text-xs font-medium flex items-center gap-1"
-                      >
-                        See more
-                        <svg
-                          className="w-3 h-3"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
+                    </div>
+                    {/* Personalized placeholder badges */}
+                    <div className="flex flex-col gap-3">
+                      {[
+                        {
+                          name: "Social Gorilla",
+                          description:
+                            "Follow Gorilli Twitter, Discord and Telegram profiles.",
+                          image: "/badges/social-gorilla.png",
+                          status: "coming-soon",
+                        },
+                        {
+                          name: "Jungle Ambassador",
+                          description:
+                            "Invite a friend to join Gorillionaire family.",
+                          image: "/badges/jungle-ambassador.png",
+                          status: "coming-soon",
+                        },
+                        {
+                          name: "Streak Ape",
+                          description:
+                            "Accept at least 1 signal per day for 7 consecutive days.",
+                          image: "/badges/streak-ape.png",
+                          status: "coming-soon",
+                        },
+                        {
+                          name: "Early Adopter",
+                          description:
+                            "Be one of the first user to join Gorillionaire v2.",
+                          image: "/badges/early-adopter.png",
+                          status: "coming-soon",
+                        },
+                        {
+                          name: "Silverback OG",
+                          description:
+                            "Reach your first 1,000 points on Gorillionaire.",
+                          image: "/badges/silverback-og.png",
+                          status: "coming-soon",
+                        },
+                      ].map((badge, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-100 shadow-sm"
                         >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M9 5l7 7-7 7"
-                          />
-                        </svg>
-                      </a>
+                          <div className="w-12 h-12 flex items-center justify-center rounded-full bg-violet-50 border">
+                            <Image
+                              src={"/propic.png"}
+                              alt={badge.name}
+                              width={48}
+                              height={48}
+                              className="rounded-full"
+                              unoptimized
+                            />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-semibold text-gray-900 truncate">
+                              {badge.name}
+                            </div>
+                            <div className="text-gray-500 text-xs truncate">
+                              {badge.description}
+                            </div>
+                          </div>
+                          <span className="px-3 py-1 rounded-full bg-gray-200 text-gray-600 text-xs font-semibold">
+                            Coming Soon
+                          </span>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>

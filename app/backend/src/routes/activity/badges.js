@@ -2,6 +2,8 @@
 
 const express = require("express");
 const router = express.Router();
+const UserBadge = require("../../models/UserBadge");
+const Badge = require("../../models/Badge");
 
 router.get("/:address", async (req, res) => {
   const { address } = req.params;
@@ -12,11 +14,11 @@ router.get("/:address", async (req, res) => {
     return res.status(404).json({ error: "User not found" });
   }
 
-  const badges = await Badge.find({
+  const userBadges = await UserBadge.find({
     address: address.toLowerCase(),
   });
 
-  res.json({ badges });
+  res.json({ userBadges });
 });
 
 module.exports = router;

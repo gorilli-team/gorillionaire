@@ -8,6 +8,7 @@ const { initWebSocketServer } = require("./websocket");
 const { initTokenHoldersCron } = require("./cron/blockvision");
 const { initPriceUpdateCron } = require("./cron/prices");
 require("dotenv").config();
+const http = require("http");
 const mongoose = require("mongoose");
 const Sentry = require("@sentry/node");
 
@@ -21,6 +22,26 @@ const serverState = {
   restartAttempts: 0,
   isShuttingDown: false,
 };
+
+let serverInstance = null;
+let wssInstance = null;
+let isShuttingDown = false;
+
+async function connectToDatabase() {
+  const baseConnectionString = process.env.MONGODB_CONNECTION_STRING;
+  const cleanConnectionString = baseConnectionString
+    .split("/")
+    .slice(0, -1)
+    .join("/");
+  const connectionString = `${cleanConnectionString}/signals`;
+
+  console.log("Connecting to MongoDB...");
+  await mongoose.connect(connectionString, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  });
+  console.log("Connected to MongoDB:", mongoose.connection.db.databaseName);
+}
 
 async function startServer() {
   return Sentry.startSpan({ name: "server-startup" }, async () => {

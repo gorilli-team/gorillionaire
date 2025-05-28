@@ -16,6 +16,8 @@ const tokenContractAddresses = [
   },
 ];
 
+let tokenHoldersCronJob = null;
+
 // Function to fetch token holders
 async function fetchTokenHolders(contractAddress, tokenName) {
   try {
@@ -44,8 +46,19 @@ function initTokenHoldersCron() {
       console.error("Failed to fetch token holders:", error);
     }
   });
+
+  return tokenHoldersCronJob;
+}
+
+function stopTokenHoldersCron() {
+  if (tokenHoldersCronJob) {
+    tokenHoldersCronJob.stop();
+    tokenHoldersCronJob = null;
+    console.log("Token holders cron job stopped");
+  }
 }
 
 module.exports = {
   initTokenHoldersCron,
+  stopTokenHoldersCron,
 };
