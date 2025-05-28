@@ -223,7 +223,7 @@ const UserProfilePage = () => {
             {/* Two-column layout for desktop */}
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
               {/* Left Column: Profile & Activity Chart - 3/5 width */}
-              <div className="lg:col-span-3 space-y-6">
+              <div className="lg:col-span-3 space-y-3">
                 {/* Profile Header */}
                 <div className="bg-white rounded-lg shadow-lg p-8 transform transition-all duration-300 hover:shadow-xl">
                   {/* Top Section: Avatar, Name, Badges, and Social Buttons */}
@@ -365,22 +365,6 @@ const UserProfilePage = () => {
                             })
                           : "0.00"}
                       </div>
-                      {/* <div className="flex items-center text-sm text-green-600">
-                        <svg
-                          className="w-4 h-4 mr-1"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M7 11l5-5m0 0l5 5m-5-5v12"
-                          />
-                        </svg>
-                        +$197 this week
-                      </div> */}
                     </div>
 
                     {/* Total Points */}
@@ -403,6 +387,32 @@ const UserProfilePage = () => {
                         {getOrdinalSuffix(userProfile.rank)}
                       </div>
                     </div>
+                  </div>
+                </div>
+                <div className="bg-white rounded-lg shadow-lg p-3 transform transition-all duration-300 hover:shadow-xl">
+                  <div className="flex justify-between items-center mb-3">
+                    <h2 className="text-base font-bold text-gray-900">
+                      Your Next Quests
+                    </h2>
+                    <a
+                      href={`/badges/${userProfile.address}`}
+                      className="text-violet-600 hover:text-violet-800 text-xs font-medium flex items-center gap-1"
+                    >
+                      See more
+                      <svg
+                        className="w-3 h-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M9 5l7 7-7 7"
+                        />
+                      </svg>
+                    </a>
                   </div>
                 </div>
               </div>
@@ -447,7 +457,7 @@ const UserProfilePage = () => {
                           )
                           .map((activity, index) => (
                             <div
-                              key={activity.signalId + index}
+                              key={index}
                               className="flex items-center bg-gray-50 rounded-xl border border-gray-100 px-3 py-2 shadow-sm gap-3"
                             >
                               <div
@@ -504,7 +514,7 @@ const UserProfilePage = () => {
                               </span>
                               {/* Token Image */}
                               {activity.intentId?.tokenSymbol && (
-                                <img
+                                <Image
                                   src={`/tokens/${activity.intentId.tokenSymbol.toLowerCase()}.png`}
                                   alt={activity.intentId.tokenSymbol}
                                   width={18}
@@ -515,6 +525,7 @@ const UserProfilePage = () => {
                                       e.currentTarget as HTMLImageElement
                                     ).style.display = "none";
                                   }}
+                                  unoptimized
                                 />
                               )}
                               {/* Amount + Symbol */}
@@ -548,6 +559,34 @@ const UserProfilePage = () => {
                         No recent trades.
                       </div>
                     )}
+                  </div>
+                </div>
+                <div className="bg-white rounded-lg shadow-lg transform transition-all duration-300 hover:shadow-xl mt-3">
+                  <div className="bg-white rounded-xl p-4">
+                    <div className="flex justify-between items-center mb-3">
+                      <h2 className="text-base font-bold text-gray-900">
+                        Latest Badges
+                      </h2>
+                      <a
+                        href={`/badges/${userProfile.address}`}
+                        className="text-violet-600 hover:text-violet-800 text-xs font-medium flex items-center gap-1"
+                      >
+                        See more
+                        <svg
+                          className="w-3 h-3"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M9 5l7 7-7 7"
+                          />
+                        </svg>
+                      </a>
+                    </div>
                   </div>
                 </div>
               </div>
