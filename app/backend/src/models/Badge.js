@@ -1,5 +1,3 @@
-//create a badge model
-
 const mongoose = require("mongoose");
 
 const badgeSchema = new mongoose.Schema({

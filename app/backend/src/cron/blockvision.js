@@ -16,6 +16,8 @@ const tokenContractAddresses = [
   },
 ];
 
+let tokenHoldersCronJob = null;
+
 // Function to fetch token holders
 async function fetchTokenHolders(contractAddress, tokenName) {
   try {
@@ -34,8 +36,13 @@ async function fetchTokenHolders(contractAddress, tokenName) {
 
 // Initialize the cron job
 function initTokenHoldersCron() {
+  if (tokenHoldersCronJob) {
+    console.log("Token holders cron job already running");
+    return tokenHoldersCronJob;
+  }
+
   // Run every hour at minute 0
-  return cron.schedule("0 * * * *", async () => {
+  tokenHoldersCronJob = cron.schedule("0 * * * *", async () => {
     try {
       console.log("Fetching token holders...");
       for (const token of tokenContractAddresses) {
@@ -46,8 +53,19 @@ function initTokenHoldersCron() {
       console.error("Failed to fetch token holders:", error);
     }
   });
+
+  return tokenHoldersCronJob;
+}
+
+function stopTokenHoldersCron() {
+  if (tokenHoldersCronJob) {
+    tokenHoldersCronJob.stop();
+    tokenHoldersCronJob = null;
+    console.log("Token holders cron job stopped");
+  }
 }
 
 module.exports = {
   initTokenHoldersCron,
+  stopTokenHoldersCron,
 };

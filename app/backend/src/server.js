@@ -1,109 +1,137 @@
 // server.js
-const http = require("http");
-const app = require("./app");
-const { initWebSocketServer } = require("./websocket");
-const { initTokenHoldersCron } = require("./cron/blockvision");
-const { initPriceUpdateCron } = require("./cron/prices");
+
 require("dotenv").config();
+const http = require("http");
 const mongoose = require("mongoose");
+
+const app = require("./app");
+const { initWebSocketServer, closeWebSocketServer } = require("./websocket");
+const {
+  initTokenHoldersCron,
+  stopTokenHoldersCron,
+} = require("./cron/blockvision");
+const { initPriceUpdateCron, stopPriceUpdateCron } = require("./cron/prices");
+
 const PORT = process.env.PORT || 3001;
+
+let serverInstance = null;
+let wssInstance = null;
+let isShuttingDown = false;
+
+async function connectToDatabase() {
+  const baseConnectionString = process.env.MONGODB_CONNECTION_STRING;
+  const cleanConnectionString = baseConnectionString
+    .split("/")
+    .slice(0, -1)
+    .join("/");
+  const connectionString = `${cleanConnectionString}/signals`;
+
+  console.log("Connecting to MongoDB...");
+  await mongoose.connect(connectionString, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  });
+  console.log("Connected to MongoDB:", mongoose.connection.db.databaseName);
+}
 
 async function startServer() {
   try {
-    // Ensure we're connecting to the right database
-    const baseConnectionString = process.env.MONGODB_CONNECTION_STRING;
-    // Remove any existing database name from the connection string
-    const cleanConnectionString = baseConnectionString
-      .split("/")
-      .slice(0, -1)
-      .join("/");
-    const connectionString = `${cleanConnectionString}/signals`;
+    await connectToDatabase();
 
-    console.log("Attempting to connect to gorillionaire database...");
-
-    await mongoose.connect(connectionString, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
-
-    // Verify connection
-    console.log("Connected to database:", mongoose.connection.db.databaseName);
-
-    // Create HTTP server
-    const server = http.createServer(app);
-
-    // Initialize WebSocket server
-    const wss = initWebSocketServer(server);
+    serverInstance = http.createServer(app);
+    wssInstance = initWebSocketServer(serverInstance);
 
     // Initialize cron jobs
     initTokenHoldersCron();
     initPriceUpdateCron();
-    // Start server
-    server.listen(PORT, () => {
-      console.log(`HTTP server running on port ${PORT}`);
-      console.log(`WebSocket server initialized`);
+
+    serverInstance.listen(PORT, () => {
+      console.log(`🚀 Server listening on port ${PORT}`);
     });
 
-    // Error handling for the server
-    server.on("error", (error) => {
-      console.error("Server error:", error);
-      restartServer();
+    serverInstance.on("error", (err) => {
+      console.error("HTTP Server error:", err);
+      attemptRestart();
     });
-
-    // Handle unexpected errors
-    process.on("uncaughtException", (error) => {
-      console.error("Uncaught Exception:", error);
-      restartServer();
-    });
-
-    process.on("unhandledRejection", (error) => {
-      console.error("Unhandled Rejection:", error);
-      restartServer();
-    });
-
-    // Return the server instance
-    return server;
-  } catch (error) {
-    console.error("Failed to connect to MongoDB:", error);
-    restartServer();
+  } catch (err) {
+    console.error("Startup error:", err);
+    attemptRestart();
   }
 }
 
-async function restartServer() {
-  console.log("Attempting to restart server...");
+async function shutdown() {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+
+  console.log("Gracefully shutting down...");
 
   try {
-    // Close existing connections
-    await mongoose.connection.close();
-    console.log("MongoDB connection closed.");
+    // Stop cron jobs first
+    stopTokenHoldersCron();
+    stopPriceUpdateCron();
+    console.log("Cron jobs stopped");
 
-    // Wait a bit before restarting
-    await new Promise((resolve) => setTimeout(resolve, 5000));
-
-    console.log("Restarting server...");
-    try {
-      await startServer();
-    } catch (error) {
-      console.error("Failed to restart server:", error);
-      // If restart fails, wait longer and try again
-      setTimeout(restartServer, 10000);
+    // Close WebSocket server
+    if (wssInstance) {
+      await closeWebSocketServer(wssInstance);
+      console.log("WebSocket server closed");
     }
-  } catch (error) {
-    console.error("Error during server restart:", error);
-    setTimeout(restartServer, 10000);
+
+    // Close HTTP server
+    if (serverInstance) {
+      await new Promise((resolve, reject) => {
+        serverInstance.close((err) => (err ? reject(err) : resolve()));
+      });
+      console.log("HTTP server closed");
+    }
+
+    // Close MongoDB connection
+    if (mongoose.connection.readyState === 1) {
+      await mongoose.disconnect();
+      console.log("MongoDB disconnected");
+    }
+  } catch (err) {
+    console.error("Error during shutdown:", err);
+  } finally {
+    process.exit(1);
   }
 }
 
-// Start the server and store the instance
-let serverInstance;
-startServer().then((server) => {
-  serverInstance = server;
+let restartTimeout = null;
+function attemptRestart() {
+  if (restartTimeout) return;
+
+  restartTimeout = setTimeout(async () => {
+    restartTimeout = null;
+    console.log("Attempting to restart the server...");
+    await shutdown();
+    isShuttingDown = false;
+    await startServer();
+  }, 5000);
+}
+
+// Global error and shutdown handlers
+process.on("uncaughtException", (err) => {
+  console.error("Uncaught Exception:", err);
+  attemptRestart();
 });
 
-// Export the server instance and the startServer function
+process.on("unhandledRejection", (reason) => {
+  console.error("Unhandled Rejection:", reason);
+  attemptRestart();
+});
+
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);
+
+// Initial launch
+startServer();
+
+// Export the server (optional)
 module.exports = {
   get server() {
     return serverInstance;
   },
   startServer,
+  shutdown,
 };
