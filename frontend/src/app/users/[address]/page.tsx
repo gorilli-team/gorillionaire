@@ -15,6 +15,7 @@ import { useReadContract, useAccount } from "wagmi";
 import { abi } from "@/app/abi/early-nft";
 import { NFT_ACCESS_ADDRESS } from "@/app/utils/constants";
 import { getLevelInfo, getXpProgress } from "@/app/utils/xp";
+import Link from "next/link";
 
 interface UserActivity {
   name: string;
@@ -297,8 +298,7 @@ const UserProfilePage = () => {
                       </div>
                     </div>
 
-                    {/* Right: Badges */}
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
                       <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
                         <svg
                           className="w-4 h-4 mr-1"
@@ -448,7 +448,6 @@ const UserProfilePage = () => {
 
               {/* Right Column: Empty - 2/5 width */}
               <div className="lg:col-span-2">
-                {/* Empty column for future content */}
                 <div className="bg-white rounded-lg shadow-lg p-8 transform transition-all duration-300 hover:shadow-xl">
                   <h2 className="text-xl font-bold text-gray-900">
                     Activity Overview
@@ -456,9 +455,20 @@ const UserProfilePage = () => {
                   <div className="bg-gray-50 rounded-xl">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                        <div className="w-3 h-3 bg-green-500 rounded-full">
+                          {/* give me the list of the last activities */}
+                          {userProfile.activitiesList.map((activity) => (
+                            <div key={activity.signalId}>
+                              {activity.name}
+                              {activity.intentId.tokenSymbol}
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
+                    <Link href={`/transactions/${userProfile.address}`}>
+                      View all transactions
+                    </Link>
                   </div>
                 </div>
               </div>
