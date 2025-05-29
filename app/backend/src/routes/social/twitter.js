@@ -4,14 +4,17 @@ const crypto = require("crypto");
 
 const TWITTER_CLIENT_ID = process.env.TWITTER_CLIENT_ID;
 const TWITTER_CLIENT_SECRET = process.env.TWITTER_CLIENT_SECRET;
-const REDIRECT_URI = `${process.env.NEXT_PUBLIC_API_URL}/social/twitter/callback`;
 const BASIC_AUTH = Buffer.from(
   `${TWITTER_CLIENT_ID}:${TWITTER_CLIENT_SECRET}`
 ).toString("base64");
+const TWITTER_REDIRECT_URI = process.env.TWITTER_REDIRECT_URI;
+const TWITTER_TARGET_USERNAME = process.env.TWITTER_TARGET_USERNAME;
 const SCOPE = "tweet.read users.read follows.read offline.access";
 
 router.get("/connect", (req, res) => {
+  const state = crypto.randomBytes(16).toString("hex");
   const codeVerifier = crypto.randomBytes(64).toString("hex");
+  req.session.oauthState = state;
   req.session.codeVerifier = codeVerifier;
 
   const hash = crypto.createHash("sha256").update(codeVerifier).digest();
@@ -22,16 +25,24 @@ router.get("/connect", (req, res) => {
     .replace(/=+$/, "");
 
   const authUrl = `https://twitter.com/i/oauth2/authorize?response_type=code&client_id=${TWITTER_CLIENT_ID}&redirect_uri=${encodeURIComponent(
-    REDIRECT_URI
+    TWITTER_REDIRECT_URI
   )}&scope=${encodeURIComponent(
     SCOPE
-  )}&state=some_random_state&code_challenge=${base64url}&code_challenge_method=S256`;
+  )}&state=${state}&code_challenge=${base64url}&code_challenge_method=S256`;
   res.redirect(authUrl);
 });
 
 router.get("/callback", async (req, res) => {
+  const returnedState = req.query.state;
+  const originalState = req.session.oauthState;
   const code = req.query.code;
-  const codeVerifier = req.session.codeVerifier
+  const codeVerifier = req.session.codeVerifier;
+
+  if (!returnedState || returnedState != originalState) {
+    return res.status(400).json({ error: "Invalid state" });
+  }
+
+  delete req.session.oauthState;
 
   if (!code) {
     return res.status(400).json({ error: "Authorization code is missing" });
@@ -41,13 +52,15 @@ router.get("/callback", async (req, res) => {
     return res.status(400).json({ error: "Code verifier is missing" });
   }
 
+  delete req.session.codeVerifier;
+
   try {
     const params = new URLSearchParams();
     params.append("code", code);
     params.append("grant_type", "authorization_code");
-    params.append("redirect_uri", REDIRECT_URI);
+    params.append("redirect_uri", TWITTER_REDIRECT_URI);
     params.append("client_id", TWITTER_CLIENT_ID);
-    params.append("code_verifier", codeVerifier)
+    params.append("code_verifier", codeVerifier);
 
     const response = await fetch("https://api.twitter.com/2/oauth2/token", {
       method: "POST",
@@ -71,73 +84,71 @@ router.get("/callback", async (req, res) => {
 
     // Add logic to store access_token in db here
 
-    return res.status(200).json({
-      message: "Access token retrieved successfully",
-      access_token,
-      refresh_token,
-    });
+    try {
+      const isFollowing = await checkTwitterFollowing(
+        access_token,
+        TWITTER_TARGET_USERNAME
+      );
+      return res.redirect(`/?isFollowing=${isFollowing}`);
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
   } catch (err) {
     console.error("Error exchanging code: ", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-router.get("/check-following", async (req, res) => {
-  const targetUsername = req.query.target;
-  const authHeader = req.headers.authorization;
-  const accessToken = authHeader?.replace("Bearer ", "");
-
+async function checkTwitterFollowing(accessToken, targetUsername) {
   if (!accessToken) {
-    return res.status(401).json({ error: "Missing access token" });
+    throw new Error("Access token is missing");
   }
 
   if (!targetUsername) {
-    return res.status(400).json({ error: "Missing target username" });
+    throw new Error("Target username is missing");
   }
 
-  try {
-    const userResp = await fetch("https://api.twitter.com/2/users/me", {
+  const userResp = await fetch("https://api.twitter.com/2/users/me", {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!userResp.ok) {
+    const err = await userResp.json();
+    throw new Error(err.detail || "Error fetching userId");
+  }
+
+  const userData = await userResp.json();
+  console.log("User data: ", userData);
+  const userId = userData?.data?.id;
+
+  if (!userId) {
+    throw new Error("User ID not found");
+  }
+
+  const followingResp = await fetch(
+    `https://api.twitter.com/2/users/${userId}/following`,
+    {
       headers: { Authorization: `Bearer ${accessToken}` },
-    });
-
-    if (!userResp.ok) {
-      const err = await userResp.json();
-      return res.status(userResp.status).json({
-        error: err.detail || "Error fetching userId",
-      });
     }
+  );
 
-    const userData = await userResp.json();
-    const userId = userData?.data?.id;
+  console.log("Following response: ", followingResp);
 
-    if (!userId) {
-      return res.status(404).json({ error: "User ID not found" });
-    }
-
-    const followingResp = await fetch(
-      `https://api.twitter.com/2/users/${userId}/following`,
-      {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      }
-    );
-
-    if (!followingResp.ok) {
-      const err = await followingResp.json();
-      return res.status(followingResp.status).json({
-        error: err.detail || "Error fetching following list",
-      });
-    }
-
-    const followingData = await followingResp.json();
-    const isFollowing = followingData?.data?.some(
-      (account) => account.username === targetUsername
-    );
-
-    return res.status(200).json({ isFollowing: !!isFollowing });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: "Internal server error" });
+  if (!followingResp.ok) {
+    const err = await followingResp.json();
+    throw new Error(err.detail || "Error fetching following list");
   }
-});
+
+  const followingData = await followingResp.json();
+  console.log("Following data: ", followingData);
+  const isFollowing = followingData?.data?.some(
+    (account) => account.username == targetUsername
+  );
+
+  return !!isFollowing;
+}
 
 module.exports = router;
