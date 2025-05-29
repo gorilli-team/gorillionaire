@@ -82,7 +82,7 @@ router.get("/callback", async (req, res) => {
 
     const { access_token, refresh_token, expires_in, token_type } = data;
 
-    // Add logic to store access_token in db here
+    // Add logic to save access token to db if needed
 
     try {
       const isFollowing = await checkTwitterFollowing(
