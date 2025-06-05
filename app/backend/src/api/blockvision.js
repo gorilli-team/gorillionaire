@@ -69,7 +69,10 @@ const retrieveAddressTokens = async ({
 
     return response.data;
   } catch (error) {
-    console.error("Error retrieving address tokens:", error.message);
+    console.error(
+      "BlockvisionAPI Error retrieving address tokens:",
+      error.message
+    );
     throw {
       message: "Failed to retrieve address tokens",
       error: error.message,
