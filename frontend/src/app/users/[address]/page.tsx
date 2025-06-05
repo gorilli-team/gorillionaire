@@ -61,7 +61,7 @@ const UserProfilePage = () => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   // const [allActivities, setAllActivities] = useState<UserActivity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedPage, setSelectedPage] = useState("Leaderboard");
+  const [selectedPage, setSelectedPage] = useState("Profile");
   const [quests, setQuests] = useState<Quest[]>([]);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   // const [currentPage, setCurrentPage] = useState(1);
