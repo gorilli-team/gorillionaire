@@ -16,7 +16,7 @@ const questSchema = new mongoose.Schema({
   questType: {
     type: String,
     required: true,
-    enum: ["acceptedSignals", "refuseSignals", "streakSignals"],
+    enum: ["acceptedSignals", "refuseSignals", "streakSignals", "discord"],
   },
   badgeAwarded: {
     type: mongoose.Schema.Types.ObjectId,
