@@ -39,6 +39,8 @@ app.use(
   require("./routes/signals/generated-signals")
 );
 app.use("/auth/privy", require("./routes/auth/privy"));
+app.use("/discord/membership", require("./routes/discord/membership"));
+
 // Basic error handling
 app.use((err, req, res, next) => {
   console.error(err.stack);
