@@ -49,6 +49,9 @@ app.use("/auth/privy", require("./routes/auth/privy"));
 app.use(expressErrorHandler());
 app.use("/discord/membership", require("./routes/discord/membership"));
 
+// Sentry error handler must be registered after all controllers but before other error handlers
+app.use(expressErrorHandler());
+
 // Basic error handling
 app.use((err, req, res, next) => {
   console.error(err.stack);
