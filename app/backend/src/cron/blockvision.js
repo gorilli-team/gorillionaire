@@ -34,8 +34,8 @@ async function fetchTokenHolders(contractAddress, tokenName) {
 
 // Initialize the cron job
 function initTokenHoldersCron() {
-  // Run every hour at minute 0
-  return cron.schedule("0 * * * *", async () => {
+  // Run every day at 12:00 AM
+  return cron.schedule("0 0 * * *", async () => {
     try {
       for (const token of tokenContractAddresses) {
         await fetchTokenHolders(token.contractAddress, token.tokenName);
