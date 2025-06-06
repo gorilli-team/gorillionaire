@@ -185,6 +185,19 @@ const UserProfilePage = () => {
     return "th";
   };
 
+  const handleDiscordConnect = () => {
+    const address = params.address as string;
+    const clientId = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID;
+    const redirectUri = encodeURIComponent(process.env.NEXT_PUBLIC_DISCORD_REDIRECT_URI!);
+    const scope = encodeURIComponent("identify guilds");
+    const state = encodeURIComponent(address);
+    
+    const authUrl = `https://discord.com/oauth2/authorize?client_id=${clientId}&response_type=code&redirect_uri=${redirectUri}&scope=${scope}&state=${state}`;
+        
+    window.location.href = authUrl;
+  };
+
+
   return (
     <div className="flex min-h-screen bg-gradient-to-r from-violet-50 to-indigo-50 text-gray-800">
       {/* Mobile menu button */}
@@ -295,7 +308,10 @@ const UserProfilePage = () => {
                               </svg>
                               Connect X
                             </button> */}
-                            <button className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors">
+                           <button 
+                              onClick={handleDiscordConnect}
+                              className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
+                            >
                               <svg
                                 className="w-4 h-4"
                                 viewBox="0 0 24 24"
