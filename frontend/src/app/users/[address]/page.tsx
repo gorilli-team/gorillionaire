@@ -469,47 +469,49 @@ const UserProfilePage = () => {
                     </a>
                   </div>
                   <div className="space-y-3">
-                    {quests.map((quest, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center bg-white rounded-xl shadow p-4"
-                      >
-                        {/* Quest Icon */}
-                        <div className="w-12 h-12 flex items-center justify-center bg-violet-100 rounded-lg mr-4">
-                          <Image
-                            src={"/propic.png"}
-                            alt={quest.questName}
-                            width={32}
-                            height={32}
-                          />
-                        </div>
-                        {/* Quest Info */}
-                        <div className="flex-1 flex flex-col gap-1">
-                          <div className="flex items-center gap-2">
-                            <div className="font-semibold text-gray-900">
-                              {quest.questName}
+                    {quests
+                      .filter(quest => quest.questType !== "discord")
+                      .map((quest, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center bg-white rounded-xl shadow p-4"
+                        >
+                          {/* Quest Icon */}
+                          <div className="w-12 h-12 flex items-center justify-center bg-violet-100 rounded-lg mr-4">
+                            <Image
+                              src={"/propic.png"}
+                              alt={quest.questName}
+                              width={32}
+                              height={32}
+                            />
+                          </div>
+                          {/* Quest Info */}
+                          <div className="flex-1 flex flex-col gap-1">
+                            <div className="flex items-center gap-2">
+                              <div className="font-semibold text-gray-900">
+                                {quest.questName}
+                              </div>
+                              <span className="px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 text-xs font-semibold">
+                                +{quest.questRequirement} pts
+                              </span>
                             </div>
-                            <span className="px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 text-xs font-semibold">
-                              +{quest.questRequirement} pts
-                            </span>
-                          </div>
-                          <div className="text-gray-500 text-sm">
-                            {quest.questDescription}
-                          </div>
-                          <div className="mt-2 w-full">
-                            <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                              <div
-                                className="bg-gradient-to-r from-violet-500 to-indigo-600 h-2 rounded-full transition-all duration-300"
-                                style={{ width: "60%" }}
-                              ></div>
+                            <div className="text-gray-500 text-sm">
+                              {quest.questDescription}
+                            </div>
+                            <div className="mt-2 w-full">
+                              <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                                <div
+                                  className="bg-gradient-to-r from-violet-500 to-indigo-600 h-2 rounded-full transition-all duration-300"
+                                  style={{ width: "60%" }}
+                                ></div>
+                              </div>
                             </div>
                           </div>
+                          {/* Action Button */}
+                          <button className="ml-4 px-4 py-2 bg-violet-600 text-white rounded-lg font-medium hover:bg-violet-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                            Claim
+                          </button>
                         </div>
-                        {/* Action Button */}
-                        <button className="ml-4 px-4 py-2 bg-violet-600 text-white rounded-lg font-medium hover:bg-violet-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
-                          Claim
-                        </button>
-                      </div>
                     ))}
                   </div>
                 </div>
