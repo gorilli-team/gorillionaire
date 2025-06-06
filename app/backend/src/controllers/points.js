@@ -84,7 +84,28 @@ async function trackOnDiscordXpGained(action, address, points, totalPoints) {
   }
 }
 
+async function awardDiscordConnectionPoints(address) {
+  const userActivity = await UserActivity.findOne({
+    address: address.toLowerCase(),
+  });
+
+  if (!userActivity) {
+    throw new Error("User activity not found");
+  }
+
+  const totalPoints = userActivity.points + 50;
+  userActivity.points += 50;
+  userActivity.activitiesList.push({
+    name: "Discord Connected",
+    points: 50,
+    date: new Date(),
+  });
+  await userActivity.save();
+  await trackOnDiscordXpGained("Discord Connected", address, 50, totalPoints);
+}
+
 module.exports = {
   awardRefuseSignalPoints,
   trackOnDiscordXpGained,
+  awardDiscordConnectionPoints,
 };
