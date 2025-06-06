@@ -38,6 +38,14 @@ try {
     const tokenData = await tokenResponse.json();
     const { access_token } = tokenData;
 
+    const userResponse = await fetch("https://discord.com/api/v10/users/@me", {
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+      },
+    });
+
+    const discordUser = await userResponse.json();
+
     // Check Discord guild membership
     const isMember = await checkDiscordGuildMembership(access_token, GORILLIONAIRE_GUILD_ID);
     
@@ -49,7 +57,8 @@ try {
     // Return JSON response
     return res.json({ 
       isMember: isMember,
-      address: address 
+      address: address,
+      discordUsername: discordUser.username,
     });
 
   } catch (error) {
