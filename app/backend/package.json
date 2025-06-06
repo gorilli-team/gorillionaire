@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@nadnameservice/nns-viem-sdk": "^1.1.0",
+    "@sentry/node": "^9.27.0",
+    "@sentry/profiling-node": "^9.27.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "discord.js": "^14.19.3",

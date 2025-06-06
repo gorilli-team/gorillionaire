@@ -1,6 +1,11 @@
 // app.js
+// IMPORTANT: Import instrument first before any other imports
+require("./instrument");
+
 const express = require("express");
 const cors = require("cors");
+const Sentry = require("@sentry/node");
+const { expressIntegration, expressErrorHandler } = require("@sentry/node");
 require("dotenv").config();
 
 const app = express();
@@ -37,6 +42,10 @@ app.use(
   require("./routes/signals/generated-signals")
 );
 app.use("/auth/privy", require("./routes/auth/privy"));
+
+// Sentry error handler must be registered after all controllers but before other error handlers
+app.use(expressErrorHandler());
+
 // Basic error handling
 app.use((err, req, res, next) => {
   console.error(err.stack);
