@@ -596,7 +596,6 @@ export default function SignalDetails() {
     },
     [signal, tokens, onYes, onNo, user?.wallet?.address]
   );
-
   return (
     <div>
       <div className="flex-1 overflow-y-auto p-6">

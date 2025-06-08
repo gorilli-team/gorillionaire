@@ -8,6 +8,9 @@ import Cookies from "js-cookie";
 import { useGetProfile } from "@nadnameservice/nns-wagmi-hooks";
 import { HexString } from "@/app/types";
 import { useDisconnect } from "wagmi";
+import { apiClient, safe } from "@/app/services/api";
+import { ENDPOINTS } from "@/app/const/Endpoints";
+import { setAuthToken, removeAuthToken } from "@/app/lib/auth";
 
 interface Notification {
   type: string;
@@ -59,22 +62,44 @@ export default function Header() {
     await logout();
   };
 
+  // useEffect(() => {
+  //   const token = getAuthToken();
+  //   if (!token || !isTokenValid(token)) {
+  //     removeAuthToken();
+  //     logout();
+  //   }
+  // }, [logout]);
+
   const { login } = useLogin({
     onComplete: async ({ user }) => {
+      console.log("user", user);
       const privyToken = Cookies.get("privy-token");
       if (!privyToken || !user.wallet?.address) return;
 
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/auth/privy`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
+      const [response, error] = await safe(
+        apiClient.post({
+          url: ENDPOINTS.PRIVY_VERIFY,
+          data: {
+            wallet_address: user.wallet.address,
+            privy_token: privyToken,
           },
-          body: JSON.stringify({ address: user.wallet.address, privyToken }),
-        }
+          csrfToken: true,
+        })
       );
-      await response.json();
+      if (response && response.status === 200) {
+        setAuthToken(response.data.token, response.data.refreshToken);
+        showCustomNotification(
+          "Welcome back! You've been signed in successfully.",
+          "Login Success"
+        );
+      } else {
+        removeAuthToken();
+        logout();
+        showCustomNotification(
+          error?.message || "Login Failed",
+          "Login Failed"
+        );
+      }
     },
   });
   const [monPriceFormatted, setMonPriceFormatted] = useState<string>("0.00");
