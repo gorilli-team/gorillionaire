@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import "@coinbase/onchainkit/styles.css";
 import "./styles/globals.css";
-import { Providers } from "./providers";
 import Script from "next/script";
+import { Providers } from "./providers";
 
 export const metadata: Metadata = {
   title: "Gorillionaire – AI-Powered Crypto Signals & Gamified Trading",
