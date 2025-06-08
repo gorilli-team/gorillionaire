@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import "@coinbase/onchainkit/styles.css";
 import "./styles/globals.css";
-import { Providers } from "./providers";
 import Script from "next/script";
+import Layout from "./main";
 
 export const metadata: Metadata = {
   title: "Gorillionaire – AI-Powered Crypto Signals & Gamified Trading",
@@ -51,7 +51,7 @@ export default function RootLayout({
           </a>{" "}
           to see what&apos;s new.
         </div>
-        <Providers>{children}</Providers>
+            <Layout>{children}</Layout>
         <Script
           id="crate-widget"
           src="https://cdn.jsdelivr.net/npm/@widgetbot/crate@3"

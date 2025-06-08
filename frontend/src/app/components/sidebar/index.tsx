@@ -85,9 +85,9 @@ export default function Sidebar({
           <li>
             <button
               className={`w-full text-left px-3 py-2 rounded-lg hover:bg-gray-200 ${
-                selectedPage === "V2" ? "bg-gray-200" : ""
+                selectedPage === "v2/signals" ? "bg-gray-200" : ""
               }`}
-              onClick={() => handlePageChange("V2")}
+              onClick={() => handlePageChange("v2/signals")}
             >
               <i className="fa-solid fa-rocket pr-2"></i>
               <span>V2 🦍</span>
