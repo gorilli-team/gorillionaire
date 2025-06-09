@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { getAuthToken } from "@/app/lib/auth";
+import { getAuthToken } from "@/app/helpers/auth";
 
 type MessageHandler = (data: any) => void;
 

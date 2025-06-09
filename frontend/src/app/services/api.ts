@@ -3,7 +3,7 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
 import { ENDPOINTS, BASE_URL } from "@/app/const/Endpoints";
 import { TOKEN_KEY, REFRESH_TOKEN_KEY } from "@/app/const/Vars";
-import { getAuthToken, getRefreshToken } from "../lib/auth";
+import { getAuthToken, getRefreshToken } from "@/app/helpers/auth";
 
 interface PropsRequest {
   url: string;

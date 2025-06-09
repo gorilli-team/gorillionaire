@@ -11,10 +11,9 @@ export default function GorillionaireLayout({ children }: { children: React.Reac
 
 
   return (
-    <html lang="en">
-      <body>
-        <AuthProvider>
-          <Providers>
+
+    <Providers>
+            <AuthProvider>
             <div className="flex h-screen bg-gray-100 text-gray-800">
               {/* Mobile menu button */}
               <button
@@ -79,9 +78,8 @@ export default function GorillionaireLayout({ children }: { children: React.Reac
                 {children}
               </div>
             </div>
-          </Providers>
         </AuthProvider>
-      </body>
-    </html>
+
+          </Providers>
   );
 }
