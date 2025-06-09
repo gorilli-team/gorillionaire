@@ -1,9 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useParams } from "next/navigation";
-import Sidebar from "@/app/components/sidebar";
-import Header from "@/app/components/header";
 import PriceChart from "@/app/components/price-chart";
 import { trackedTokens } from "@/app/shared/tokenData";
 import Image from "next/image";
@@ -11,6 +9,8 @@ import { getTimeAgo } from "@/app/utils/time";
 import { Time } from "lightweight-charts";
 import { apiClient } from "@/app/services/api";
 import { ENDPOINTS } from "@/app/const/Endpoints";
+import { Token } from "@/app/types";
+import CandlestickChart from "@/app/components/candlestick-chart";
 
 interface SignalData {
   id: string;
@@ -30,9 +30,59 @@ interface SignalEvent {
   timestamp: string;
 }
 
+interface Token {
+  id: string;
+  name: string;
+  symbol: string;
+  image: string;
+  trackedSince: string;
+  trackingTime: string;
+  signalsGenerated: number;
+}
+
 interface PriceData {
-  time: Time;
-  value: number;
+  id: number;
+  token_id: string;
+  chain_id: number;
+  currency: string;
+  high: number;
+  low: number;
+  open: number;
+  close: number;
+  volume: number;
+  timestamp: string;
+}
+
+export function parseTimeStringToTimestamp(timeStr: string): number {
+  const now = Date.now();
+
+  if (timeStr.trim() === "now") {
+    return now;
+  }
+
+  const regex = /^(-?\d+)([smhdw])$/i; // allow capital letters too
+  const match = timeStr.trim().match(regex); // trim spaces
+
+  if (!match) {
+    throw new Error(`Invalid time string format: ${timeStr}`);
+  }
+
+  const value = parseInt(match[1], 10);
+  const unit = match[2].toLowerCase();
+
+  const multipliers: Record<string, number> = {
+    s: 1000, // seconds
+    m: 60 * 1000, // minutes
+    h: 60 * 60 * 1000, // hours
+    d: 24 * 60 * 60 * 1000, // days
+    w: 7 * 24 * 60 * 60 * 1000, // weeks
+  };
+
+  if (!(unit in multipliers)) {
+    throw new Error(`Unsupported time unit: ${unit}`);
+  }
+
+  return now + value * multipliers[unit];
 }
 
 export default function SignalPage() {
@@ -49,20 +99,25 @@ export default function SignalPage() {
   console.log("currency", currency);
   const [signal, setSignal] = useState<SignalData | null>(null);
   const [signals, setSignals] = useState<SignalEvent[]>([]);
-  const [prices, setPrices] = useState<PriceData[]>([]);
+  const [token, setToken] = useState<Token | null>(null);
+  const [prices, setPrices] = useState<{ time: number; value: number }[]>([]);
 
   const [loading, setLoading] = useState(true);
 
-  const from = "-12h";
-  const to = "now";
+  const { from, to } = useMemo(() => {
+    return {
+      from: parseTimeStringToTimestamp("-6h"),
+      to: parseTimeStringToTimestamp("now"),
+    };
+  }, []);
 
   const fetchPriceData = async (
     token_id: string,
     timeframe: string,
-    from: string,
-    to: string
+    from: number,
+    to: number
   ) => {
-    if (!token_id) return;
+    if (!token_id || !timeframe || !from || !to) return;
 
     try {
       const response = await apiClient.get({
@@ -73,20 +128,24 @@ export default function SignalPage() {
       });
 
       if (response.status === 200) {
-        const chartData = response.data.map(
-          (item: { timestamp: string; price: number }) => {
-            const date = new Date(item.timestamp);
-            const timeValue = Math.floor(date.getTime() / 1000);
-            return {
-              time: timeValue,
-              value: item.price,
-            };
-          }
-        );
+        console.log("prices", response.data);
+        const chartData = response.data.map((item: PriceData) => {
+          const date = new Date(item.timestamp);
+          const timeValue = Math.floor(date.getTime() / 1000);
+          return {
+            time: timeValue,
+            open: item.open,
+            high: item.high,
+            low: item.low,
+            close: item.close,
+          };
+        });
 
         chartData.sort(
-          (a: PriceData, b: PriceData) =>
-            (a.time as number) - (b.time as number)
+          (
+            a: { time: number; value: number },
+            b: { time: number; value: number }
+          ) => a.time - b.time
         );
 
         setPrices(chartData);
@@ -101,7 +160,8 @@ export default function SignalPage() {
       url: ENDPOINTS.SIGNAL_INFO.replace(":id", signal_id),
       auth: true,
     });
-    return response.data;
+    console.log("signal", response.data);
+    setSignal(response.data);
   };
 
   const fetchTokenInfo = async (token_id: string) => {
@@ -109,15 +169,32 @@ export default function SignalPage() {
       url: ENDPOINTS.TOKEN_INFO.replace(":id", token_id),
       auth: true,
     });
-    return response.data;
+    console.log("token", response.data);
+    setToken(response.data);
   };
 
-  const fetchSignalEvents = async (signal_id: string, token_id: string, currency: string) => {
+  const fetchSignalEvents = async (
+    signal_id: string,
+    token_id: string,
+    currency: string,
+    from: number,
+    to: number
+  ) => {
     const response = await apiClient.get({
-      url: ENDPOINTS.SIGNAL_EVENTS.replace(":signal_id", signal_id) + "?token=" + token_id + "&curr=" + currency,
+      url:
+        ENDPOINTS.SIGNAL_EVENTS.replace(":signal_id", signal_id) +
+        "?token=" +
+        token_id +
+        "&curr=" +
+        currency +
+        "&from=" +
+        from +
+        "&to=" +
+        to,
       auth: true,
     });
-    return response.data;
+    console.log("signals", response.data);
+    setSignals(response.data.events);
   };
 
   // const fetchHolders = async (tokenAddress: string) => {
@@ -193,36 +270,153 @@ export default function SignalPage() {
     }
 
     return (
-      <div className="bg-white rounded-lg shadow p-4 mb-6">
-        <PriceChart data={prices} tokenSymbol={token_id || ""} />
-      </div>
+      <CandlestickChart
+        data={prices}
+        tokenSymbol={
+          token?.symbol + " - " + signal?.name + " - " + signal?.timeframe
+        }
+        signals={signals}
+      />
     );
   };
 
   useEffect(() => {
     fetchSignalInfo(signal_id);
     fetchTokenInfo(token_id);
-    fetchSignalEvents(signal_id, token_id, currency);
-  }, [signal_id, token_id, currency]);
-
+    fetchSignalEvents(signal_id, token_id, currency, from, to);
+  }, [signal_id, token_id, currency, from, to]);
 
   useEffect(() => {
-    fetchPriceData(token_id, signal?.timeframe, from, to);
-  }, [signal]);
+    if (signal && token_id) {
+      fetchPriceData(token_id, signal?.timeframe, from, to);
+      setLoading(false);
+    }
+  }, [signal, token_id, from, to]);
 
   return (
     <div className="flex-1 overflow-auto bg-gray-50">
       <div className="container mx-auto px-4 py-8">
         {/* add here a whales section with the top 20 holders */}
-        <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mt-6">
 
-          {/* Table header - visible only on medium screens and up */}
-          <div className="gap-4 mb-2 px-4 font-semibold text-gray-700">
-            {renderPriceChart()}
-          </div>
-
-          {/* Table rows */}
+        {/* Table header - visible only on medium screens and up */}
+        <div className="gap-4 mb-2 px-4 font-semibold text-gray-700 p-4 bg-white rounded-lg shadow-md">
+          {renderPriceChart()}
         </div>
+        <div className="grid grid-cols-2 gap-2">
+          <table className="w-full border-collapse hidden md:table bg-white rounded-lg shadow-md p-4 text-xs">
+            <thead className="sticky top-0 bg-white z-10">
+              <tr className="text-left text-xs text-gray-500 bg-gray-50">
+                <th className="px-4 py-2 text-xs">SIGNAL</th>
+                <th className="px-4 py-2 text-xs">TIME</th>
+                <th className="px-4 py-2 text-xs">PRICE</th>
+                <th className="px-4 py-2 text-xs text-center">ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody>
+              {signals.map((signalEvent, index) => (
+                <tr
+                  key={signalEvent.id}
+                  className="border-b border-gray-100 text-xs text-gray-500"
+                >
+                  <td className="text-gray-500 px-4 py-2 text-xs">
+                  <div className="flex items-center">
+                        <div
+                          className={`w-4 h-4 rounded-full mr-2 flex items-center justify-center ${
+                            signalEvent.action === "BUY"
+                              ? "bg-green-400"
+                              : "bg-red-400"
+                          }`}
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="w-3 h-4 text-white"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            {signalEvent.action === "BUY" ? (
+                              <>
+                                {/* Stick (vertical line) */}
+                                <line
+                                  x1="12"
+                                  y1="20"
+                                  x2="12"
+                                  y2="10"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                />
+                                {/* Arrowhead (upward) */}
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M5 15l7-7 7 7"
+                                />
+                              </>
+                            ) : (
+                              <>
+                                {/* Stick (vertical line) */}
+                                <line
+                                  x1="12"
+                                  y1="4"
+                                  x2="12"
+                                  y2="14"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                />
+                                {/* Arrowhead (downward) */}
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M19 9l-7 7-7-7"
+                                />
+                              </>
+                            )}
+                          </svg>
+                        </div>
+                        <span className="text-xs">
+                          {signalEvent.action.charAt(0).toUpperCase() +
+                            signalEvent.action.slice(1).toLowerCase()}
+                        </span>
+                      </div>
+                  </td>
+                  <td className="text-gray-500 px-4 py-2 text-xs">
+                    {getTimeAgo(signalEvent.timestamp)}
+                  </td>
+                  <td className="text-gray-500 px-4 py-2 text-xs">
+                    {signalEvent.price.toFixed(6)}
+                  </td>
+                  <td className="text-gray-500 px-4 py-2 text-xs">
+                      <div className="inline-flex rounded-full border border-gray-300 overflow-hidden">
+                        <button 
+                          className={`px-3 py-1 text-sm flex items-center justify-center w-16 ${
+                            index === 0 ? 'bg-white text-gray-500' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                          }`}
+                          disabled={index !== 0}
+                        >
+                          <span>Refuse</span>
+                        </button>
+                        <button 
+                          className={`px-3 py-1 text-sm flex items-center justify-center w-16 ${
+                            index === 0 ? 'bg-violet-700 text-white' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                          }`}
+                          disabled={index !== 0}
+                        >
+                          <span>Trade</span>
+                        </button>
+                      </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <table className="w-full bg-white rounded-lg shadow-md p-4 text-xs">
+            <thead>
+            </thead>
+          </table>
+        </div>
+        {/* Table rows */}
       </div>
     </div>
   );
