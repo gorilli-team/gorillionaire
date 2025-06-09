@@ -131,24 +131,24 @@ const CandlestickChart: React.FC<PriceChartProps> = ({ data, tokenSymbol, signal
     });
   }, [data]);
 
-  // Find all-time high and low
-  useEffect(() => {
-    if (!data || data.length === 0) return;
+  // // Find all-time high and low
+  // useEffect(() => {
+  //   if (!data || data.length === 0) return;
 
-    let high = { value: Number.MIN_SAFE_INTEGER, time: data[0].time };
-    let low = { value: Number.MAX_SAFE_INTEGER, time: data[0].time };
+  //   let high = { value: Number.MIN_SAFE_INTEGER, time: data[0].time };
+  //   let low = { value: Number.MAX_SAFE_INTEGER, time: data[0].time };
 
-    data.forEach((item) => {
-      if (item.close > high.value) {
-        high = { value: item.close, time: item.time };
-      }
-      if (item.close < low.value) {
-        low = { value: item.close, time: item.time };
-      }
-    });
+  //   data.forEach((item) => {
+  //     if (item.close > high.value) {
+  //       high = { value: item.close, time: item.time };
+  //     }
+  //     if (item.close < low.value) {
+  //       low = { value: item.close, time: item.time };
+  //     }
+  //   });
 
-    setAllTimeHighLow({ high, low });
-  }, [data]);
+  //   setAllTimeHighLow({ high, low });
+  // }, [data]);
 
   useLayoutEffect(() => {
     if (!isClient || !chartContainerRef.current || !data || data.length === 0)
@@ -467,13 +467,13 @@ const CandlestickChart: React.FC<PriceChartProps> = ({ data, tokenSymbol, signal
   // Server-side and initial client render
   if (!isClient || !data || data.length === 0) {
     return (
-      <div className="w-full p-4 bg-white rounded-lg shadow-md">
-        <h3 className="text-lg font-semibold mb-4">
+      <div className="w-full">
+        {/* <h3 className="text-lg font-semibold mb-4">
           {tokenSymbol} Price Chart
         </h3>
         <div className="h-[300px] flex items-center justify-center text-gray-500">
           {!isClient ? "Loading..." : "No price data available"}
-        </div>
+        </div> */}
       </div>
     );
   }
@@ -483,7 +483,7 @@ const CandlestickChart: React.FC<PriceChartProps> = ({ data, tokenSymbol, signal
       <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-4">
         <h3 className="text-lg font-semibold mb-2 md:mb-0">{tokenSymbol}</h3>
 
-        {priceStats && (
+        {/* {priceStats && (
           <div className="flex flex-wrap gap-4 md:gap-4 md:justify-end mt-1 md:mt-0">
             <div className="flex flex-col">
               <span className="text-xs text-gray-500">Price</span>
@@ -525,7 +525,7 @@ const CandlestickChart: React.FC<PriceChartProps> = ({ data, tokenSymbol, signal
               </span>
             </div>
           </div>
-        )}
+        )} */}
       </div>
 
       <div className="relative">
