@@ -13,7 +13,6 @@ const GORILLIONAIRE_GUILD_ID = process.env.GORILLIONAIRE_GUILD_ID;
 router.post("/verify", async (req, res) => {
   const { code, address } = req.body;
 
-
   if (!code) {
     return res.status(400).json({ error: "Authorization code is missing" });
   }
@@ -74,6 +73,16 @@ router.post("/verify", async (req, res) => {
         });
 
         if (existingUserQuest) {
+          await UserQuest.findOneAndUpdate(
+            {
+              questId: discordQuest._id,
+              address: address
+            },
+            { 
+              username: discordUser.username
+            }
+          );
+
           console.log(`User ${address} already completed Discord quest at ${existingUserQuest.completedAt}`);
           return res.json({ 
             isMember: true,
@@ -90,7 +99,8 @@ router.post("/verify", async (req, res) => {
           },
           { 
             isCompleted: true, 
-            completedAt: new Date() 
+            completedAt: new Date(),
+            username: discordUser.username
           },
           { upsert: true, new: true }
         );
@@ -140,5 +150,76 @@ async function checkDiscordGuildMembership(accessToken, guildId) {
   const guilds = await response.json();
   return guilds.some((guild) => guild.id === guildId);
 }
+
+router.get("/username/:address", async (req, res) => {
+  const { address } = req.params;
+
+  try {
+    const discordQuest = await Quest.findOne({ questType: "discord" });
+    
+    if (!discordQuest) {
+      return res.json({ username: null });
+    }
+
+    const userQuest = await UserQuest.findOne({
+      questId: discordQuest._id,
+      address: address,
+      isCompleted: true
+    });
+
+    if (userQuest && userQuest.username) {
+      return res.json({ 
+        username: userQuest.username
+      });
+    }
+
+    return res.json({ username: null });
+
+  } catch (error) {
+    console.error("Error getting Discord username:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/status/:address", async (req, res) => {
+  const { address } = req.params;
+
+  try {
+    const discordQuest = await Quest.findOne({ questType: "discord" });
+    
+    if (!discordQuest) {
+      return res.json({ 
+        hasCompletedQuest: false,
+        questExists: false,
+        username: null
+      });
+    }
+
+    const userQuest = await UserQuest.findOne({
+      questId: discordQuest._id,
+      address: address,
+      isCompleted: true
+    });
+
+    if (userQuest) {
+      return res.json({ 
+        hasCompletedQuest: true,
+        questExists: true,
+        completedAt: userQuest.completedAt,
+        username: userQuest.username || null
+      });
+    }
+
+    return res.json({
+      hasCompletedQuest: false,
+      questExists: true,
+      username: null
+    });
+
+  } catch (error) {
+    console.error("Error checking Discord quest status:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 module.exports = router;

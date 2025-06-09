@@ -35,8 +35,7 @@ const DiscordPage = () => {
           
           const data = await response.json();
 
-          const urlParams = `?discordConnected=${data.isMember}&discordUsername=${encodeURIComponent(data.discordUsername)}`;
-          router.push(`/users/${state}${urlParams}`);
+          router.push(`/users/${state}`);
           
         } catch (error) {
           console.error('Discord verification failed:', error);

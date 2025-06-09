@@ -23,6 +23,10 @@ const userQuestSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    username: {
+      type: String,
+      default: null,
+    },
   },
   {
     timestamps: true,
