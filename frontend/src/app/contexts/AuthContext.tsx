@@ -53,12 +53,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // const valid = isTokenValid(token || "");
     // console.log("valid", valid);
     // if (!valid || (privy.authenticated && !token)) {
-      await logout();
-      setIsAuthenticated(false);
-      privyLogin();
-      setIsAuthenticated(true);
+    await logout();
+    setIsAuthenticated(false);
+    privyLogin();
+    setIsAuthenticated(true);
     // } else {
-      // privyLogin();
+    // privyLogin();
     // }
   }, [privyLogin, privy, logout]);
 

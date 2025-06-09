@@ -75,5 +75,3 @@ export const getRefreshToken = (): string | null => {
   }
   return null;
 };
-
-
