@@ -1,83 +1,128 @@
-'use client';
+// AuthContext.tsx
+"use client";
 
-import { createContext, useContext, useState, ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
-
-interface User {
-  address: string;
-  token: string;
-}
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  ReactNode,
+} from "react";
+import { usePrivy, useLogout, useLogin } from "@privy-io/react-auth";
+import {
+  getAuthToken,
+  isTokenValid,
+  removeAuthToken,
+  setAuthToken,
+} from "@/app/helpers/auth";
+import { safe, apiClient } from "@/app/services/api";
+import { ENDPOINTS } from "@/app/const/Endpoints";
+import Cookies from "js-cookie";
 
 interface AuthContextType {
-  user: User | null;
+  token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  verifyWallet: (address: string, siweToken: string) => Promise<void>;
+  login: () => void;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [isLoading, setIsLoading] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
-  const router = useRouter();
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [token, setToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const verifyWallet = async (address: string, siweToken: string) => {
-    try {
-      setIsLoading(true);
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_V2_URL}/auth/siwe/verify`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          address,
-          siweToken,
-        }),
-      });
+  const privy = usePrivy();
+  const { logout: privyLogout } = useLogout();
+  const { login: privyLogin } = useLogin({
+    onComplete: () => {
+      handlePrivyLogin();
+    },
+  });
 
-      if (response.ok) {
-        const data = await response.json();
-        setUser({
-          address,
-          token: data.token,
-        });
-      } else {
-        setUser(null);
-      }
-    } catch (error) {
-      console.error('Auth verification failed:', error);
-      setUser(null);
-    } finally {
-      setIsLoading(false);
+  const logout = useCallback(() => {
+    removeAuthToken();
+    setToken(null);
+    privyLogout();
+  }, [privyLogout]);
+
+  const login = useCallback(() => {
+    privyLogin();
+  }, [privyLogin]);
+
+  const validateToken = useCallback(() => {
+    const existing = getAuthToken();
+    if (existing && isTokenValid(existing)) {
+      setToken(existing);
+    } else {
+      logout();
     }
-  };
+    setIsLoading(false);
+  }, [logout]);
 
-  const logout = () => {
-    setUser(null);
-    router.push('/');
-  };
+  const handlePrivyLogin = useCallback(async () => {
+    if (!privy.ready || !privy.authenticated || !privy.user?.wallet?.address)
+      return;
+
+    const privyToken = Cookies.get("privy-token");
+    if (!privyToken) return;
+
+    const [response, error] = await safe(
+      apiClient.post({
+        url: ENDPOINTS.PRIVY_VERIFY,
+        data: {
+          wallet_address: privy.user.wallet.address,
+          privy_token: privyToken,
+        },
+        csrfToken: true,
+      })
+    );
+
+    if (error || response?.status !== 200) {
+      logout();
+    } else {
+      setAuthToken(response.data.token, response.data.refreshToken);
+      setToken(response.data.token);
+    }
+  }, [privy, logout]);
+
+  useEffect(() => {
+    const token = getAuthToken();
+    if (token)
+      if (isTokenValid(token)) {
+        setToken(token);
+      } else {
+        logout();
+      }
+  }, [logout]);
+
+  useEffect(() => {
+    if (!token && privy.ready && privy.authenticated) {
+      handlePrivyLogin();
+    }
+  }, [privy, token, handlePrivyLogin]);
 
   return (
     <AuthContext.Provider
       value={{
-        user,
-        isAuthenticated: !!user,
+        token,
+        isAuthenticated: !!token,
         isLoading,
-        verifyWallet,
+        login,
         logout,
       }}
     >
       {children}
     </AuthContext.Provider>
   );
-}
+};
 
-export function useAuth() {
+export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+  if (!context) {
+    throw new Error("useAuth must be used within AuthProvider");
   }
   return context;
-} 
+};

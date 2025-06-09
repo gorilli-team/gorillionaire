@@ -2,13 +2,15 @@
 
 import { Suspense } from 'react';
 import EventSignalsComponent from '@/app/components/signals/events';
+import Protect from '@/app/components/protect/index';
 
 function SignalsContent() {
 
 
   return (
-    
+    <Protect>
       <EventSignalsComponent />
+    </Protect>
 
   )
   //   <div className="container mx-auto px-4 py-8">
