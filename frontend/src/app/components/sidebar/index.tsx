@@ -85,6 +85,17 @@ export default function Sidebar({
           <li>
             <button
               className={`w-full text-left px-3 py-2 rounded-lg hover:bg-gray-200 ${
+                selectedPage === "Betting" ? "bg-gray-200" : ""
+              }`}
+              onClick={() => handlePageChange("Betting")}
+            >
+              <i className="fa-solid fa-chart-line pr-2"></i>
+              <span>Betting</span>
+            </button>
+          </li>
+          <li>
+            <button
+              className={`w-full text-left px-3 py-2 rounded-lg hover:bg-gray-200 ${
                 selectedPage === "V2" ? "bg-gray-200" : ""
               }`}
               onClick={() => handlePageChange("V2")}

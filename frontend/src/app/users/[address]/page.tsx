@@ -14,6 +14,7 @@ import ActivitiesChart from "@/app/components/activities-chart";
 import { useReadContract } from "wagmi";
 import { abi } from "@/app/abi/early-nft";
 import { NFT_ACCESS_ADDRESS } from "@/app/utils/constants";
+import { LoadingOverlay } from "@/app/components/ui/LoadingSpinner";
 
 interface UserActivity {
   name: string;
@@ -123,14 +124,7 @@ const UserProfilePage = () => {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-r from-violet-50 to-indigo-50">
-        <div className="flex flex-col items-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-violet-600"></div>
-          <p className="mt-4 text-violet-600 font-medium">Loading profile...</p>
-        </div>
-      </div>
-    );
+    return <LoadingOverlay />;
   }
 
   if (!userProfile) {
