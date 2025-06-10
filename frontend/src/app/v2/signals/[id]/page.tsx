@@ -2,15 +2,11 @@
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useParams } from "next/navigation";
-import PriceChart from "@/app/components/price-chart";
-import { trackedTokens } from "@/app/shared/tokenData";
-import Image from "next/image";
 import { getTimeAgo } from "@/app/utils/time";
-import { Time } from "lightweight-charts";
 import { apiClient } from "@/app/services/api";
 import { ENDPOINTS } from "@/app/const/Endpoints";
-import { Token } from "@/app/types";
 import CandlestickChart from "@/app/components/candlestick-chart";
+import ProtectPage from "@/app/components/protect-page/index";
 
 interface SignalData {
   id: string;
@@ -294,6 +290,7 @@ export default function SignalPage() {
   }, [signal, token_id, from, to]);
 
   return (
+    <ProtectPage>
     <div className="flex-1 overflow-auto bg-gray-50">
       <div className="container mx-auto px-4 py-8">
         {/* add here a whales section with the top 20 holders */}
@@ -419,5 +416,6 @@ export default function SignalPage() {
         {/* Table rows */}
       </div>
     </div>
+    </ProtectPage>
   );
 }

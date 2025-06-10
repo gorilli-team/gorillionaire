@@ -49,8 +49,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [privyLogout]);
 
   const login = useCallback(() => {
-    privyLogin();
-  }, [privyLogin]);
+    const existing = getAuthToken();
+    if (privy.authenticated && !existing) {
+      logout();
+      privyLogin();
+    } else {
+      privyLogin();
+    }
+  }, [privyLogin, privy, logout]);
 
   const validateToken = useCallback(() => {
     const existing = getAuthToken();
@@ -98,11 +104,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
   }, [logout]);
 
-  useEffect(() => {
-    if (!token && privy.ready && privy.authenticated) {
-      handlePrivyLogin();
-    }
-  }, [privy, token, handlePrivyLogin]);
+
+
+  // useEffect(() => {
+  //   if (!token && privy.ready && privy.authenticated) {
+  //     handlePrivyLogin();
+  //   }
+  // }, [privy, token, handlePrivyLogin]);
 
   return (
     <AuthContext.Provider
