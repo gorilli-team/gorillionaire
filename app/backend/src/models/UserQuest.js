@@ -22,11 +22,7 @@ const userQuestSchema = new mongoose.Schema(
     completedAt: {
       type: Date,
       default: null,
-    },
-    username: {
-      type: String,
-      default: null,
-    },
+    }
   },
   {
     timestamps: true,

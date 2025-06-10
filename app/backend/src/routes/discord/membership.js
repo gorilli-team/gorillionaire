@@ -4,6 +4,7 @@ const router = express.Router();
 const { awardDiscordConnectionPoints } = require('../../controllers/points');
 const Quest = require('../../models/Quest');
 const UserQuest = require('../../models/UserQuest');
+const UserActivity = require('../../models/UserActivity');
 
 const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID;
 const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
@@ -54,7 +55,18 @@ router.post("/verify", async (req, res) => {
 
     const discordUser = await userResponse.json();
 
-    // Check Discord guild membership
+    try {
+      await UserActivity.findOneAndUpdate(
+        { address: address },
+        { 
+          discordUsername: discordUser.username 
+        },
+        { upsert: true, new: true }
+      );
+    } catch (activityError) {
+      console.error("Error updating Discord username in UserActivity:", activityError);
+    }
+
     const isMember = await checkDiscordGuildMembership(access_token, GORILLIONAIRE_GUILD_ID);
 
     if (isMember) {
@@ -73,16 +85,6 @@ router.post("/verify", async (req, res) => {
         });
 
         if (existingUserQuest) {
-          await UserQuest.findOneAndUpdate(
-            {
-              questId: discordQuest._id,
-              address: address
-            },
-            { 
-              username: discordUser.username
-            }
-          );
-
           console.log(`User ${address} already completed Discord quest at ${existingUserQuest.completedAt}`);
           return res.json({ 
             isMember: true,
@@ -99,13 +101,14 @@ router.post("/verify", async (req, res) => {
           },
           { 
             isCompleted: true, 
-            completedAt: new Date(),
-            username: discordUser.username
+            completedAt: new Date()
           },
           { upsert: true, new: true }
         );
 
         await awardDiscordConnectionPoints(address);
+
+        console.log(`User ${address} completed Discord quest and earned 50 points`);
 
       } catch (questError) {
         console.error("Error handling Discord quest:", questError);
@@ -155,21 +158,11 @@ router.get("/username/:address", async (req, res) => {
   const { address } = req.params;
 
   try {
-    const discordQuest = await Quest.findOne({ questType: "discord" });
+    const userActivity = await UserActivity.findOne({ address: address });
     
-    if (!discordQuest) {
-      return res.json({ username: null });
-    }
-
-    const userQuest = await UserQuest.findOne({
-      questId: discordQuest._id,
-      address: address,
-      isCompleted: true
-    });
-
-    if (userQuest && userQuest.username) {
+    if (userActivity && userActivity.discordUsername) {
       return res.json({ 
-        username: userQuest.username
+        username: userActivity.discordUsername
       });
     }
 
@@ -201,19 +194,22 @@ router.get("/status/:address", async (req, res) => {
       isCompleted: true
     });
 
+    const userActivity = await UserActivity.findOne({ address: address });
+    const discordUsername = userActivity?.discordUsername || null;
+
     if (userQuest) {
       return res.json({ 
         hasCompletedQuest: true,
         questExists: true,
         completedAt: userQuest.completedAt,
-        username: userQuest.username || null
+        username: discordUsername
       });
     }
 
-    return res.json({
+    return res.json({ 
       hasCompletedQuest: false,
       questExists: true,
-      username: null
+      username: discordUsername
     });
 
   } catch (error) {

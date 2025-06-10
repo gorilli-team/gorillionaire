@@ -44,6 +44,10 @@ const userActivitySchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    discordUsername: {
+      type: String,
+      default: null,
+    },
   },
   {
     timestamps: true,
