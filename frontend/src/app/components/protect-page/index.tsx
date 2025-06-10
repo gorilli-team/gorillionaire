@@ -8,7 +8,7 @@ interface ProtectProps {
   children: React.ReactNode;
 }
 
-export default function Protect({ children }: ProtectProps) {
+export default function ProtectPage({ children }: ProtectProps) {
   const { isAuthenticated } = useAuth();
   const router = useRouter();
 
@@ -19,6 +19,7 @@ export default function Protect({ children }: ProtectProps) {
   }, [isAuthenticated, router]);
 
   if (!isAuthenticated) {
+    router.push("/unauthorized");
     return null;
   }
 
