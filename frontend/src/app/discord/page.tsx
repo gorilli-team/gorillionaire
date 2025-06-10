@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect } from "react";
-import { useRouter } from 'next/navigation';
+import { useRouter } from "next/navigation";
 import Sidebar from "@/app/components/sidebar";
 import Header from "@/app/components/header";
 
@@ -12,33 +12,33 @@ const DiscordPage = () => {
     const handleDiscordCallback = async () => {
       // Get URL parameters
       const urlParams = new URLSearchParams(window.location.search);
-      const code = urlParams.get('code');
-      const state = urlParams.get('state');
-      const error = urlParams.get('error');
-      
+      const code = urlParams.get("code");
+      const state = urlParams.get("state");
+      const error = urlParams.get("error");
+
       if (error) {
         router.push(`/users/${state}?discordError=true`);
         return;
       }
-      
+
       if (code && state) {
         try {
           // Call backend to verify membership
-          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/discord/membership/verify`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              code: code, 
-              address: state 
-            })
-          });
-          
-          const data = await response.json();
+          await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/discord/membership/verify`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                code: code,
+                address: state,
+              }),
+            }
+          );
 
           router.push(`/users/${state}`);
-          
         } catch (error) {
-          console.error('Discord verification failed:', error);
+          console.error("Discord verification failed:", error);
           router.push(`/users/${state}?discordError=true`);
         }
       }
@@ -59,7 +59,6 @@ const DiscordPage = () => {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               <div className="lg:col-span-12">
                 <div className="bg-white rounded-2xl shadow-lg p-6 h-full">
-                  
                   <div className="flex items-center justify-center min-h-[60vh]">
                     <div className="text-center p-8 bg-white rounded-xl shadow-lg max-w-md">
                       <div className="text-6xl mb-6">🦍</div>
@@ -72,7 +71,6 @@ const DiscordPage = () => {
                       </p>
                     </div>
                   </div>
-
                 </div>
               </div>
             </div>
