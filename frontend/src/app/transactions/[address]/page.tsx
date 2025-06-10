@@ -255,121 +255,165 @@ const TransactionsPage = () => {
                   </div>
 
                   {/* Activities List */}
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {userProfile.activitiesList.length > 0 ? (
                       userProfile.activitiesList.map((activity, index) => (
                         <div
                           key={index}
-                          className="flex items-center bg-white rounded-xl border border-gray-100 px-4 py-3 shadow-sm gap-3"
+                          className={`p-3 rounded-lg hover:shadow-sm transition-all duration-200 border border-l-2 border-l-purple-500 border-gray-200"`}
                         >
-                          {/* Buy/Sell Icon */}
-                          <div
-                            className="shrink-0 flex items-center justify-center w-7 h-7 rounded-full"
-                            style={{
-                              backgroundColor:
-                                activity.intentId.action === "buy"
-                                  ? "#E9F9EE"
-                                  : "#FDECEC",
-                            }}
-                          >
-                            {activity.intentId.action === "buy" ? (
-                              <svg
-                                className="w-4 h-4 text-green-500"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
+                          <div className="flex items-center gap-2">
+                            <div className="shrink-0">
+                              <div
+                                className={`w-8 h-8 rounded-full flex items-center justify-center shadow-sm bg-gradient-to-br from-violet-500 to-violet-600`}
                               >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth="2"
-                                  d="M5 10l7-7m0 0l7 7m-7-7v18"
-                                />
-                              </svg>
-                            ) : (
-                              <svg
-                                className="w-4 h-4 text-red-500"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth="2"
-                                  d="M19 14l-7 7m0 0l-7-7m7 7V3"
-                                />
-                              </svg>
-                            )}
+                                {activity.intentId?.tokenSymbol ? (
+                                  <Image
+                                    src={getTokenImage(
+                                      activity.intentId.tokenSymbol
+                                    )}
+                                    alt={activity.intentId.tokenSymbol}
+                                    width={32}
+                                    height={32}
+                                    className="rounded-full"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = "none";
+                                      e.currentTarget.parentElement!.innerHTML = `
+                                        <span class="text-white text-sm font-bold">
+                                          ${activity.name
+                                            .charAt(0)
+                                            .toUpperCase()}
+                                        </span>
+                                      `;
+                                    }}
+                                  />
+                                ) : (
+                                  <span className="text-white text-sm font-bold">
+                                    {activity.name.charAt(0).toUpperCase()}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                              <div className="flex justify-between items-center">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <div className="font-medium text-gray-900 text-sm truncate">
+                                    {activity.name}
+                                  </div>
+                                  {activity.intentId?.tokenSymbol && (
+                                    <div className="flex items-center gap-1 bg-gray-100 px-1.5 py-0.5 rounded-full shrink-0">
+                                      <Image
+                                        src={`/tokens/${activity.intentId.tokenSymbol.toLowerCase()}.png`}
+                                        alt={activity.intentId.tokenSymbol}
+                                        width={12}
+                                        height={12}
+                                        className="rounded-full"
+                                        onError={(e) => {
+                                          e.currentTarget.style.display =
+                                            "none";
+                                        }}
+                                      />
+                                      <span className="text-xs font-medium text-gray-700">
+                                        {activity.intentId.tokenSymbol}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <span className="text-xs text-gray-500">
+                                    {getTimeAgo(activity.date)}
+                                  </span>
+                                  <div className="inline-flex items-center px-1.5 py-0.5 bg-violet-100 text-violet-800 rounded-full text-xs font-medium">
+                                    +{activity.points} pts
+                                  </div>
+                                </div>
+                              </div>
+
+                              {activity?.intentId && (
+                                <div className="mt-2 flex flex-wrap gap-1.5">
+                                  <div className="flex items-center space-x-1 bg-white px-1.5 py-0.5 rounded-md border border-gray-100">
+                                    <span className="text-xs text-gray-500">
+                                      Action:
+                                    </span>
+                                    <span
+                                      className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${
+                                        activity.intentId.action === "buy"
+                                          ? "bg-green-100 text-green-800"
+                                          : "bg-red-100 text-red-800"
+                                      }`}
+                                    >
+                                      {activity.intentId.action.toUpperCase()}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center space-x-1 bg-white px-1.5 py-0.5 rounded-md border border-gray-100">
+                                    <span className="text-xs text-gray-500">
+                                      Amount:
+                                    </span>
+                                    <span className="text-xs font-medium text-gray-900">
+                                      {activity.intentId.tokenAmount}{" "}
+                                      {activity.intentId.tokenSymbol}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center space-x-1 bg-white px-1.5 py-0.5 rounded-md border border-gray-100">
+                                    <span className="text-xs text-gray-500">
+                                      Price:
+                                    </span>
+                                    <span className="text-xs font-medium text-gray-900">
+                                      ${activity.intentId.tokenPrice}
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+
+                              <div className="flex items-center gap-2 mt-1.5">
+                                {activity.intentId?.txHash && (
+                                  <a
+                                    href={`https://testnet.monadexplorer.com/tx/${activity.intentId.txHash}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center text-xs text-violet-600 hover:text-violet-800 font-medium transition-colors duration-200"
+                                  >
+                                    <svg
+                                      className="w-3 h-3 mr-1"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth="2"
+                                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                                      />
+                                    </svg>
+                                    View Transaction
+                                  </a>
+                                )}
+                                {activity.signalId && (
+                                  <a
+                                    href={`/signals/${activity.signalId}`}
+                                    className="inline-flex items-center text-xs text-violet-600 hover:text-violet-800 font-medium transition-colors duration-200"
+                                  >
+                                    <svg
+                                      className="w-3 h-3 mr-1"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth="2"
+                                        d="M9 5l7 7-7 7"
+                                      />
+                                    </svg>
+                                    View Signal
+                                  </a>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                          {/* Action */}
-                          <span
-                            className={`font-medium text-sm ${
-                              activity.intentId.action === "buy"
-                                ? "text-green-600"
-                                : "text-red-600"
-                            }`}
-                          >
-                            {activity.intentId.action.charAt(0).toUpperCase() +
-                              activity.intentId.action.slice(1)}
-                          </span>
-                          {/* Token Image */}
-                          {activity.intentId?.tokenSymbol && (
-                            <Image
-                              src={getTokenImage(activity.intentId.tokenSymbol)}
-                              alt={activity.intentId.tokenSymbol}
-                              width={24}
-                              height={24}
-                              className="rounded-full"
-                              onError={(e) => {
-                                e.currentTarget.style.display = "none";
-                              }}
-                            />
-                          )}
-                          {/* Amount + Symbol */}
-                          <span className="font-semibold text-gray-900 text-sm">
-                            {activity.intentId.tokenAmount.toLocaleString()}{" "}
-                            {activity.intentId.tokenSymbol}
-                          </span>
-                          {/* Time ago */}
-                          <span className="text-xs text-gray-500 ml-auto">
-                            {getTimeAgo(activity.date)}
-                          </span>
-                          {/* Points pill */}
-                          <span className="ml-2 px-2 py-0.5 rounded-md bg-violet-50 text-violet-700 text-xs font-semibold">
-                            +{activity.points} pts
-                          </span>
-                          {/* Version pill */}
-                          <span
-                            className={`ml-2 px-2 py-0.5 rounded-md text-xs font-semibold ${
-                              activity.intentId.tokenPrice > 1
-                                ? "bg-pink-100 text-pink-600"
-                                : "bg-orange-100 text-orange-600"
-                            }`}
-                          >
-                            {activity.intentId.tokenPrice > 1 ? "V2" : "V1"}
-                          </span>
-                          {/* External link icon */}
-                          <a
-                            href={`https://testnet.monadexplorer.com/tx/${activity.intentId.txHash}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="ml-2 text-violet-600 hover:text-violet-800"
-                          >
-                            <svg
-                              className="w-4 h-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth="2"
-                                d="M14 3h7m0 0v7m0-7L10 14"
-                              />
-                            </svg>
-                          </a>
                         </div>
                       ))
                     ) : (
