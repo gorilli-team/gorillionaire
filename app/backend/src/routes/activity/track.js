@@ -261,14 +261,10 @@ router.get("/me", async (req, res) => {
       return res.status(400).json({ error: "No address provided" });
     }
 
-    console.log("address", address);
-
     const dollarValue = await Intent.aggregate([
       { $match: { userAddress: address.toLowerCase(), status: "completed" } },
       { $group: { _id: null, total: { $sum: "$usdValue" } } },
     ]);
-
-    console.log("dollarValue", dollarValue);
 
     // Get user activity with paginated activities
     const userActivity = await UserActivity.findOne(
