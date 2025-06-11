@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Pagination } from "flowbite-react";
 import { useAccount } from "wagmi";
 import Image from "next/image";
@@ -48,7 +48,7 @@ const LeaderboardComponent = () => {
     fetchLeaderboard(page);
   };
 
-  const fetchLeaderboard = async (currentPage: number) => {
+  const fetchLeaderboard = useCallback(async (currentPage: number) => {
     try {
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/activity/track/leaderboard?page=${currentPage}`
@@ -72,9 +72,9 @@ const LeaderboardComponent = () => {
       console.error("Error fetching leaderboard:", error);
       setInvestors([]);
     }
-  };
+  }, []);
 
-  const fetchMe = async () => {
+  const fetchMe = useCallback(async () => {
     try {
       if (!address) return;
       const response = await fetch(
@@ -87,7 +87,7 @@ const LeaderboardComponent = () => {
 
       // Create investor object from /me response
       const myInvestorData: Investor = {
-        rank: data.userActivity?.rank || 0, // Access rank from userActivity object
+        rank: data.userActivity?.rank || 0,
         address: address,
         nadName: nadProfile[0]?.primaryName,
         nadAvatar:
@@ -100,7 +100,7 @@ const LeaderboardComponent = () => {
     } catch (error) {
       console.error("Error fetching user activity:", error);
     }
-  };
+  }, [address]);
 
   useEffect(() => {
     fetchLeaderboard(currentPage);
@@ -114,7 +114,7 @@ const LeaderboardComponent = () => {
 
     // Cleanup interval on component unmount
     return () => clearInterval(interval);
-  }, [address, currentPage]);
+  }, [address, currentPage, fetchLeaderboard, fetchMe]);
 
   // Effect to update filteredInvestors when investors change
   useEffect(() => {

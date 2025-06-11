@@ -1,9 +1,19 @@
 import { useEffect, useRef } from "react";
 import { getAuthToken } from "@/app/helpers/auth";
 
-type MessageHandler = (data: any) => void;
+type Event = {
+  id: string;
+  token_id: string;
+  signal_id: string;
+  signal_name: string;
+  currency: string;
+  action: string;
+  symbol: string;
+  price: number;
+  timestamp: string;
+};
 
-
+type MessageHandler = (data: Event) => void;
 
 export function useSSE(url: string, onMessage: MessageHandler) {
   const eventSourceRef = useRef<EventSource | null>(null);

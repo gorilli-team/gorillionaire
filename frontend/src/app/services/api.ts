@@ -1,19 +1,19 @@
 // src/api/apiClient.ts
 
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
+import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig, AxiosError } from "axios";
 import { ENDPOINTS, BASE_URL } from "@/app/const/Endpoints";
 import { TOKEN_KEY, REFRESH_TOKEN_KEY } from "@/app/const/Vars";
 import { getAuthToken, getRefreshToken } from "@/app/helpers/auth";
 
 interface PropsRequest {
   url: string;
-  params?: any;
-  data?: any;
+  params?: Record<string, string | number | boolean>;
+  data?: Record<string, unknown>;
   config?: AxiosRequestConfig;
   csrfToken?: boolean;
   auth?: boolean;
   onResponse?: (response: AxiosResponse) => void;
-  onError?: (error: any) => void;
+  onError?: (error: AxiosError) => void;
   onFinally?: () => void;
 }
 
@@ -22,7 +22,7 @@ class ApiClient {
   private isRefreshing = false;
   private failedQueue: {
     resolve: (value?: unknown) => void;
-    reject: (error: any) => void;
+    reject: (error: AxiosError) => void;
   }[] = [];
 
   private cachedCsrfToken: string | null = null; // Cached token for reuse
@@ -41,10 +41,10 @@ class ApiClient {
     this.client.interceptors.response.use(this.handleResponse, this.handleError);
   }
 
-  private handleRequest = (config: AxiosRequestConfig): AxiosRequestConfig => {
+  private handleRequest = (config: InternalAxiosRequestConfig): InternalAxiosRequestConfig => {
     const token = getAuthToken();
     if (token) {
-      if (!config.headers) config.headers = {};
+      config.headers = config.headers || {};
       config.headers.Authorization = `Bearer at_${token}`;
     }
     return config;
@@ -52,13 +52,13 @@ class ApiClient {
 
   private handleResponse = (response: AxiosResponse): AxiosResponse => response;
 
-  private handleError = (error: any): Promise<any> => {
-    const originalRequest = error.config;
+  private handleError = (error: AxiosError): Promise<AxiosResponse> => {
+    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
     if (
       error.response &&
       error.response.status === 401 &&
-      !originalRequest._retry
+      !originalRequest?._retry
     ) {
       if (this.isRefreshing) {
         return new Promise((resolve, reject) => {
@@ -77,14 +77,13 @@ class ApiClient {
             localStorage.setItem(TOKEN_KEY, newToken);
             this.client.defaults.headers.common.Authorization = `Bearer at_${newToken}`;
             originalRequest.headers.Authorization = `Bearer at_${newToken}`;
-            this.processQueue(null);
+            this.processQueue(null as unknown as AxiosError);
             resolve(this.client(originalRequest));
           })
           .catch((err) => {
             this.processQueue(err);
             localStorage.removeItem(TOKEN_KEY);
             localStorage.removeItem(REFRESH_TOKEN_KEY);
-            // window.location.href = "/";
             reject(err);
           })
           .finally(() => {
@@ -103,7 +102,7 @@ class ApiClient {
       .then((response) => response.data.token);
   }
 
-  private processQueue(error: any) {
+  private processQueue(error: AxiosError) {
     this.failedQueue.forEach((prom) => {
       if (error) prom.reject(error);
       else prom.resolve();
@@ -116,7 +115,12 @@ class ApiClient {
     csrfToken?: string | boolean,
     auth?: boolean
   ): Promise<AxiosRequestConfig> {
-    let headers: Record<string, any> = { ...(config?.headers || {}) };
+    const headers: Record<string, string> = {};
+    if (config?.headers) {
+      Object.entries(config.headers).forEach(([key, value]) => {
+        if (value !== undefined) headers[key] = String(value);
+      });
+    }
   
     // Fetch CSRF token if needed
     if (csrfToken === true && !this.cachedCsrfToken) {
@@ -153,28 +157,28 @@ class ApiClient {
     };
   }
 
-  public async post<T = any>(
+  public async post<T = unknown>(
     props: PropsRequest
   ): Promise<AxiosResponse<T>> {
   const mergedConfig = await this.mergeConfigWithCsrf(props.config, props.csrfToken, props.auth);
     return this.client.post<T>(props.url, props.data, mergedConfig);
   }
 
-  public async put<T = any>(
+  public async put<T = unknown>(
     props: PropsRequest
   ): Promise<AxiosResponse<T>> {
   const mergedConfig = await this.mergeConfigWithCsrf(props.config, props.csrfToken, props.auth);
     return this.client.put<T>(props.url, props.data, mergedConfig);
   }
 
-  public async patch<T = any>(
+  public async patch<T = unknown>(
     props: PropsRequest
   ): Promise<AxiosResponse<T>> {
   const mergedConfig = await this.mergeConfigWithCsrf(props.config, props.csrfToken, props.auth);
     return this.client.patch<T>(props.url, props.data, mergedConfig);
   }
 
-  public async delete<T = any>(
+  public async delete<T = unknown>(
     props: PropsRequest
   ): Promise<AxiosResponse<T>> {
   const mergedConfig = await this.mergeConfigWithCsrf(props.config, props.csrfToken, props.auth);
@@ -196,7 +200,7 @@ class ApiClient {
   //     .finally(() => props.onFinally?.());
   // }
 
-  public async get<T = any>(
+  public async get<T = unknown>(
     props: PropsRequest
   ): Promise<AxiosResponse<T>> {
     const mergedConfig = await this.mergeConfigWithCsrf(props.config, props.csrfToken, props.auth);
@@ -222,7 +226,7 @@ class ApiClient {
 //   return localStorage.getItem(REFRESH_TOKEN_KEY);
 // }
 
-const safe = <T>(promise: Promise<T>): Promise<[T, null] | [null, any]> =>
-  promise.then((data): [T, null] => [data, null]).catch((err): [null, any] => [null, err]);
+const safe = <T>(promise: Promise<T>): Promise<[T, null] | [null, AxiosError]> =>
+  promise.then((data): [T, null] => [data, null]).catch((err): [null, AxiosError] => [null, err]);
 const apiClient = new ApiClient();
 export { apiClient, safe };

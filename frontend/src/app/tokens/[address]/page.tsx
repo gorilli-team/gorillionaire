@@ -2,8 +2,6 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
-import Sidebar from "../../components/sidebar";
-import Header from "../../components/header";
 import PriceChart from "../../components/price-chart";
 import { trackedTokens } from "@/app/shared/tokenData";
 import Image from "next/image";
@@ -37,7 +35,6 @@ interface PriceData {
 export default function TokenPage() {
   const params = useParams();
   const [token, setToken] = useState<TokenData | null>(null);
-  const [selectedPage, setSelectedPage] = useState("Tokens");
   const [events, setEvents] = useState<TokenEvent[]>([]);
   const [allEvents, setAllEvents] = useState<TokenEvent[]>([]);
   const [filterLabel, setFilterLabel] = useState("ALL");
@@ -59,7 +56,6 @@ export default function TokenPage() {
 
   const [priceData, setPriceData] = useState<PriceData[]>([]);
   const [priceLoading, setPriceLoading] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const fetchPriceData = async (symbol: string) => {
     if (!symbol) return;

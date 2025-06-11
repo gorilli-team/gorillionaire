@@ -33,7 +33,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const privy = usePrivy();
   const { logout: privyLogout } = useLogout();
   const { login: privyLogin } = useLogin({
@@ -43,13 +43,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   });
 
   const logout = useCallback(() => {
+    privyLogout();
     removeAuthToken();
     setToken(null);
-    privyLogout();
   }, [privyLogout]);
 
   const login = useCallback(() => {
     const existing = getAuthToken();
+    console.log("existing", existing);
+    console.log("privy.authenticated", privy.authenticated);
     if (privy.authenticated && !existing) {
       logout();
       privyLogin();
@@ -58,15 +60,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [privyLogin, privy, logout]);
 
-  const validateToken = useCallback(() => {
-    const existing = getAuthToken();
-    if (existing && isTokenValid(existing)) {
-      setToken(existing);
-    } else {
-      logout();
-    }
-    setIsLoading(false);
-  }, [logout]);
+  // const validateToken = useCallback(() => {
+  //   const existing = getAuthToken();
+  //   if (existing && isTokenValid(existing)) {
+  //     setToken(existing);
+  //   } else {
+  //     logout();
+  //   }
+  //   setIsLoading(false);
+  // }, [logout]);
 
   const handlePrivyLogin = useCallback(async () => {
     if (!privy.ready || !privy.authenticated || !privy.user?.wallet?.address)
@@ -89,22 +91,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (error || response?.status !== 200) {
       logout();
     } else {
-      setAuthToken(response.data.token, response.data.refreshToken);
-      setToken(response.data.token);
+      const data = response.data as { token: string; refreshToken: string };
+      setAuthToken(data.token, data.refreshToken);
+      setToken(data.token);
     }
   }, [privy, logout]);
 
   useEffect(() => {
+    if (!privy.ready) return; // wait for Privy to load
+  
     const token = getAuthToken();
-    if (token)
-      if (isTokenValid(token)) {
-        setToken(token);
+    if (token && isTokenValid(token) && privy.authenticated) {
+        setIsAuthenticated(true);
+        setIsLoading(false);
       } else {
-        logout();
+        setIsAuthenticated(false);
+        // logout();
       }
-  }, [logout]);
-
-
+  }, [logout, privy]);
 
   // useEffect(() => {
   //   if (!token && privy.ready && privy.authenticated) {
@@ -116,7 +120,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     <AuthContext.Provider
       value={{
         token,
-        isAuthenticated: !!token,
+        isAuthenticated,
         isLoading,
         login,
         logout,

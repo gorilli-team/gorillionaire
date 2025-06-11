@@ -7,7 +7,7 @@ import { apiClient } from "@/app/services/api";
 import { ENDPOINTS } from "@/app/const/Endpoints";
 import { getTimeAgo } from "@/app/utils/time";
 import { useSSE } from "@/app/hooks/useSSE";
-import { unique } from "next/dist/build/utils";
+import { Pagination } from "flowbite-react";
 
 type Signal = {
   id: string;
@@ -137,7 +137,7 @@ export default function SignalsPage() {
     });
     if (response && response.status === 200) {
       const signals = new Map<string, Signal>(
-        response.data.signals.map((signal: Signal) => [signal.id, signal])
+        (response.data as { signals: Signal[] }).signals.map((signal: Signal) => [signal.id, signal])
       );
       setSignals(signals);
     }
@@ -148,7 +148,7 @@ export default function SignalsPage() {
         url: ENDPOINTS.PRICE_DATA.replace(":id", event.token_id) + "?limit=500",
         auth: true,
       });
-      const chartData = response.data.map((item: any) => ({
+      const chartData = (response.data as { data: { timestamp: string; close: number }[] }).data.map((item: { timestamp: string; close: number }) => ({
         timestamp: item.timestamp,
         price: item.close,
       }));
@@ -165,12 +165,13 @@ export default function SignalsPage() {
   }, []);
 
   const fetchEvents = useCallback(async () => {
-    const response = await apiClient.get({
+    const response = await apiClient.get<{ data: Event[] }>({
       url: ENDPOINTS.SIGNAL_EVENTS_ALL,
       auth: true,
     });
     if (response && response.status === 200) {
-      const events = response.data.slice(0, 50);
+      const events = response.data.data.slice(0, 50);
+      console.log("events", events);
       setEvents(events);
       const uniqueEvents = events.filter(
         (event: Event, index: number, self: Event[]) => {
@@ -292,7 +293,9 @@ export default function SignalsPage() {
                       <th className="px-4 py-2 text-xs">TIMEFRAME</th>
                       <th className="px-4 py-2 text-xs">CREATED</th>
                       <th className="px-4 py-2 text-xs text-center">ACTIONS</th>
-                      <th className="px-4 py-2 text-xs text-center">DECISION</th>
+                      <th className="px-4 py-2 text-xs text-center">
+                        DECISION
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -434,28 +437,28 @@ export default function SignalsPage() {
                 </table>
 
                 {/* Pagination Controls */}
-                <div className="flex justify-between items-center mt-4 px-4">
+                <div className="flex justify-between items-center">
                   <div className="text-sm text-gray-500">
-                    Showing {(currentPage - 1) * 25 + 1} to{" "}
-                    {Math.min(currentPage * 25, events.length)} of{" "}
-                    {events.length} entries
+                    <span className="text-sm text-gray-500 mb-4 sm:mb-0">
+                    <span className="font-normal">Showing</span>{" "}
+                    <span className="font-bold">
+                      {(currentPage - 1) * rowsPerPage + 1}-
+                      {Math.min(
+                        currentPage * rowsPerPage,
+                        events.length
+                      )}
+                    </span>{" "}
+                    <span className="font-normal">of</span>{" "}
+                    <span className="font-bold">{events.length}</span>
+                  </span>
+
+
                   </div>
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() =>
-                        setCurrentPage((prev) => Math.max(prev - 1, 1))
-                      }
-                      disabled={currentPage === 1}
-                      className={`px-3 py-1 rounded-md text-sm ${
-                        currentPage === 1
-                          ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                          : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
-                      }`}
-                    >
-                      Previous
-                    </button>
-                    <button
-                      onClick={() =>
+                  <div className="flex-grow flex justify-center mb-2">
+                  <Pagination
+                      currentPage={currentPage}
+                      totalPages={events.length}
+                      onPageChange={() =>
                         setCurrentPage((prev) =>
                           Math.min(
                             prev + 1,
@@ -463,17 +466,9 @@ export default function SignalsPage() {
                           )
                         )
                       }
-                      disabled={
-                        currentPage >= Math.ceil(events.length / rowsPerPage)
-                      }
-                      className={`px-3 py-1 rounded-md text-sm ${
-                        currentPage >= Math.ceil(events.length / rowsPerPage)
-                          ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                          : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
-                      }`}
-                    >
-                      Next
-                    </button>
+                      showIcons={false}
+                    />
+
                   </div>
                 </div>
               </div>

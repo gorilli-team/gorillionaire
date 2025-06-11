@@ -5,8 +5,6 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { LoadingOverlay } from "@/app/components/ui/LoadingSpinner";
 import Image from "next/image";
 import { getTokenImage } from "@/app/utils/tokens";
-import Sidebar from "@/app/components/sidebar";
-import Header from "@/app/components/header";
 import { useRouter } from "next/navigation";
 import {
   useWriteContract,
@@ -77,8 +75,6 @@ export default function SignalDetails() {
   const [signal, setSignal] = useState<Signal | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedPage, setSelectedPage] = useState("Signals");
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const router = useRouter();
   const { writeContractAsync } = useWriteContract();
   const { signTypedDataAsync } = useSignTypedData();
@@ -293,7 +289,7 @@ export default function SignalDetails() {
     if (params.id) {
       fetchSignal();
     }
-  }, [params.id]);
+  }, [params.id, tokens]);
 
   const mapConfidenceToRisk = (confidenceScore: string | undefined) => {
     if (!confidenceScore) return "Aggressive";
@@ -539,6 +535,7 @@ export default function SignalDetails() {
       }
     );
   }, [
+    currentDexAmount,
     currentDexToken,
     currentDexType,
     currentDexInputAmount,
