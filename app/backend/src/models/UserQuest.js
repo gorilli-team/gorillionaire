@@ -22,6 +22,14 @@ const userQuestSchema = new mongoose.Schema(
     completedAt: {
       type: Date,
       default: null,
+    },
+    currentProgress: {
+      type: Number,
+      default: 0,
+    },
+    lastProgressUpdate: {
+      type: Date,
+      default: Date.now,
     }
   },
   {
@@ -30,6 +38,6 @@ const userQuestSchema = new mongoose.Schema(
 );
 
 // Create compound index for efficient queries
-userQuestSchema.index({ address: 1 });
+userQuestSchema.index({ address: 1, questId: 1 });
 
 module.exports = mongoose.model("UserQuest", userQuestSchema);

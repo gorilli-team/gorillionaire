@@ -3,7 +3,7 @@ const router = express.Router();
 const GeneratedSignal = require("../../models/GeneratedSignal");
 const UserSignal = require("../../models/UserSignal");
 const UserAuth = require("../../models/UserAuth");
-const { awardRefuseSignalPoints } = require("../../controllers/points");
+const { awardRefuseSignalPoints, createAcceptedSignalUserQuests } = require("../../controllers/points");
 
 router.get("/", async (req, res) => {
   try {
@@ -157,7 +157,6 @@ router.post("/user-signal", async (req, res) => {
       .json({ error: `Missing required fields: ${missing.join(", ")}` });
   }
 
-
   const userAuth = await UserAuth.findOne({
     userAddress,
     privyAccessToken: privyToken,
@@ -198,6 +197,8 @@ router.post("/user-signal", async (req, res) => {
 
   if (choice === "No") {
     await awardRefuseSignalPoints(userAddress, signalId);
+  } else if (choice === "Yes") {
+    await createAcceptedSignalUserQuests(userAddress, signalId);
   }
 
   res.json(newUserSignal);
