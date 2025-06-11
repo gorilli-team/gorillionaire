@@ -346,7 +346,7 @@ const UserProfilePage = () => {
                               Connect X
                             </button> */}
                             {discordUsername || discordQuestCompleted ? (
-                              <div className="flex items-center gap-2 px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-medium">
+                              <div className="flex items-center gap-2 px-3 py-1.5 bg-violet-400 text-white rounded-lg text-sm font-medium">
                                 <svg
                                   className="w-4 h-4"
                                   viewBox="0 0 24 24"
