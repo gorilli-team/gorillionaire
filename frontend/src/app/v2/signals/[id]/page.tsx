@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { getTimeAgo } from "@/app/utils/time";
 import { apiClient } from "@/app/services/api";
 import { ENDPOINTS } from "@/app/const/Endpoints";
 import CandlestickChart from "@/app/components/candlestick-chart";
+import type { Time } from "lightweight-charts";
 import ProtectPage from "@/app/components/protect-page/index";
 
 interface SignalData {
@@ -49,7 +50,7 @@ interface PriceData {
   timestamp: string;
 }
 
-export function parseTimeStringToTimestamp(timeStr: string): number {
+const parseTimeStringToTimestamp = (timeStr: string): number => {
   const now = Date.now();
 
   if (timeStr.trim() === "now") {
@@ -96,7 +97,7 @@ export default function SignalPage() {
   const [signal, setSignal] = useState<SignalData | null>(null);
   const [signals, setSignals] = useState<SignalEvent[]>([]);
   const [token, setToken] = useState<Token | null>(null);
-  const [prices, setPrices] = useState<{ time: number; value: number }[]>([]);
+  const [prices, setPrices] = useState<{ time: number; open: number; high: number; low: number; close: number }[]>([]);
 
   const [loading, setLoading] = useState(true);
 
@@ -125,7 +126,7 @@ export default function SignalPage() {
 
       if (response.status === 200) {
         console.log("prices", response.data);
-        const chartData = response.data.map((item: PriceData) => {
+        const chartData = (response.data as PriceData[]).map((item: PriceData) => {
           const date = new Date(item.timestamp);
           const timeValue = Math.floor(date.getTime() / 1000);
           return {
@@ -139,8 +140,8 @@ export default function SignalPage() {
 
         chartData.sort(
           (
-            a: { time: number; value: number },
-            b: { time: number; value: number }
+            a: { time: number; open: number; high: number; low: number; close: number },
+            b: { time: number; open: number; high: number; low: number; close: number }
           ) => a.time - b.time
         );
 
@@ -157,7 +158,7 @@ export default function SignalPage() {
       auth: true,
     });
     console.log("signal", response.data);
-    setSignal(response.data);
+    setSignal(response.data as SignalData);
   };
 
   const fetchTokenInfo = async (token_id: string) => {
@@ -166,7 +167,7 @@ export default function SignalPage() {
       auth: true,
     });
     console.log("token", response.data);
-    setToken(response.data);
+    setToken(response.data as Token);
   };
 
   const fetchSignalEvents = async (
@@ -190,7 +191,8 @@ export default function SignalPage() {
       auth: true,
     });
     console.log("signals", response.data);
-    setSignals(response.data.events);
+    const data = response.data as { events: SignalEvent[] };
+    setSignals(data.events);
   };
 
   // const fetchHolders = async (tokenAddress: string) => {
@@ -210,37 +212,37 @@ export default function SignalPage() {
   //   }
   // };
 
-  const getImpactColor = (impact: string) => {
-    switch (impact) {
-      case "HIGH":
-        return "bg-red-100 text-red-800";
-      case "MEDIUM":
-        return "bg-yellow-100 text-yellow-800";
-      case "LOW":
-        return "bg-blue-100 text-blue-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
+  // const getImpactColor = (impact: string) => {
+  //   switch (impact) {
+  //     case "HIGH":
+  //       return "bg-red-100 text-red-800";
+  //     case "MEDIUM":
+  //       return "bg-yellow-100 text-yellow-800";
+  //     case "LOW":
+  //       return "bg-blue-100 text-blue-800";
+  //     default:
+  //       return "bg-gray-100 text-gray-800";
+  //   }
+  // };
 
-  const getEventTypeIcon = (type: string) => {
-    switch (type) {
-      case "PRICE_CHANGE":
-        return "💰";
-      case "VOLUME_SPIKE":
-        return "📈";
-      case "ACTIVITY_SPIKE":
-        return "🔥";
-      case "HOLDER_CHANGE":
-        return "👥";
-      case "SIGNAL":
-        return "🎯";
-      case "TRANSFER":
-        return "💸";
-      default:
-        return "📊";
-    }
-  };
+  // const getEventTypeIcon = (type: string) => {
+  //   switch (type) {
+  //     case "PRICE_CHANGE":
+  //       return "💰";
+  //     case "VOLUME_SPIKE":
+  //       return "📈";
+  //     case "ACTIVITY_SPIKE":
+  //       return "🔥";
+  //     case "HOLDER_CHANGE":
+  //       return "👥";
+  //     case "SIGNAL":
+  //       return "🎯";
+  //     case "TRANSFER":
+  //       return "💸";
+  //     default:
+  //       return "📊";
+  //   }
+  // };
 
   const renderPriceChart = () => {
     if (loading) {
@@ -267,7 +269,10 @@ export default function SignalPage() {
 
     return (
       <CandlestickChart
-        data={prices}
+        data={prices.map(item => ({
+          ...item,
+          time: item.time as Time
+        }))}
         tokenSymbol={
           token?.symbol + " - " + signal?.name + " - " + signal?.timeframe
         }
@@ -291,131 +296,114 @@ export default function SignalPage() {
 
   return (
     <ProtectPage>
-    <div className="flex-1 overflow-auto bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
-        {/* add here a whales section with the top 20 holders */}
+      <div className="flex-1 overflow-auto bg-gray-50 h-full">
+        <div className="container mx-auto px-4 py-8 grid grid-cols-3 gap-4">
+          {/* add here a whales section with the top 20 holders */}
 
-        {/* Table header - visible only on medium screens and up */}
-        <div className="gap-4 mb-2 px-4 font-semibold text-gray-700 p-4 bg-white rounded-lg shadow-md">
-          {renderPriceChart()}
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <table className="w-full border-collapse hidden md:table bg-white rounded-lg shadow-md p-4 text-xs">
-            <thead className="sticky top-0 bg-white z-10">
-              <tr className="text-left text-xs text-gray-500 bg-gray-50">
-                <th className="px-4 py-2 text-xs">SIGNAL</th>
-                <th className="px-4 py-2 text-xs">TIME</th>
-                <th className="px-4 py-2 text-xs">PRICE</th>
-                <th className="px-4 py-2 text-xs text-center">ACTIONS</th>
-              </tr>
-            </thead>
-            <tbody>
-              {signals.map((signalEvent, index) => (
-                <tr
-                  key={signalEvent.id}
-                  className="border-b border-gray-100 text-xs text-gray-500"
+          {/* Table header - visible only on medium screens and up */}
+          <div className="col-span-2 gap-4 mb-2 px-4 font-semibold text-gray-700 p-4 bg-white rounded-lg shadow-md">
+            {renderPriceChart()}
+          </div>
+          <div className="bg-white rounded-lg shadow-md p-4 text-xs col-span-1">
+            <h2 className="font-semibold mb-2">Signal Events</h2>
+            {signals.map((event: SignalEvent, index: number) => (
+              <div
+                key={index || event.id}
+                className="bg-white rounded-lg p-4 text-xs border border-gray-100"
+              >
+                <div
+                  key={event.id}
+                  className=" grid grid-cols-2 border-b border-gray-100"
                 >
-                  <td className="text-gray-500 px-4 py-2 text-xs">
                   <div className="flex items-center">
-                        <div
-                          className={`w-4 h-4 rounded-full mr-2 flex items-center justify-center ${
-                            signalEvent.action === "BUY"
-                              ? "bg-green-400"
-                              : "bg-red-400"
-                          }`}
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="w-3 h-4 text-white"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            {signalEvent.action === "BUY" ? (
-                              <>
-                                {/* Stick (vertical line) */}
-                                <line
-                                  x1="12"
-                                  y1="20"
-                                  x2="12"
-                                  y2="10"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                />
-                                {/* Arrowhead (upward) */}
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M5 15l7-7 7 7"
-                                />
-                              </>
-                            ) : (
-                              <>
-                                {/* Stick (vertical line) */}
-                                <line
-                                  x1="12"
-                                  y1="4"
-                                  x2="12"
-                                  y2="14"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                />
-                                {/* Arrowhead (downward) */}
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M19 9l-7 7-7-7"
-                                />
-                              </>
-                            )}
-                          </svg>
-                        </div>
-                        <span className="text-xs">
-                          {signalEvent.action.charAt(0).toUpperCase() +
-                            signalEvent.action.slice(1).toLowerCase()}
-                        </span>
-                      </div>
-                  </td>
-                  <td className="text-gray-500 px-4 py-2 text-xs">
-                    {getTimeAgo(signalEvent.timestamp)}
-                  </td>
-                  <td className="text-gray-500 px-4 py-2 text-xs">
-                    {signalEvent.price.toFixed(6)}
-                  </td>
-                  <td className="text-gray-500 px-4 py-2 text-xs">
-                      <div className="inline-flex rounded-full border border-gray-300 overflow-hidden">
-                        <button 
-                          className={`px-3 py-1 text-sm flex items-center justify-center w-16 ${
-                            index === 0 ? 'bg-white text-gray-500' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                          }`}
-                          disabled={index !== 0}
-                        >
-                          <span>Refuse</span>
-                        </button>
-                        <button 
-                          className={`px-3 py-1 text-sm flex items-center justify-center w-16 ${
-                            index === 0 ? 'bg-violet-700 text-white' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                          }`}
-                          disabled={index !== 0}
-                        >
-                          <span>Trade</span>
-                        </button>
-                      </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <table className="w-full bg-white rounded-lg shadow-md p-4 text-xs">
-            <thead>
-            </thead>
-          </table>
+                    <div
+                      className={`w-4 h-4 rounded-full mr-2 flex items-center justify-center ${
+                        event.action === "BUY" ? "bg-green-400" : "bg-red-400"
+                      }`}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="w-3 h-4 text-white"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        {event.action === "BUY" ? (
+                          <>
+                            <line
+                              x1="12"
+                              y1="20"
+                              x2="12"
+                              y2="10"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                            />
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M5 15l7-7 7 7"
+                            />
+                          </>
+                        ) : (
+                          <>
+                            <line
+                              x1="12"
+                              y1="4"
+                              x2="12"
+                              y2="14"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                            />
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 9l-7 7-7-7"
+                            />
+                          </>
+                        )}
+                      </svg>
+                    </div>
+                    <span className="text-xs">
+                      {event.action.charAt(0).toUpperCase() +
+                        event.action.slice(1).toLowerCase()}
+                    </span>
+                  </div>
+                  <div className="px-4 py-2 text-xs flex justify-end items-center">
+                    <button
+                      className="text-xs cursor-pointer px-3 py-1 rounded-md bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 mr-2"
+                      onClick={() => {
+                        // TODO: Implement refuse
+                      }}
+                    >
+                      Refuse
+                    </button>
+                    <button className="text-xs cursor-pointer px-3 py-1 rounded-md bg-purple-600 text-white hover:bg-purple-700">
+                      Accept
+                    </button>
+                  </div>
+                </div>
+                <div className="items-center grid grid-cols-3 text-xs mt-2">
+                  <div className="">
+                    <div className="text-xs">Price</div>
+                    <div className="text-xs">{event.price.toFixed(6)}</div>
+                  </div>
+                  <div className="">
+                    <div className="text-xs">Created</div>
+                    <div className="text-xs">{getTimeAgo(event.timestamp)}</div>
+                  </div>
+                  <div className="">
+                    <div className="text-xs">User Actions</div>
+                    <div className="text-xs"></div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          {/* Table rows */}
         </div>
-        {/* Table rows */}
       </div>
-    </div>
     </ProtectPage>
   );
 }

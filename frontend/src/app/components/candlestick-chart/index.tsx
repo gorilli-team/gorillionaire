@@ -37,22 +37,16 @@ interface PriceChartProps {
   signals: Signal[];
 }
 
-interface PriceStats {
-  current: number;
-  change1h: number;
-  change6h: number;
-  change24h: number;
-}
 
 const CandlestickChart: React.FC<PriceChartProps> = ({ data, tokenSymbol, signals }) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const [isClient, setIsClient] = useState(false);
-  const [timeRange, setTimeRange] = useState<"1d" | "7d" | "30d" | "all">(
+  const [timeRange] = useState<"1d" | "7d" | "30d" | "all">(
     "all"
   );
-  const [priceStats, setPriceStats] = useState<PriceStats | null>(null);
-  const [allTimeHighLow, setAllTimeHighLow] = useState<{
+  // const [priceStats] = useState<PriceStats | null>(null);
+  const [allTimeHighLow] = useState<{
     high: { value: number; time: Time };
     low: { value: number; time: Time };
   } | null>(null);
@@ -115,20 +109,8 @@ const CandlestickChart: React.FC<PriceChartProps> = ({ data, tokenSymbol, signal
         break;
     }
 
-    // Calculate percentage changes
-    const change1h =
-      price1h !== current ? ((current - price1h) / price1h) * 100 : 0;
-    const change6h =
-      price6h !== current ? ((current - price6h) / price6h) * 100 : 0;
-    const change24h =
-      price24h !== current ? ((current - price24h) / price24h) * 100 : 0;
 
-    setPriceStats({
-      current,
-      change1h,
-      change6h,
-      change24h,
-    });
+
   }, [data]);
 
   // // Find all-time high and low
@@ -297,7 +279,7 @@ const CandlestickChart: React.FC<PriceChartProps> = ({ data, tokenSymbol, signal
         });
       }
 
-      const chartData = data.map((item, index) => ({
+      const chartData = data.map((item) => ({
         time: (Number(item.time)) as UTCTimestamp,
         open: item.open,
         high: item.high,

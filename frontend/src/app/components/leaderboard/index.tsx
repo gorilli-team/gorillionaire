@@ -62,7 +62,7 @@ const LeaderboardComponent = () => {
     fetchLeaderboard(page);
   };
 
-  const fetchLeaderboard = async (currentPage: number) => {
+  const fetchLeaderboard = useCallback(async (currentPage: number) => {
     try {
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/activity/track/leaderboard?page=${currentPage}`
@@ -86,7 +86,7 @@ const LeaderboardComponent = () => {
       console.error("Error fetching leaderboard:", error);
       setInvestors([]);
     }
-  };
+  }, []);
 
   const fetchMe = useCallback(async () => {
     try {
@@ -101,7 +101,7 @@ const LeaderboardComponent = () => {
 
       // Create investor object from /me response
       const myInvestorData: Investor = {
-        rank: data.userActivity?.rank || 0, // Access rank from userActivity object
+        rank: data.userActivity?.rank || 0,
         address: address,
         nadName: nadProfile[0]?.primaryName,
         nadAvatar:

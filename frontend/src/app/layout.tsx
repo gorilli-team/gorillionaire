@@ -3,6 +3,7 @@ import "@coinbase/onchainkit/styles.css";
 import "./styles/globals.css";
 import Script from "next/script";
 import { Providers } from "./providers";
+import { ThemeModeScript } from "flowbite-react";
 
 export const metadata: Metadata = {
   title: "Gorillionaire – AI-Powered Crypto Signals & Gamified Trading",
@@ -19,8 +20,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
+        <ThemeModeScript mode="light" />
+
         <link
           rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.1/css/all.min.css"
@@ -43,7 +46,7 @@ export default function RootLayout({
           data-website-id="1ac7b906-684c-46cb-95d7-f7719fb51940"
         />
       </head>
-      <body suppressHydrationWarning>
+      <body>
         <div className="bg-purple-700 text-white py-2 text-center font-medium">
           🚀 Gorillionaire v2 is coming soon!{" "}
           <a href="/v2" className="underline font-bold hover:text-gray-200">

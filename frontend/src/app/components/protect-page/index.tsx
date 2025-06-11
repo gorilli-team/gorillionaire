@@ -9,19 +9,20 @@ interface ProtectProps {
 }
 
 export default function ProtectPage({ children }: ProtectProps) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth(); // 👈 include loading state
   const router = useRouter();
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/unauthorized");
+    if (!isLoading && !isAuthenticated) {
+      router.push("/v2");
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, isLoading, router]);
 
-  if (!isAuthenticated) {
-    router.push("/unauthorized");
-    return null;
-  }
+  // Don't render anything while auth state is being determined
+  if (isLoading) return null;
+
+  // After auth is resolved
+  if (!isAuthenticated) return null;
 
   return <>{children}</>;
 }

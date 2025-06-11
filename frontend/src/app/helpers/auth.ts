@@ -1,9 +1,6 @@
 import { jwtDecode } from "jwt-decode";
 import Cookies from "js-cookie";
 import { REFRESH_TOKEN_KEY, TOKEN_KEY } from "../const/Vars";
-import { useAuth } from "../contexts/AuthContext";
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 
 export interface User {
   id: string;
