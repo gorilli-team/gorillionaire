@@ -65,7 +65,7 @@ const LeaderboardComponent = () => {
     fetchLeaderboard(page);
   };
 
-  const fetchLeaderboard = async (currentPage: number) => {
+  const fetchLeaderboard = useCallback(async (currentPage: number) => {
     try {
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/activity/track/leaderboard?page=${currentPage}`
@@ -129,71 +129,51 @@ const LeaderboardComponent = () => {
       setTraders([]);
       setTraderCount(0);
     }
-  };
+  }, []);
 
   const fetchMe = useCallback(async () => {
-    try {
-      if (!address) return;
+    if (!address || typeof address !== "string" || address.trim() === "") {
+      console.error("Invalid address for NNS lookup:", address);
+      return;
+    }
 
+    try {
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/activity/track/me?address=${address}`
       );
-      const data = await response.json();
 
-      // Validate address before calling NNS
-      if (!address || typeof address !== "string" || address.trim() === "") {
-        console.error("Invalid address for NNS lookup:", address);
+      if (!response.ok) {
+        console.error("Failed to fetch user activity:", response.statusText);
         return;
       }
 
+      const data = await response.json();
+
+      let nadProfile: Array<{ primaryName?: string; avatar?: string }> = [];
+
       try {
-        // Get NNS profile for the current user
-        const nadProfile = await nnsClient.getProfiles([address]);
-
-        // Create trader object from /me response
-        const myTraderData: Trader = {
-          rank: data.userActivity?.rank || 0, // Access rank from userActivity object
-          address: address,
-          nadName: nadProfile[0]?.primaryName,
-          nadAvatar:
-            nadProfile[0]?.avatar ||
-            `/avatar_${data.userActivity?.rank % 6}.png`,
-          points: data.userActivity?.points || 0,
-          activitiesList: data.userActivity?.activitiesList || [],
-          pagination: data.userActivity?.pagination || {
-            total: 0,
-            page: 1,
-            limit: 10,
-            totalPages: 1,
-          },
-          totalReferred: data.userActivity?.totalReferred || 0,
-          totalReferralPoints: data.userActivity?.totalReferralPoints || 0,
-        };
-
-        setMyData(myTraderData);
-      } catch (nnsError) {
-        console.error("Error fetching NNS profile for user:", nnsError);
-
-        // Fallback: create trader data without NNS profile
-        const myTraderData: Trader = {
-          rank: data.userActivity?.rank || 0,
-          address: address,
-          nadName: undefined,
-          nadAvatar: `/avatar_${data.userActivity?.rank % 6}.png`,
-          points: data.userActivity?.points || 0,
-          activitiesList: data.userActivity?.activitiesList || [],
-          pagination: data.userActivity?.pagination || {
-            total: 0,
-            page: 1,
-            limit: 10,
-            totalPages: 1,
-          },
-          totalReferred: data.userActivity?.totalReferred || 0,
-          totalReferralPoints: data.userActivity?.totalReferralPoints || 0,
-        };
-
-        setMyData(myTraderData);
+        nadProfile = await nnsClient.getProfiles([address]);
+      } catch (err) {
+        console.error("Error fetching NNS profile:", err);
       }
+
+      const myInvestorData: Trader = {
+        rank: data.userActivity?.rank || 0,
+        address: address,
+        nadName: nadProfile[0]?.primaryName,
+        nadAvatar:
+          nadProfile[0]?.avatar || `/avatar_${data.userActivity?.rank % 6}.png`,
+        points: data.userActivity?.points || 0,
+        activitiesList: data.userActivity?.activitiesList || [],
+        pagination: data.userActivity?.pagination || {
+          total: 0,
+          page: 1,
+          limit: 10,
+          totalPages: 1,
+        },
+      };
+
+      setMyData(myInvestorData);
     } catch (error) {
       console.error("Error fetching user activity:", error);
     }

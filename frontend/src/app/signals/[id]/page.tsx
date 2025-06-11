@@ -4,6 +4,11 @@ import { useParams } from "next/navigation";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { LoadingOverlay } from "@/app/components/ui/LoadingSpinner";
 import Image from "next/image";
+<<<<<<< HEAD
+=======
+import Sidebar from "@/app/components/sidebar";
+import Header from "@/app/components/header";
+>>>>>>> 6e0dbb5 (GOR-65 fix build)
 import { getTokenImage } from "@/app/utils/tokens";
 import { useRouter } from "next/navigation";
 import {
@@ -95,6 +100,8 @@ export default function SignalDetails() {
   const [currentDexOutputAmount, setCurrentDexOutputAmount] =
     useState<string>("");
   const [selectedToken, setSelectedToken] = useState<Token | null>(null);
+  const [selectedPage, setSelectedPage] = useState("Signals");
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Add state for token balances and prices
   const [moyakiBalance, setMoyakiBalance] = useState<number>(0);

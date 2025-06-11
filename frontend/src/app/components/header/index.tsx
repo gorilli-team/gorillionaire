@@ -78,8 +78,9 @@ export default function Header() {
           csrfToken: true,
         })
       );
-      if (response && response.status === 200) {
-        setAuthToken(response.data.token, response.data.refreshToken);
+      if (response && response.status === 200 && response.data) {
+        const data = response.data as { token: string; refreshToken: string };
+        setAuthToken(data.token, data.refreshToken);
         showCustomNotification(
           "Welcome back! You've been signed in successfully.",
           "Login Success"
