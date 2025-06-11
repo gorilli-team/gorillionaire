@@ -157,6 +157,7 @@ router.post("/user-signal", async (req, res) => {
       .json({ error: `Missing required fields: ${missing.join(", ")}` });
   }
 
+
   const userAuth = await UserAuth.findOne({
     userAddress,
     privyAccessToken: privyToken,

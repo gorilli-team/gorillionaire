@@ -104,7 +104,7 @@ router.post("/trade-points", async (req, res) => {
     });
 
     if (!userAuth) {
-      return res.status(400).json({ error: "User not found" });
+      return res.status(400).json({ error: "User not found in Trade Points" });
     }
 
     const userActivity = await UserActivity.findOne({
@@ -130,8 +130,12 @@ router.post("/trade-points", async (req, res) => {
     if (intent.status !== "pending") {
       return res.status(400).json({ error: "Intent already completed" });
     }
-    if (intent.userAddress !== address) {
-      return res.status(400).json({ error: "Intent not for this address" });
+    if (intent.userAddress.toLowerCase !== address.toLowerCase) {
+      return res.status(400).json({
+        error: "Intent not for this address",
+        intentUserAddress: intent.userAddress,
+        address,
+      });
     }
 
     const provider = new ethers.JsonRpcProvider(
