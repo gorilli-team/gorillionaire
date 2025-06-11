@@ -137,7 +137,9 @@ export default function SignalsPage() {
     });
     if (response && response.status === 200) {
       const signals = new Map<string, Signal>(
-        (response.data as { signals: Signal[] }).signals.map((signal: Signal) => [signal.id, signal])
+        (response.data as { signals: Signal[] }).signals.map(
+          (signal: Signal) => [signal.id, signal]
+        )
       );
       setSignals(signals);
     }
@@ -148,7 +150,9 @@ export default function SignalsPage() {
         url: ENDPOINTS.PRICE_DATA.replace(":id", event.token_id) + "?limit=500",
         auth: true,
       });
-      const chartData = (response.data as { data: { timestamp: string; close: number }[] }).data.map((item: { timestamp: string; close: number }) => ({
+      const chartData = (
+        response.data as { data: { timestamp: string; close: number }[] }
+      ).data.map((item: { timestamp: string; close: number }) => ({
         timestamp: item.timestamp,
         price: item.close,
       }));
@@ -170,7 +174,9 @@ export default function SignalsPage() {
       auth: true,
     });
     if (response && response.status === 200) {
-      const events = response.data.data.slice(0, 50);
+      const events = Array.isArray(response.data)
+        ? response.data.slice(0, 50)
+        : [];
       console.log("events", events);
       setEvents(events);
       const uniqueEvents = events.filter(
@@ -440,22 +446,17 @@ export default function SignalsPage() {
                 <div className="flex justify-between items-center">
                   <div className="text-sm text-gray-500">
                     <span className="text-sm text-gray-500 mb-4 sm:mb-0">
-                    <span className="font-normal">Showing</span>{" "}
-                    <span className="font-bold">
-                      {(currentPage - 1) * rowsPerPage + 1}-
-                      {Math.min(
-                        currentPage * rowsPerPage,
-                        events.length
-                      )}
-                    </span>{" "}
-                    <span className="font-normal">of</span>{" "}
-                    <span className="font-bold">{events.length}</span>
-                  </span>
-
-
+                      <span className="font-normal">Showing</span>{" "}
+                      <span className="font-bold">
+                        {(currentPage - 1) * rowsPerPage + 1}-
+                        {Math.min(currentPage * rowsPerPage, events.length)}
+                      </span>{" "}
+                      <span className="font-normal">of</span>{" "}
+                      <span className="font-bold">{events.length}</span>
+                    </span>
                   </div>
                   <div className="flex-grow flex justify-center mb-2">
-                  <Pagination
+                    <Pagination
                       currentPage={currentPage}
                       totalPages={events.length}
                       onPageChange={() =>
@@ -468,7 +469,6 @@ export default function SignalsPage() {
                       }
                       showIcons={false}
                     />
-
                   </div>
                 </div>
               </div>
