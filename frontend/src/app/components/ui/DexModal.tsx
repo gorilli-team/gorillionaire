@@ -393,7 +393,6 @@ const DexModal: React.FC<DexModalProps> = ({
                     type="text"
                     value={inputAmount}
                     onChange={handleInputChange}
-                    disabled={type === "Buy"} // For buy orders, input is calculated
                     className={`w-full bg-transparent text-lg font-semibold focus:outline-none ${
                       type === "Buy" ? "text-gray-600" : "text-gray-900"
                     }`}
@@ -453,7 +452,6 @@ const DexModal: React.FC<DexModalProps> = ({
                     type="text"
                     value={outputAmount}
                     onChange={handleOutputChange}
-                    disabled={type === "Sell"} // For sell orders, output is calculated
                     className={`w-full bg-transparent text-lg font-semibold focus:outline-none ${
                       type === "Sell" ? "text-gray-600" : "text-gray-900"
                     }`}
