@@ -79,12 +79,7 @@ const TransactionsPage = () => {
           nadAvatar: profile?.avatar,
           points: data.userActivity?.points || 0,
           rank: data.userActivity?.rank || "0",
-          activitiesList: (data.userActivity?.activitiesList || []).filter(
-            (activity: UserActivity) =>
-              activity.intentId &&
-              (activity.intentId.action === "buy" ||
-                activity.intentId.action === "sell")
-          ),
+          activitiesList: data.userActivity?.activitiesList || [],
           pagination: data.userActivity?.pagination,
           hasV2NFT: Number(v2NFTBalance) > 0,
         });
@@ -231,7 +226,7 @@ const TransactionsPage = () => {
                   {/* Header */}
                   <div className="flex justify-between items-center mb-4">
                     <h2 className="text-xl font-bold text-gray-900">
-                      Latest Transactions
+                      Latest Activities
                     </h2>
                     <a
                       href={`/users/${params.address}`}
