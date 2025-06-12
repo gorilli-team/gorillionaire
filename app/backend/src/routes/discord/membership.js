@@ -57,7 +57,7 @@ router.post("/verify", async (req, res) => {
 
     try {
       await UserActivity.findOneAndUpdate(
-        { address: address },
+        { address: { $in: [address, address.toLowerCase()] } },
         { 
           discordUsername: discordUser.username 
         },
@@ -190,11 +190,14 @@ router.get("/status/:address", async (req, res) => {
 
     const userQuest = await UserQuest.findOne({
       questId: discordQuest._id,
-      address: address,
+      address: { $in: [address, address.toLowerCase()] },
       isCompleted: true
     });
 
-    const userActivity = await UserActivity.findOne({ address: address });
+    const userActivity = await UserActivity.findOne({ 
+      address: { $in: [address, address.toLowerCase()] }
+    });
+    
     const discordUsername = userActivity?.discordUsername || null;
 
     if (userQuest) {
@@ -217,5 +220,4 @@ router.get("/status/:address", async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
-
 module.exports = router;

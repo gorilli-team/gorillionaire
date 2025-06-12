@@ -494,7 +494,7 @@ const UserProfilePage = () => {
                       Your Next Quests
                     </h2>
                     <a
-                      href={`/badges/${userProfile.address}`}
+                      href={`/badges/${params.address}`}
                       className="text-violet-600 hover:text-violet-800 text-xs font-medium flex items-center gap-1"
                     >
                       See more
@@ -588,7 +588,7 @@ const UserProfilePage = () => {
                         Latest Transactions
                       </h2>
                       <a
-                        href={`/transactions/${userProfile.address}`}
+                        href={`/transactions/${params.address}`}
                         className="text-violet-600 hover:text-violet-800 text-xs font-medium flex items-center gap-1"
                       >
                         See more
