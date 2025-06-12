@@ -12,6 +12,7 @@ import { useReadContract, useAccount } from "wagmi";
 import { abi } from "@/app/abi/early-nft";
 import { NFT_ACCESS_ADDRESS } from "@/app/utils/constants";
 import { getLevelInfo, getXpProgress } from "@/app/utils/xp";
+import { LoadingOverlay } from "@/app/components/ui/LoadingSpinner";
 
 const formatNumber = (num: number): string => {
   if (num === 0) return "0.00";
@@ -97,48 +98,50 @@ const UserProfilePage = () => {
 
   const handleClaimQuest = async (questId: string) => {
     if (!params.address) return;
-    
+
     try {
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/activity/quests/claim`,
         {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({
             address: params.address,
-            questId: questId
-          })
+            questId: questId,
+          }),
         }
       );
 
       const data = await response.json();
 
       if (response.ok) {
-        setClaimedQuests(prev => new Set(prev).add(questId));
-        
+        setClaimedQuests((prev) => new Set(prev).add(questId));
+
         await fetchUserQuests();
-        
+
         const profileResponse = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/activity/track/me?address=${params.address}&page=${currentPage}&limit=${itemsPerPage}`
         );
         const profileData = await profileResponse.json();
-        
+
         if (profileData.userActivity) {
-          setUserProfile(prev => prev ? {
-            ...prev,
-            points: profileData.userActivity.points,
-            activitiesList: profileData.userActivity.activitiesList
-          } : null);
+          setUserProfile((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  points: profileData.userActivity.points,
+                  activitiesList: profileData.userActivity.activitiesList,
+                }
+              : null
+          );
         }
-        
       } else {
-        console.error('Error claiming quest:', data.error);
+        console.error("Error claiming quest:", data.error);
       }
-      
     } catch (error) {
-      console.error('Error claiming quest:', error);
+      console.error("Error claiming quest:", error);
     }
   };
 
@@ -151,7 +154,7 @@ const UserProfilePage = () => {
     const data = await response.json();
     console.log(data);
     setQuests(data.quests);
-    
+
     const alreadyClaimed: Set<string> = new Set(
       data.quests
         .filter((quest: Quest) => quest.claimedAt)
@@ -228,7 +231,7 @@ const UserProfilePage = () => {
 
     checkDiscordQuestStatus();
   }, [params.address]);
-  
+
   const formatAddress = (address: string) => {
     if (!address) return "";
     return `${address.substring(0, 6)}...${address.substring(
@@ -237,14 +240,7 @@ const UserProfilePage = () => {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-r from-violet-50 to-indigo-50">
-        <div className="flex flex-col items-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-violet-600"></div>
-          <p className="mt-4 text-violet-600 font-medium">Loading profile...</p>
-        </div>
-      </div>
-    );
+    return <LoadingOverlay />;
   }
 
   if (!userProfile) {
@@ -565,30 +561,41 @@ const UserProfilePage = () => {
                                 <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
                                   <div
                                     className="bg-gradient-to-r from-violet-500 to-indigo-600 h-2 rounded-full transition-all duration-300"
-                                    style={{ 
-                                      width: `${quest.progressPercentage || 0}%` 
+                                    style={{
+                                      width: `${
+                                        quest.progressPercentage || 0
+                                      }%`,
                                     }}
                                   ></div>
                                 </div>
                               </div>
-                              {!quest.claimedAt && !claimedQuests.has(quest._id) && (
-                                <span className="text-xs text-gray-500 min-w-fit">
-                                  {quest.currentProgress || 0}/{quest.questRequirement}
-                                </span>
-                              )}
+                              {!quest.claimedAt &&
+                                !claimedQuests.has(quest._id) && (
+                                  <span className="text-xs text-gray-500 min-w-fit">
+                                    {quest.currentProgress || 0}/
+                                    {quest.questRequirement}
+                                  </span>
+                                )}
                             </div>
                           </div>
                           {isOwnProfile && (
-                            <button 
+                            <button
                               onClick={() => handleClaimQuest(quest._id)}
                               className={`ml-4 px-4 py-2 rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed ${
-                                quest.claimedAt || claimedQuests.has(quest._id) 
+                                quest.claimedAt || claimedQuests.has(quest._id)
                                   ? "bg-violet-600 text-white hover:bg-violet-700"
                                   : "bg-indigo-600 transition-colors text-white hover:bg-indigo-700"
                               }`}
-                              disabled={quest.currentProgress < quest.questRequirement || !!quest.claimedAt || claimedQuests.has(quest._id)}
+                              disabled={
+                                quest.currentProgress <
+                                  quest.questRequirement ||
+                                !!quest.claimedAt ||
+                                claimedQuests.has(quest._id)
+                              }
                             >
-                              {quest.claimedAt || claimedQuests.has(quest._id) ? "Claimed" : "Claim"}
+                              {quest.claimedAt || claimedQuests.has(quest._id)
+                                ? "Claimed"
+                                : "Claim"}
                             </button>
                           )}
                         </div>
@@ -737,7 +744,9 @@ const UserProfilePage = () => {
                                         height={24}
                                         className="rounded-full"
                                         onError={(e) => {
-                                          (e.currentTarget as HTMLImageElement).style.display = "none";
+                                          (
+                                            e.currentTarget as HTMLImageElement
+                                          ).style.display = "none";
                                         }}
                                         unoptimized
                                       />
@@ -752,14 +761,25 @@ const UserProfilePage = () => {
                                             : "bg-orange-100 text-orange-600"
                                         }`}
                                       >
-                                        {activity.intentId.tokenPrice > 1 ? "V2" : "V1"}
+                                        {activity.intentId.tokenPrice > 1
+                                          ? "V2"
+                                          : "V1"}
                                       </span>
                                     </div>
                                     <div className="flex items-center gap-2 text-sm text-gray-500">
-                                      <span>${formatNumber(activity.intentId.tokenPrice)}</span>
+                                      <span>
+                                        $
+                                        {formatNumber(
+                                          activity.intentId.tokenPrice
+                                        )}
+                                      </span>
                                       <span>•</span>
                                       <span>
-                                        ${formatNumber(activity.intentId.tokenAmount * activity.intentId.tokenPrice)}
+                                        $
+                                        {formatNumber(
+                                          activity.intentId.tokenAmount *
+                                            activity.intentId.tokenPrice
+                                        )}
                                       </span>
                                     </div>
                                   </>
@@ -773,57 +793,66 @@ const UserProfilePage = () => {
                                 )}
 
                                 {/* Trading Details */}
-                                {activity.name === "trade" && activity?.intentId && (
-                                  <div className="mt-2 flex flex-wrap gap-2">
-                                    <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg text-xs">
-                                      <span className="text-gray-500">Type:</span>
-                                      <span
-                                        className={`font-medium ${
-                                          activity.intentId.action === "buy"
-                                            ? "text-green-600"
-                                            : "text-red-600"
-                                        }`}
-                                      >
-                                        {activity.intentId.action.toUpperCase()}
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg text-xs">
-                                      <span className="text-gray-500">Token:</span>
-                                      <span className="font-medium text-gray-900">
-                                        {activity.intentId.tokenSymbol}
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg text-xs">
-                                      <span className="text-gray-500">Amount:</span>
-                                      <span className="font-medium text-gray-900">
-                                        {formatNumber(activity.intentId.tokenAmount)}
-                                      </span>
-                                    </div>
-                                    {activity.intentId.txHash && (
-                                      <a
-                                        href={`https://testnet.monadexplorer.com/tx/${activity.intentId.txHash}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center gap-1.5 px-2 py-1 bg-violet-50 rounded-lg text-xs text-violet-600 hover:bg-violet-100 transition-colors"
-                                      >
-                                        <svg
-                                          className="w-3 h-3"
-                                          fill="none"
-                                          stroke="currentColor"
-                                          viewBox="0 0 24 24"
+                                {activity.name === "trade" &&
+                                  activity?.intentId && (
+                                    <div className="mt-2 flex flex-wrap gap-2">
+                                      <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg text-xs">
+                                        <span className="text-gray-500">
+                                          Type:
+                                        </span>
+                                        <span
+                                          className={`font-medium ${
+                                            activity.intentId.action === "buy"
+                                              ? "text-green-600"
+                                              : "text-red-600"
+                                          }`}
                                         >
-                                          <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                                          />
-                                        </svg>
-                                        View TX
-                                      </a>
-                                    )}
-                                  </div>
-                                )}
+                                          {activity.intentId.action.toUpperCase()}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg text-xs">
+                                        <span className="text-gray-500">
+                                          Token:
+                                        </span>
+                                        <span className="font-medium text-gray-900">
+                                          {activity.intentId.tokenSymbol}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg text-xs">
+                                        <span className="text-gray-500">
+                                          Amount:
+                                        </span>
+                                        <span className="font-medium text-gray-900">
+                                          {formatNumber(
+                                            activity.intentId.tokenAmount
+                                          )}
+                                        </span>
+                                      </div>
+                                      {activity.intentId.txHash && (
+                                        <a
+                                          href={`https://testnet.monadexplorer.com/tx/${activity.intentId.txHash}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="flex items-center gap-1.5 px-2 py-1 bg-violet-50 rounded-lg text-xs text-violet-600 hover:bg-violet-100 transition-colors"
+                                        >
+                                          <svg
+                                            className="w-3 h-3"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                          >
+                                            <path
+                                              strokeLinecap="round"
+                                              strokeLinejoin="round"
+                                              strokeWidth="2"
+                                              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                                            />
+                                          </svg>
+                                          View TX
+                                        </a>
+                                      )}
+                                    </div>
+                                  )}
                               </div>
 
                               <div className="flex flex-col items-end gap-1 ml-4">
