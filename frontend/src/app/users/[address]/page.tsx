@@ -545,9 +545,11 @@ const UserProfilePage = () => {
                             </div>
                           </div>
                           {/* Action Button */}
-                          <button className="ml-4 px-4 py-2 bg-violet-600 text-white rounded-lg font-medium hover:bg-violet-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
-                            Claim
-                          </button>
+                          {isOwnProfile && (
+                            <button className="ml-4 px-4 py-2 bg-violet-600 text-white rounded-lg font-medium hover:bg-violet-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                              Claim
+                            </button>
+                          )}
                         </div>
                       ))}
                   </div>
