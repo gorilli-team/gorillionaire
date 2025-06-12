@@ -576,9 +576,11 @@ const UserProfilePage = () => {
                                   ></div>
                                 </div>
                               </div>
-                              <span className="text-xs text-gray-500 min-w-fit">
-                                {quest.currentProgress || 0}/{quest.questRequirement}
-                              </span>
+                              {!quest.claimedAt && !claimedQuests.has(quest._id) && (
+                                <span className="text-xs text-gray-500 min-w-fit">
+                                  {quest.currentProgress || 0}/{quest.questRequirement}
+                                </span>
+                              )}
                             </div>
                           </div>
                           {isOwnProfile && (

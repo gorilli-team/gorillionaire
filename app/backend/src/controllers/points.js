@@ -58,11 +58,15 @@ async function createAcceptedSignalUserQuests(address, signalId) {
           
           console.log(`Created UserQuest for ${address}: ${quest.questName}`);
         } else {
-          // If it already exists, increment the progress
-          userQuest.currentProgress += 1;
-          userQuest.lastProgressUpdate = new Date();
-          
-          console.log(`Updated UserQuest for ${address}: ${quest.questName} (${userQuest.currentProgress}/${quest.questRequirement})`);
+          if (!userQuest.isCompleted) {
+            userQuest.currentProgress += 1;
+            userQuest.lastProgressUpdate = new Date();
+            
+            console.log(`Updated UserQuest for ${address}: ${quest.questName} (${userQuest.currentProgress}/${quest.questRequirement})`);
+          } else {
+            console.log(`Quest already completed for ${address}: ${quest.questName} - skipping progress update`);
+            continue;
+          }
         }
 
         // Check if the quest is completed
