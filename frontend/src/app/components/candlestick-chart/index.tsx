@@ -443,7 +443,7 @@ const CandlestickChart: React.FC<PriceChartProps> = ({ data, tokenSymbol, signal
     } catch (error) {
       console.error("Error initializing chart:", error);
     }
-  }, [data, isClient, timeRange, allTimeHighLow]);
+  }, [data, isClient, timeRange, allTimeHighLow, signals]);
 
 
   // Server-side and initial client render

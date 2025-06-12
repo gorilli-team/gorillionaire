@@ -8,7 +8,11 @@ import { ENDPOINTS } from "@/app/const/Endpoints";
 import { getTimeAgo } from "@/app/utils/time";
 import { useSSE } from "@/app/hooks/useSSE";
 import { Pagination } from "flowbite-react";
-
+import { usePrivy } from "@privy-io/react-auth";
+import { useTrade } from "@/app/contexts/TradeContext";
+import { useAccount } from "wagmi";
+import { Token } from "@/app/types";
+import { getTokenImage } from "@/app/utils/tokens";
 type Signal = {
   id: string;
   name: string;
@@ -31,6 +35,18 @@ type Event = {
 type ChartData = {
   timestamp: string;
   price: number;
+};
+
+type PriceData = {
+  timestamp: string;
+  close: number;
+};
+
+type TokenData = {
+  token_id: string;
+  symbol: string;
+  name: string;
+  decimal: string;
 };
 
 const chart = (data: ChartData[]) => {
@@ -101,12 +117,16 @@ const chart = (data: ChartData[]) => {
 export default function SignalsPage() {
   const router = useRouter();
   const [signals, setSignals] = useState<Map<string, Signal>>(new Map());
+  const [tokens, setTokens] = useState<Map<string, Token>>(new Map());
   const [events, setEvents] = useState<Event[]>([]);
   const [latestEventId, setLatestEventId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 15;
   const [charts, setCharts] = useState<Map<string, ChartData[]>>(new Map());
+  const { user } = usePrivy();
+  const { handleOptionSelect } = useTrade();
 
+  const { chainId } = useAccount();
   const handleEvent = useCallback(
     (data: Event) => {
       console.log("New sse event", data);
@@ -130,25 +150,26 @@ export default function SignalsPage() {
     router.push(`/v2/signals/${id}`);
   };
 
-  const fetchSignals = async () => {
-    const response = await apiClient.get({
+  const fetchSignals = useCallback(async () => {
+    const response = await apiClient.get<{signals: Signal[]}>({
       url: ENDPOINTS.SIGNALS_LIST,
       auth: true,
     });
     if (response && response.status === 200) {
       const signals = new Map<string, Signal>(
-        (response.data as { signals: Signal[] }).signals.map((signal: Signal) => [signal.id, signal])
+        response.data.signals.map((signal: Signal) => [signal.id, signal])
       );
       setSignals(signals);
     }
-  };
+  }, []);
+
   const fetchCharts = useCallback(async (events: Event[]) => {
     for (const event of events) {
-      const response = await apiClient.get({
+      const response = await apiClient.get<PriceData[]>({
         url: ENDPOINTS.PRICE_DATA.replace(":id", event.token_id) + "?limit=500",
         auth: true,
       });
-      const chartData = (response.data as { data: { timestamp: string; close: number }[] }).data.map((item: { timestamp: string; close: number }) => ({
+      const chartData = response.data.map((item: PriceData) => ({
         timestamp: item.timestamp,
         price: item.close,
       }));
@@ -165,12 +186,12 @@ export default function SignalsPage() {
   }, []);
 
   const fetchEvents = useCallback(async () => {
-    const response = await apiClient.get<{ data: Event[] }>({
+    const response = await apiClient.get<Event[]>({
       url: ENDPOINTS.SIGNAL_EVENTS_ALL,
       auth: true,
     });
     if (response && response.status === 200) {
-      const events = response.data.data.slice(0, 50);
+      const events = response.data.slice(0, 50);
       console.log("events", events);
       setEvents(events);
       const uniqueEvents = events.filter(
@@ -182,9 +203,40 @@ export default function SignalsPage() {
     }
   }, [fetchCharts]);
 
+  const fetchTokens = useCallback(async () => {
+    const response = await apiClient.get<TokenData[]>({
+      url: ENDPOINTS.TOKENS_INFO + "?type=token",
+      auth: true,
+    });
+    if (response && response.status === 200) {
+      const tokens = response.data;
+      console.log("tokens", tokens);
+      setTokens((prev) => { 
+        const newTokens = new Map(prev);
+        tokens.forEach((token: TokenData) => {
+          const token_ids = token.token_id.split(":");
+          const chainId = parseInt(token_ids[0]);
+          const tokenAddress = token_ids[1];
+          newTokens.set(token.symbol, {
+            symbol: token.symbol,
+            name: token.name,
+            decimals: parseInt(token.decimal),
+            address: tokenAddress as `0x${string}`,
+            chainId: chainId,
+            totalHolding: 0,
+            price: 0,
+            imageUrl: getTokenImage(token.symbol),
+          });
+        });
+        return newTokens;
+      });
+    }
+  }, []);
+
   useEffect(() => {
     fetchSignals();
-  }, []);
+    fetchTokens();
+  }, [fetchTokens, fetchSignals]);
 
   useEffect(() => {
     fetchEvents();
@@ -422,12 +474,30 @@ export default function SignalsPage() {
                             <button
                               className="text-xs cursor-pointer px-3 py-1 rounded-md bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 mr-2"
                               onClick={() => {
-                                // TODO: Implement refuse
+                                handleOptionSelect({
+                                  signal_id: event.signal_id,
+                                  option: "No",
+                                  user: user ? { wallet: { address: user.wallet?.address || "" } } : null,
+                                  tokens: event.symbol.split("/").map((symbol) => tokens.get(symbol) as Token),
+                                  chainId: chainId || null,
+                                });
                               }}
                             >
                               Refuse
                             </button>
-                            <button className="text-xs cursor-pointer px-3 py-1 rounded-md bg-purple-600 text-white hover:bg-purple-700">
+                            <button className="text-xs cursor-pointer px-3 py-1 rounded-md bg-purple-600 text-white hover:bg-purple-700"
+                              onClick={() => {
+                                handleOptionSelect({
+                                  signal_id: event.signal_id,
+                                  option: "Yes",
+                                  user: user ? { wallet: { address: user.wallet?.address || "" } } : null,
+                                  tokens: event.symbol.split("/").map((symbol) => tokens.get(symbol) as Token),
+                                  amount: event.price,
+                                  type: event.action,
+                                  // setSelectedOptions: setSelectedOptions,
+                                  chainId: chainId || null,
+                                });
+                              }}>
                               Accept
                             </button>
                           </td>
@@ -476,6 +546,7 @@ export default function SignalsPage() {
           </div>
         </div>
       </div>
+      
     </ProtectPage>
   );
 }
