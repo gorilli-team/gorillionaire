@@ -5,18 +5,14 @@ import { useParams } from "next/navigation";
 import Image from "next/image";
 import { nnsClient } from "@/app/providers";
 import { getTimeAgo } from "@/app/utils/time";
-// import { getTokenImage } from "@/app/utils/tokens";
 import { HexString } from "@/app/types";
 import Sidebar from "@/app/components/sidebar";
 import Header from "@/app/components/header";
-// import { Pagination } from "flowbite-react";
-// import ActivitiesChart from "@/app/components/activities-chart";
 import { useReadContract, useAccount } from "wagmi";
 import { abi } from "@/app/abi/early-nft";
 import { NFT_ACCESS_ADDRESS } from "@/app/utils/constants";
 import { getLevelInfo, getXpProgress } from "@/app/utils/xp";
 
-// Helper function to format numbers with appropriate decimals
 const formatNumber = (num: number): string => {
   if (num === 0) return "0.00";
   if (num < 0.000001) return num.toExponential(6);
@@ -69,6 +65,8 @@ interface Quest {
   currentProgress: number;
   isCompleted: boolean;
   completedAt: Date | null;
+  claimedAt: Date | null;
+  isClaimed: boolean;
   progressPercentage: number;
 }
 
@@ -76,18 +74,17 @@ const UserProfilePage = () => {
   const params = useParams();
   const { address: connectedAddress } = useAccount();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  // const [allActivities, setAllActivities] = useState<UserActivity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedPage, setSelectedPage] = useState("Profile");
   const [quests, setQuests] = useState<Quest[]>([]);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [discordUsername, setDiscordUsername] = useState<string | null>(null);
   const [discordQuestCompleted, setDiscordQuestCompleted] = useState(false);
-  // const [currentPage, setCurrentPage] = useState(1);
+  const [isClaimingQuest, setIsClaimingQuest] = useState<string | null>(null);
+  const [claimedQuests, setClaimedQuests] = useState<Set<string>>(new Set());
   const currentPage = 1;
   const itemsPerPage = 5;
 
-  // Read NFT balance for the V2 contract
   const { data: v2NFTBalance } = useReadContract({
     abi,
     functionName: "balanceOf",
@@ -95,10 +92,78 @@ const UserProfilePage = () => {
     args: [params.address as `0x${string}`],
   });
 
-  // Helper function to check if the profile is the connected user's profile
   const isOwnProfile =
     connectedAddress?.toLowerCase() ===
     params.address?.toString().toLowerCase();
+
+  const handleClaimQuest = async (questId: string) => {
+    if (!params.address) return;
+    
+    setIsClaimingQuest(questId);
+    
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/activity/quests/claim`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            address: params.address,
+            questId: questId
+          })
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setClaimedQuests(prev => new Set(prev).add(questId));
+        
+        await fetchUserQuests();
+        
+        const profileResponse = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/activity/track/me?address=${params.address}&page=${currentPage}&limit=${itemsPerPage}`
+        );
+        const profileData = await profileResponse.json();
+        
+        if (profileData.userActivity) {
+          setUserProfile(prev => prev ? {
+            ...prev,
+            points: profileData.userActivity.points,
+            activitiesList: profileData.userActivity.activitiesList
+          } : null);
+        }
+        
+      } else {
+        console.error('Error claiming quest:', data.error);
+      }
+      
+    } catch (error) {
+      console.error('Error claiming quest:', error);
+    } finally {
+      setIsClaimingQuest(null);
+    }
+  };
+
+  const fetchUserQuests = async () => {
+    console.log("fetching user quests");
+
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/activity/quests/${params.address}`
+    );
+    const data = await response.json();
+    console.log(data);
+    setQuests(data.quests);
+    
+    const alreadyClaimed: Set<string> = new Set(
+      data.quests
+        .filter((quest: Quest) => quest.claimedAt)
+        .map((quest: Quest) => quest._id)
+    );
+    setClaimedQuests(alreadyClaimed);
+  };
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -140,16 +205,6 @@ const UserProfilePage = () => {
   }, [params.address, currentPage, v2NFTBalance]);
 
   useEffect(() => {
-    const fetchUserQuests = async () => {
-      console.log("fetching user quests");
-
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/activity/quests/${params.address}`
-      );
-      const data = await response.json();
-      console.log(data);
-      setQuests(data.quests);
-    };
     if (params.address) {
       fetchUserQuests();
     }
@@ -179,8 +234,6 @@ const UserProfilePage = () => {
     checkDiscordQuestStatus();
   }, [params.address]);
   
-
-  // Helper function to format address
   const formatAddress = (address: string) => {
     if (!address) return "";
     return `${address.substring(0, 6)}...${address.substring(
@@ -245,7 +298,6 @@ const UserProfilePage = () => {
 
   return (
     <div className="flex min-h-screen bg-gradient-to-r from-violet-50 to-indigo-50 text-gray-800">
-      {/* Mobile menu button */}
       <button
         className="lg:hidden fixed top-4 left-4 z-50 p-3 rounded-full bg-white shadow-md text-violet-600 hover:bg-violet-100 transition-colors duration-300"
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -270,7 +322,6 @@ const UserProfilePage = () => {
         </svg>
       </button>
 
-      {/* Sidebar with adjusted width and positioning */}
       <div
         className={`
           fixed lg:static
@@ -290,7 +341,6 @@ const UserProfilePage = () => {
         />
       </div>
 
-      {/* Overlay */}
       {isMobileMenuOpen && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden backdrop-blur-sm"
@@ -298,20 +348,14 @@ const UserProfilePage = () => {
         />
       )}
 
-      {/* Main content */}
       <main className="flex-1">
         <Header />
         <div className="flex-1 overflow-y-auto">
           <div className="w-full px-4 pt-4 pb-8">
-            {/* Two-column layout for desktop */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-              {/* Left Column: Profile & Activity Chart - 3/5 width */}
               <div className="lg:col-span-2 space-y-3">
-                {/* Profile Header */}
                 <div className="bg-white rounded-lg shadow-lg p-8 transform transition-all duration-300 hover:shadow-xl">
-                  {/* Top Section: Avatar, Name, Badges, and Social Buttons */}
                   <div className="flex items-start justify-between mb-6">
-                    {/* Left: Avatar and Name */}
                     <div className="flex items-center gap-4">
                       <div className="relative">
                         <div className="w-20 h-20 rounded-full overflow-hidden border-4 border-violet-200 shadow-md">
@@ -340,7 +384,6 @@ const UserProfilePage = () => {
                           </p>
                         )}
 
-                        {/* Social Connection Buttons */}
                         {isOwnProfile && (
                           <div className="flex gap-2">
                             {/* <button className="flex items-center gap-2 px-3 py-1.5 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors">
@@ -360,7 +403,7 @@ const UserProfilePage = () => {
                                   viewBox="0 0 24 24"
                                   fill="currentColor"
                                 >
-                                  <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z" />
+                                  <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.30z" />
                                 </svg>
                                 <span>{discordUsername}</span>
                               </div>
@@ -423,7 +466,6 @@ const UserProfilePage = () => {
                     </div>
                   </div>
 
-                  {/* Level Progress Bar */}
                   <div className="mb-6">
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-sm font-medium text-gray-700">
@@ -448,9 +490,7 @@ const UserProfilePage = () => {
                     </div>
                   </div>
 
-                  {/* Stats Section */}
                   <div className="grid grid-cols-3 gap-6">
-                    {/* Total Volume */}
                     <div>
                       <h3 className="text-sm font-medium text-gray-500 mb-1">
                         Total Volume
@@ -466,7 +506,6 @@ const UserProfilePage = () => {
                       </div>
                     </div>
 
-                    {/* Total Points */}
                     <div>
                       <h3 className="text-sm font-medium text-gray-500 mb-1">
                         Total Points
@@ -476,7 +515,6 @@ const UserProfilePage = () => {
                       </div>
                     </div>
 
-                    {/* Global Rank */}
                     <div>
                       <h3 className="text-sm font-medium text-gray-500 mb-1">
                         Global Rank
@@ -521,7 +559,6 @@ const UserProfilePage = () => {
                           key={idx}
                           className="flex items-center bg-white rounded-xl shadow p-4"
                         >
-                          {/* Quest Icon */}
                           <div className="w-12 h-12 flex items-center justify-center bg-violet-100 rounded-lg mr-4">
                             <Image
                               src={"/propic.png"}
@@ -530,7 +567,6 @@ const UserProfilePage = () => {
                               height={32}
                             />
                           </div>
-                          {/* Quest Info */}
                           <div className="flex-1 flex flex-col gap-1">
                             <div className="flex items-center gap-2">
                               <div className="font-semibold text-gray-900">
@@ -564,13 +600,13 @@ const UserProfilePage = () => {
                               </span>
                             </div>
                           </div>
-                          {/* Action Button*/}
                           {isOwnProfile && (
                             <button 
+                              onClick={() => handleClaimQuest(quest._id)}
                               className="ml-4 px-4 py-2 bg-violet-600 text-white rounded-lg font-medium hover:bg-violet-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                              disabled={quest.currentProgress < quest.questRequirement || quest.isCompleted}
+                              disabled={quest.currentProgress < quest.questRequirement || !!quest.claimedAt || claimedQuests.has(quest._id)}
                             >
-                              {quest.isCompleted ? "✓ Claimed" : "Claim"}
+                              {quest.claimedAt || claimedQuests.has(quest._id) ? "✓ Claimed" : "Claim"}
                             </button>
                           )}
                         </div>
@@ -579,7 +615,6 @@ const UserProfilePage = () => {
                 </div>
               </div>
 
-              {/* Right Column: Empty - 1/5 width */}
               <div className="lg:col-span-1">
                 <div className="bg-white rounded-lg shadow-lg transform transition-all duration-300 hover:shadow-xl">
                   <div className="bg-white rounded-xl p-4">
@@ -621,7 +656,6 @@ const UserProfilePage = () => {
                               key={index}
                               className="flex items-center bg-white rounded-xl border border-gray-100 px-4 py-3 shadow-sm hover:shadow-md transition-all duration-200"
                             >
-                              {/* Left: Action Icon */}
                               <div
                                 className="shrink-0 flex items-center justify-center w-10 h-10 rounded-full mr-4"
                                 style={{
@@ -662,10 +696,8 @@ const UserProfilePage = () => {
                                 )}
                               </div>
 
-                              {/* Middle: Main Content */}
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-3 mb-1">
-                                  {/* Token Image */}
                                   {activity.intentId?.tokenSymbol && (
                                     <Image
                                       src={`/tokens/${activity.intentId.tokenSymbol.toLowerCase()}.png`}
@@ -682,13 +714,11 @@ const UserProfilePage = () => {
                                     />
                                   )}
 
-                                  {/* Amount and Symbol */}
                                   <span className="font-semibold text-gray-900">
                                     {activity.intentId.tokenAmount.toLocaleString()}{" "}
                                     {activity.intentId.tokenSymbol}
                                   </span>
 
-                                  {/* Version Badge */}
                                   <span
                                     className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                                       activity.intentId.tokenPrice > 1
@@ -702,7 +732,6 @@ const UserProfilePage = () => {
                                   </span>
                                 </div>
 
-                                {/* Price and Total Value */}
                                 <div className="flex items-center gap-2 text-sm text-gray-500">
                                   <span>
                                     $
@@ -718,7 +747,6 @@ const UserProfilePage = () => {
                                   </span>
                                 </div>
 
-                                {/* Trade-specific Information */}
                                 {activity.name === "trade" && (
                                   <div className="mt-2 flex flex-wrap gap-2">
                                     <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg text-xs">
@@ -780,7 +808,6 @@ const UserProfilePage = () => {
                                 )}
                               </div>
 
-                              {/* Right: Time and Points */}
                               <div className="flex flex-col items-end gap-1 ml-4">
                                 <span className="text-xs text-gray-500">
                                   {getTimeAgo(activity.date)}
@@ -806,7 +833,6 @@ const UserProfilePage = () => {
                         Badges
                       </h2>
                     </div>
-                    {/* Personalized placeholder badges */}
                     <div className="flex flex-col gap-3">
                       {[
                         {
