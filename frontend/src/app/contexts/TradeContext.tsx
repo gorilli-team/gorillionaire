@@ -258,6 +258,8 @@ const TradeContext = createContext<{
       }: HandleOptionSelectParams) => {
         setIsLoading(true);
         if (option === "Yes") {
+          setIsLoading(false);
+
           await onYes({
             tokens,
             amount,
