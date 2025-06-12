@@ -13,6 +13,7 @@ import { useTrade } from "@/app/contexts/TradeContext";
 import { useAccount } from "wagmi";
 import { Token } from "@/app/types";
 import { getTokenImage } from "@/app/utils/tokens";
+
 type Signal = {
   id: string;
   name: string;
@@ -116,6 +117,7 @@ const chart = (data: ChartData[]) => {
 
 export default function SignalsPage() {
   const router = useRouter();
+  const [hasAccess, setHasAccess] = useState(false);
   const [signals, setSignals] = useState<Map<string, Signal>>(new Map());
   const [tokens, setTokens] = useState<Map<string, Token>>(new Map());
   const [events, setEvents] = useState<Event[]>([]);
@@ -125,8 +127,8 @@ export default function SignalsPage() {
   const [charts, setCharts] = useState<Map<string, ChartData[]>>(new Map());
   const { user } = usePrivy();
   const { handleOptionSelect } = useTrade();
-
   const { chainId } = useAccount();
+
   const handleEvent = useCallback(
     (data: Event) => {
       console.log("New sse event", data);
@@ -151,7 +153,7 @@ export default function SignalsPage() {
   };
 
   const fetchSignals = useCallback(async () => {
-    const response = await apiClient.get<{signals: Signal[]}>({
+    const response = await apiClient.get<{ signals: Signal[] }>({
       url: ENDPOINTS.SIGNALS_LIST,
       auth: true,
     });
@@ -200,6 +202,8 @@ export default function SignalsPage() {
         }
       );
       fetchCharts(uniqueEvents);
+    } else {
+      console.log("error", response);
     }
   }, [fetchCharts]);
 
@@ -211,7 +215,7 @@ export default function SignalsPage() {
     if (response && response.status === 200) {
       const tokens = response.data;
       console.log("tokens", tokens);
-      setTokens((prev) => { 
+      setTokens((prev) => {
         const newTokens = new Map(prev);
         tokens.forEach((token: TokenData) => {
           const token_ids = token.token_id.split(":");
@@ -232,6 +236,15 @@ export default function SignalsPage() {
       });
     }
   }, []);
+
+  useEffect(() => {
+    const access = localStorage.getItem("hasAccess");
+    if (!access) {
+      router.push("/v2/access");
+    } else {
+      setHasAccess(true);
+    }
+  }, [router]);
 
   useEffect(() => {
     fetchSignals();
@@ -271,6 +284,11 @@ export default function SignalsPage() {
         return name;
     }
   };
+
+  if (!hasAccess) {
+    return null;
+  }
+
   return (
     <ProtectPage>
       <div className="w-full min-h-screen bg-gray-50 p-4 md:p-6 lg:p-8">
@@ -477,27 +495,48 @@ export default function SignalsPage() {
                                 handleOptionSelect({
                                   signal_id: event.signal_id,
                                   option: "No",
-                                  user: user ? { wallet: { address: user.wallet?.address || "" } } : null,
-                                  tokens: event.symbol.split("/").map((symbol) => tokens.get(symbol) as Token),
+                                  user: user
+                                    ? {
+                                        wallet: {
+                                          address: user.wallet?.address || "",
+                                        },
+                                      }
+                                    : null,
+                                  tokens: event.symbol
+                                    .split("/")
+                                    .map(
+                                      (symbol) => tokens.get(symbol) as Token
+                                    ),
                                   chainId: chainId || null,
                                 });
                               }}
                             >
                               Refuse
                             </button>
-                            <button className="text-xs cursor-pointer px-3 py-1 rounded-md bg-purple-600 text-white hover:bg-purple-700"
+                            <button
+                              className="text-xs cursor-pointer px-3 py-1 rounded-md bg-purple-600 text-white hover:bg-purple-700"
                               onClick={() => {
                                 handleOptionSelect({
                                   signal_id: event.signal_id,
                                   option: "Yes",
-                                  user: user ? { wallet: { address: user.wallet?.address || "" } } : null,
-                                  tokens: event.symbol.split("/").map((symbol) => tokens.get(symbol) as Token),
+                                  user: user
+                                    ? {
+                                        wallet: {
+                                          address: user.wallet?.address || "",
+                                        },
+                                      }
+                                    : null,
+                                  tokens: event.symbol
+                                    .split("/")
+                                    .map(
+                                      (symbol) => tokens.get(symbol) as Token
+                                    ),
                                   amount: event.price,
                                   type: event.action,
-                                  // setSelectedOptions: setSelectedOptions,
                                   chainId: chainId || null,
                                 });
-                              }}>
+                              }}
+                            >
                               Accept
                             </button>
                           </td>
@@ -510,22 +549,17 @@ export default function SignalsPage() {
                 <div className="flex justify-between items-center">
                   <div className="text-sm text-gray-500">
                     <span className="text-sm text-gray-500 mb-4 sm:mb-0">
-                    <span className="font-normal">Showing</span>{" "}
-                    <span className="font-bold">
-                      {(currentPage - 1) * rowsPerPage + 1}-
-                      {Math.min(
-                        currentPage * rowsPerPage,
-                        events.length
-                      )}
-                    </span>{" "}
-                    <span className="font-normal">of</span>{" "}
-                    <span className="font-bold">{events.length}</span>
-                  </span>
-
-
+                      <span className="font-normal">Showing</span>{" "}
+                      <span className="font-bold">
+                        {(currentPage - 1) * rowsPerPage + 1}-
+                        {Math.min(currentPage * rowsPerPage, events.length)}
+                      </span>{" "}
+                      <span className="font-normal">of</span>{" "}
+                      <span className="font-bold">{events.length}</span>
+                    </span>
                   </div>
                   <div className="flex-grow flex justify-center mb-2">
-                  <Pagination
+                    <Pagination
                       currentPage={currentPage}
                       totalPages={events.length}
                       onPageChange={() =>
@@ -538,7 +572,6 @@ export default function SignalsPage() {
                       }
                       showIcons={false}
                     />
-
                   </div>
                 </div>
               </div>
@@ -546,7 +579,6 @@ export default function SignalsPage() {
           </div>
         </div>
       </div>
-      
     </ProtectPage>
   );
 }
