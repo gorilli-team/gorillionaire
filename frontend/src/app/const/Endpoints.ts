@@ -1,7 +1,7 @@
 export const ENDPOINTS = {
     PRIVY_VERIFY: '/app/auth/privy/verify',
     CSRF_TOKEN: '/app/csrf-token',
-    REFREFH_TOKEN: '/app/refresh-token',
+    REFREFH_TOKEN: '/app/auth/refresh-token',
     SIGNAL_SSE_EVENTS: '/app/signals/sse',
     SIGNALS_LIST: '/api/v1/signals',
     SIGNAL_INFO: '/api/v1/signal/:id',

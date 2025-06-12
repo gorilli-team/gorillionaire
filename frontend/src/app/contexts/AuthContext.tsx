@@ -42,22 +42,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     },
   });
 
-  const logout = useCallback(() => {
-    privyLogout();
+  const logout = useCallback(async () => {
+    await privyLogout();
     removeAuthToken();
     setToken(null);
   }, [privyLogout]);
 
-  const login = useCallback(() => {
-    const existing = getAuthToken();
-    console.log("existing", existing);
+  const login = useCallback(async () => {
     console.log("privy.authenticated", privy.authenticated);
-    if (privy.authenticated && !existing) {
-      logout();
+    // const valid = isTokenValid(token || "");
+    // console.log("valid", valid);
+    // if (!valid || (privy.authenticated && !token)) {
+      await logout();
+      setIsAuthenticated(false);
       privyLogin();
-    } else {
-      privyLogin();
-    }
+      setIsAuthenticated(true);
+    // } else {
+      // privyLogin();
+    // }
   }, [privyLogin, privy, logout]);
 
   // const validateToken = useCallback(() => {
@@ -94,6 +96,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const data = response.data as { token: string; refreshToken: string };
       setAuthToken(data.token, data.refreshToken);
       setToken(data.token);
+      setIsAuthenticated(true);
     }
   }, [privy, logout]);
 
