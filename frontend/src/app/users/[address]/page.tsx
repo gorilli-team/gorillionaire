@@ -58,11 +58,18 @@ interface UserProfile {
 }
 
 interface Quest {
+  _id: string;
   questName: string;
   questDescription: string;
   questImage: string;
   questType: string;
   questRequirement: number;
+  questRewardType: string;
+  questRewardAmount: number;
+  currentProgress: number;
+  isCompleted: boolean;
+  completedAt: Date | null;
+  progressPercentage: number;
 }
 
 const UserProfilePage = () => {
@@ -171,6 +178,7 @@ const UserProfilePage = () => {
 
     checkDiscordQuestStatus();
   }, [params.address]);
+  
 
   // Helper function to format address
   const formatAddress = (address: string) => {
@@ -529,25 +537,40 @@ const UserProfilePage = () => {
                                 {quest.questName}
                               </div>
                               <span className="px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 text-xs font-semibold">
-                                +{quest.questRequirement} pts
+                                +{quest.questRewardAmount} pts
                               </span>
+                              {quest.isCompleted && (
+                                <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-semibold">
+                                  ✓ Completed
+                                </span>
+                              )}
                             </div>
                             <div className="text-gray-500 text-sm">
                               {quest.questDescription}
                             </div>
-                            <div className="mt-2 w-full">
-                              <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                                <div
-                                  className="bg-gradient-to-r from-violet-500 to-indigo-600 h-2 rounded-full transition-all duration-300"
-                                  style={{ width: "60%" }}
-                                ></div>
+                            <div className="flex items-center gap-2 mt-2">
+                              <div className="flex-1">
+                                <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                                  <div
+                                    className="bg-gradient-to-r from-violet-500 to-indigo-600 h-2 rounded-full transition-all duration-300"
+                                    style={{ 
+                                      width: `${quest.progressPercentage || 0}%` 
+                                    }}
+                                  ></div>
+                                </div>
                               </div>
+                              <span className="text-xs text-gray-500 min-w-fit">
+                                {quest.currentProgress || 0}/{quest.questRequirement}
+                              </span>
                             </div>
                           </div>
-                          {/* Action Button */}
+                          {/* Action Button*/}
                           {isOwnProfile && (
-                            <button className="ml-4 px-4 py-2 bg-violet-600 text-white rounded-lg font-medium hover:bg-violet-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
-                              Claim
+                            <button 
+                              className="ml-4 px-4 py-2 bg-violet-600 text-white rounded-lg font-medium hover:bg-violet-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                              disabled={quest.currentProgress < quest.questRequirement || quest.isCompleted}
+                            >
+                              {quest.isCompleted ? "✓ Claimed" : "Claim"}
                             </button>
                           )}
                         </div>
