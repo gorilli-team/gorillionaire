@@ -98,17 +98,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [privy, logout]);
 
   useEffect(() => {
+    console.log("privy.ready", privy.ready);
+    console.log("privy.authenticated", privy.authenticated);
+
     if (!privy.ready) return; // wait for Privy to load
-  
+
     const token = getAuthToken();
     if (token && isTokenValid(token) && privy.authenticated) {
-        setIsAuthenticated(true);
-        setIsLoading(false);
-      } else {
-        setIsAuthenticated(false);
-        // logout();
-      }
-  }, [logout, privy]);
+      setIsAuthenticated(true);
+      setIsLoading(false);
+    } else {
+      setIsAuthenticated(false);
+      // logout();
+    }
+    // if ((!token || !isTokenValid(token)) && privy.authenticated) {
+    //   console.log("logout");
+    //   logout();
+    // }
+  }, [logout, privy.authenticated, privy.ready]);
 
   // useEffect(() => {
   //   if (!token && privy.ready && privy.authenticated) {

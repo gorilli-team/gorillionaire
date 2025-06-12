@@ -6,17 +6,18 @@ import { useAccount, useSwitchChain } from "wagmi";
 import { MONAD_CHAIN_ID } from "@/app/utils/constants";
 
 // Extend the Token type to include the properties we need
-interface ExtendedToken extends Token {
-  imageUrl?: string;
-  totalHolding: number;
-  price: number;
-}
+// interface ExtendedToken extends Token {
+//   imageUrl?: string;
+//   totalHolding: number;
+//   price: number;
+// }
 
 interface DexModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (inputAmount: string) => void;
-  token: ExtendedToken;
+  token?: Token;
+  tokens?: Token[];
   amount: number;
   type: "Buy" | "Sell";
   monBalance?: number;
@@ -32,6 +33,7 @@ const DexModal: React.FC<DexModalProps> = ({
   onClose,
   onConfirm,
   token,
+  tokens,
   amount,
   type,
   monBalance = 0,
@@ -48,7 +50,7 @@ const DexModal: React.FC<DexModalProps> = ({
   const { switchChain } = useSwitchChain();
 
   // Define MON token for buying, using the passed in balance and price
-  const monToken: ExtendedToken = {
+  const monToken: Token = {
     symbol: "MON",
     name: "Monad",
     address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
@@ -59,21 +61,28 @@ const DexModal: React.FC<DexModalProps> = ({
   };
 
   // Get input and output tokens based on transaction type
-  const inputToken = type === "Buy" ? monToken : token;
-  const outputToken = type === "Buy" ? token : monToken;
+  let inputToken = type && type.toLowerCase() === "buy" ? monToken : token;
+  let outputToken = type && type.toLowerCase() === "buy" ? token : monToken;
 
+  if (tokens && tokens.length === 2) {
+    inputToken = tokens[0];
+    outputToken = tokens[1];
+  }
+  console.log("inputToken", inputToken);
+  console.log("outputToken", outputToken);
   useEffect(() => {
     if (isOpen) {
-      if (type === "Buy") {
+      if (type && type.toLowerCase() === "buy") {
         // For buy: set the target amount in the output and calculate MON needed
         // Calculate how much MON is needed for the requested amount
-        const usdValue = amount * token.price;
+        if (!inputToken) return;
+        const usdValue = amount * inputToken.price;
         const monNeeded = usdValue / monPrice;
         const monNeededWithSlippage = monNeeded * 1.005;
         // If user can't afford the requested amount, cap to max possible
         if (monNeededWithSlippage > monBalance) {
           // Calculate max tokens user can buy with their MON balance
-          const maxTokenAmount = (monBalance * monPrice) / token.price;
+          const maxTokenAmount = (monBalance * monPrice) / inputToken.price;
           const adjustedTokenAmount = maxTokenAmount * 0.995;
           setOutputAmount(adjustedTokenAmount.toFixed(6));
           calculateInputForBuy(adjustedTokenAmount);
@@ -83,7 +92,8 @@ const DexModal: React.FC<DexModalProps> = ({
         }
       } else {
         // For sell: calculate amount based on percentage of total holdings
-        const sellAmount = (token.totalHolding * sellPercentage) / 100;
+        if (!inputToken) return;
+        const sellAmount = (inputToken?.totalHolding * sellPercentage) / 100;
         setInputAmount(sellAmount.toString());
         calculateOutputForSell(sellAmount);
       }
@@ -95,7 +105,8 @@ const DexModal: React.FC<DexModalProps> = ({
     try {
       // Calculate how much MON we need based on token price and MON price
       // First get the USD value of the tokens we want to buy
-      const usdValue = targetAmount * token.price;
+      if (!inputToken) return;
+      const usdValue = targetAmount * inputToken.price;
       // Then convert USD value to MON amount
       const monNeeded = usdValue / monPrice;
 
@@ -115,7 +126,8 @@ const DexModal: React.FC<DexModalProps> = ({
     try {
       // Calculate how much MON we'll get based on token price and MON price
       // First get the USD value of the tokens we want to sell
-      const usdValue = sourceAmount * token.price;
+      if (!inputToken) return;
+      const usdValue = sourceAmount * (inputToken?.price || 0);
       // Then convert USD value to MON amount
       const monReceived = usdValue / monPrice;
 
@@ -134,7 +146,7 @@ const DexModal: React.FC<DexModalProps> = ({
     setIsLoading(true);
     try {
       // Pass the current input amount to the parent component
-      if (type === "Buy") {
+      if (type.toLowerCase() === "buy") {
         await onConfirm(outputAmount);
       } else {
         await onConfirm(inputAmount);
@@ -154,19 +166,20 @@ const DexModal: React.FC<DexModalProps> = ({
     const value = e.target.value;
     if (/^\d*\.?\d*$/.test(value)) {
       // For sell orders, check if input amount exceeds total holdings
-      if (type === "Sell" && parseFloat(value) > inputToken.totalHolding) {
+      if (!inputToken) return;
+      if (type.toLowerCase() === "sell" && parseFloat(value) > inputToken.totalHolding) {
         setInputAmount(inputToken.totalHolding.toString());
         calculateOutputForSell(inputToken.totalHolding);
         return;
       }
       setInputAmount(value);
-      if (value && type === "Sell") {
+      if (value && type.toLowerCase() === "sell") {
         // For sell: user changes input (token amount), calculate MON output
         calculateOutputForSell(parseFloat(value));
-      } else if (value && type === "Buy") {
+      } else if (value && type.toLowerCase() === "buy") {
         // For buy: user changes input (MON amount), calculate token output
         const usdValue = parseFloat(value) * monPrice;
-        const tokenAmount = usdValue / token.price;
+        const tokenAmount = usdValue / inputToken.price;
         const newOutputAmount = (tokenAmount * 0.995).toFixed(6); // Apply slippage
         setOutputAmount(newOutputAmount);
         onAmountChange?.(value, newOutputAmount);
@@ -180,15 +193,16 @@ const DexModal: React.FC<DexModalProps> = ({
   const handleOutputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     if (/^\d*\.?\d*$/.test(value)) {
-      if (type === "Buy" && value) {
+      if (!inputToken) return;
+      if (type.toLowerCase() === "buy" && value) {
         // For buy: user changes output (token amount), calculate MON input
-        const usdValue = parseFloat(value) * token.price;
+        const usdValue = parseFloat(value) * inputToken.price;
         const monNeeded = usdValue / monPrice;
         const newInputAmount = (monNeeded * 1.005).toFixed(6); // Apply slippage
         // If calculated MON needed exceeds balance, cap to max possible
         if (parseFloat(newInputAmount) > inputToken.totalHolding) {
           const maxTokenAmount =
-            (inputToken.totalHolding * monPrice) / token.price;
+            (inputToken.totalHolding * monPrice) / inputToken.price;
           const adjustedOutputAmount = (maxTokenAmount * 0.995).toFixed(6);
           setOutputAmount(adjustedOutputAmount);
           setInputAmount(inputToken.totalHolding.toString());
@@ -201,15 +215,15 @@ const DexModal: React.FC<DexModalProps> = ({
         setOutputAmount(value);
         setInputAmount(newInputAmount);
         onAmountChange?.(newInputAmount, value);
-      } else if (value && type === "Sell") {
+      } else if (value && type.toLowerCase() === "sell") {
         // For sell: user changes output (MON amount), calculate token input
         const usdValue = parseFloat(value) * monPrice;
-        const tokenAmount = usdValue / token.price;
+        const tokenAmount = usdValue / inputToken.price;
         const newInputAmount = (tokenAmount * 1.005).toFixed(6); // Apply slippage
         // Check if calculated token amount exceeds balance
         if (parseFloat(newInputAmount) > inputToken.totalHolding) {
           const maxMonAmount =
-            (inputToken.totalHolding * token.price) / monPrice;
+            (inputToken.totalHolding * inputToken.price) / monPrice;
           const adjustedOutputAmount = (maxMonAmount * 0.995).toFixed(6);
           setOutputAmount(adjustedOutputAmount);
           setInputAmount(inputToken.totalHolding.toString());
@@ -231,7 +245,8 @@ const DexModal: React.FC<DexModalProps> = ({
   };
 
   // Format a dollar amount to a nice string with 2-4 decimals depending on value
-  const formatUSD = (value: number) => {
+  const formatUSD = (value: number | undefined) => {
+    if (!value) return "$0.00";
     if (value >= 100) return `$${value.toFixed(2)}`;
     if (value >= 1) return `$${value.toFixed(3)}`;
     return `$${value.toFixed(4)}`;
@@ -263,7 +278,7 @@ const DexModal: React.FC<DexModalProps> = ({
       <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 overflow-hidden">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-xl font-semibold text-gray-900">
-            {type === "Buy" ? "Buy" : "Sell"} {token.symbol}
+            {type && type.toLowerCase() === "buy" ? "Buy" : "Sell"} {token?.symbol}
           </h3>
           <button
             onClick={onClose}
@@ -292,8 +307,8 @@ const DexModal: React.FC<DexModalProps> = ({
               <div className="flex-shrink-0 mt-1">
                 <div className="w-8 h-8 relative">
                   <Image
-                    src={token.imageUrl || ""}
-                    alt={token.symbol}
+                    src={inputToken?.imageUrl || ""}
+                    alt={inputToken?.symbol || ""}
                     width={32}
                     height={32}
                     className="rounded-full"
@@ -307,7 +322,7 @@ const DexModal: React.FC<DexModalProps> = ({
                 <div className="flex items-center mt-1 space-x-2">
                   <span
                     className={`px-2 py-1 text-xs rounded-full ${
-                      type === "Buy"
+                      type && type.toLowerCase() === "buy"
                         ? "bg-green-100 text-green-800"
                         : "bg-red-100 text-red-800"
                     }`}
@@ -336,15 +351,15 @@ const DexModal: React.FC<DexModalProps> = ({
             <div className="flex items-center">
               <div className="w-4 h-4 mr-1 relative">
                 <Image
-                  src={token.imageUrl || ""}
-                  alt={token.symbol}
+                  src={inputToken?.imageUrl || ""}
+                  alt={inputToken?.symbol || ""}
                   width={16}
                   height={16}
                   className="rounded-full"
                 />
               </div>
               <div className="text-sm font-medium">
-                {formatUSD(token.price)}
+                {formatUSD(inputToken?.price)}
               </div>
             </div>
           </div>
@@ -383,8 +398,8 @@ const DexModal: React.FC<DexModalProps> = ({
               <div className="flex justify-between items-center mb-2">
                 <span className="text-sm text-gray-500">From</span>
                 <span className="text-sm text-gray-500">
-                  Balance: {inputToken.totalHolding.toFixed(4)}
-                  {type === "Sell" && ` (${sellPercentage}% of holdings)`}
+                  Balance: {inputToken?.totalHolding.toFixed(4)}
+                  {type && type.toLowerCase() === "sell" && ` (${sellPercentage}% of holdings)`}
                 </span>
               </div>
               <div className="flex items-center space-x-3">
@@ -393,31 +408,31 @@ const DexModal: React.FC<DexModalProps> = ({
                     type="text"
                     value={inputAmount}
                     onChange={handleInputChange}
-                    disabled={type === "Buy"} // For buy orders, input is calculated
+                    disabled={type && type.toLowerCase() === "buy"} // For buy orders, input is calculated
                     className={`w-full bg-transparent text-lg font-semibold focus:outline-none ${
-                      type === "Buy" ? "text-gray-600" : "text-gray-900"
+                      type && type.toLowerCase() === "buy" ? "text-gray-600" : "text-gray-900"
                     }`}
                     placeholder="0.0"
                   />
-                  {type === "Buy" && inputAmount && (
+                  {type && type.toLowerCase() === "buy" && inputAmount && (
                     <div className="text-xs text-gray-500 mt-1">
                       ≈ {formatUSD(parseFloat(inputAmount) * monPrice)}
                     </div>
                   )}
                 </div>
                 <div className="flex items-center space-x-2 bg-white rounded-full px-3 py-2 shadow-sm">
-                  {inputToken.imageUrl && (
+                  {inputToken?.imageUrl && (
                     <div className="w-6 h-6 relative">
                       <Image
-                        src={inputToken.imageUrl}
-                        alt={inputToken.symbol}
+                        src={inputToken?.imageUrl}
+                        alt={inputToken?.symbol}
                         width={24}
                         height={24}
                         className="rounded-full"
                       />
                     </div>
                   )}
-                  <span className="font-medium">{inputToken.symbol}</span>
+                  <span className="font-medium">{inputToken?.symbol}</span>
                 </div>
               </div>
             </div>
@@ -453,9 +468,9 @@ const DexModal: React.FC<DexModalProps> = ({
                     type="text"
                     value={outputAmount}
                     onChange={handleOutputChange}
-                    disabled={type === "Sell"} // For sell orders, output is calculated
+                    disabled={type && type.toLowerCase() === "sell"} // For sell orders, output is calculated
                     className={`w-full bg-transparent text-lg font-semibold focus:outline-none ${
-                      type === "Sell" ? "text-gray-600" : "text-gray-900"
+                      type && type.toLowerCase() === "sell" ? "text-gray-600" : "text-gray-900"
                     }`}
                     placeholder="0.0"
                   />
@@ -464,24 +479,24 @@ const DexModal: React.FC<DexModalProps> = ({
                       ≈{" "}
                       {formatUSD(
                         parseFloat(outputAmount) *
-                          (type === "Buy" ? token.price : monPrice)
+                          (type && type.toLowerCase() === "buy" ? (inputToken?.price || 0) : monPrice)
                       )}
                     </div>
                   )}
                 </div>
                 <div className="flex items-center space-x-2 bg-white rounded-full px-3 py-2 shadow-sm">
-                  {outputToken.imageUrl && (
+                  {outputToken?.imageUrl && (
                     <div className="w-6 h-6 relative">
                       <Image
-                        src={outputToken.imageUrl}
-                        alt={outputToken.symbol}
+                        src={outputToken?.imageUrl}
+                        alt={outputToken?.symbol || ""}
                         width={24}
                         height={24}
                         className="rounded-full"
                       />
                     </div>
                   )}
-                  <span className="font-medium">{outputToken.symbol}</span>
+                  <span className="font-medium">{outputToken?.symbol}</span>
                 </div>
               </div>
             </div>
@@ -490,11 +505,11 @@ const DexModal: React.FC<DexModalProps> = ({
               <div className="flex items-center justify-between text-sm text-gray-500">
                 <span>Rate</span>
                 <span>
-                  1 {type === "Buy" ? "MON" : token.symbol} ≈{" "}
-                  {type === "Buy"
-                    ? (monPrice / token.price).toFixed(6)
-                    : (token.price / monPrice).toFixed(6)}{" "}
-                  {type === "Buy" ? token.symbol : "MON"}
+                  1 {type && type.toLowerCase() === "buy" ? "MON" : token?.symbol} ≈{" "}
+                  {type && type.toLowerCase() === "buy"
+                      ? (monPrice / (inputToken?.price || 0)).toFixed(6)
+                    : ((inputToken?.price || 0) / monPrice).toFixed(6)}{" "}
+                  {type && type.toLowerCase() === "buy" ? inputToken?.symbol || "" : "MON"}
                 </span>
               </div>
 
@@ -513,23 +528,23 @@ const DexModal: React.FC<DexModalProps> = ({
               onClick={handleConfirm}
               disabled={
                 isLoading ||
-                (type === "Buy" && parseFloat(inputAmount) > monBalance) ||
-                (type === "Sell" &&
-                  parseFloat(inputAmount) > inputToken.totalHolding)
+                (type && type.toLowerCase() === "buy" && parseFloat(inputAmount) > monBalance) ||
+                (type && type.toLowerCase() === "sell" &&
+                  parseFloat(inputAmount) > (inputToken?.totalHolding || 0))
               }
               className={`w-full py-3 rounded-full font-medium text-white 
                 ${
                   isLoading ||
-                  (type === "Buy" && parseFloat(inputAmount) > monBalance) ||
-                  (type === "Sell" &&
-                    parseFloat(inputAmount) > inputToken.totalHolding)
+                  (type && type.toLowerCase() === "buy" && parseFloat(inputAmount) > monBalance) ||
+                  (type && type.toLowerCase() === "sell" &&
+                    parseFloat(inputAmount) > (inputToken?.totalHolding || 0) )
                     ? "bg-gray-400 cursor-not-allowed"
                     : "bg-violet-600 hover:bg-violet-700"
                 }`}
             >
               {isLoading
                 ? "Loading..."
-                : `Confirm ${type === "Buy" ? "Buy" : "Sell"}`}
+                : `Confirm ${type && type.toLowerCase() === "buy" ? "Buy" : "Sell"}`}
             </button>
           </>
         )}

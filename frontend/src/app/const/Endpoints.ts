@@ -9,7 +9,7 @@ export const ENDPOINTS = {
     SIGNAL_EVENTS: '/api/v1/signal/events/:signal_id',
     PRICE_DATA: '/app/prices/:id',
     TOKEN_INFO: '/api/v1/token/:id',
-
+    TOKENS_INFO: '/api/v1/tokens',
     // Add more endpoints as needed
 };
 

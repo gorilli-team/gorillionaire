@@ -32,12 +32,12 @@ export function useSSE(url: string, onMessage: MessageHandler) {
         console.log("parsed", parsed);
         onMessage(parsed);
       } catch (e) {
-        console.error("Failed to parse SSE message:", e);
+        console.info("Failed to parse SSE message:", e);
       }
     });
 
     sse.onerror = (err) => {
-      console.error("SSE error:", err);
+      console.info("SSE error:", err);
       sse.close();
     };
 

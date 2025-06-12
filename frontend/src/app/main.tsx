@@ -4,6 +4,7 @@ import Sidebar from "@/app/components/sidebar";
 import { useState } from "react";
 import { Providers } from "@/app/providers";
 import { AuthProvider } from "@/app/contexts/AuthContext";
+import { TradeProvider } from "@/app/contexts/TradeContext";
 
 export default function GorillionaireLayout({ children }: { children: React.ReactNode }) {
   const [selectedPage, setSelectedPage] = useState("Signals");
@@ -14,6 +15,7 @@ export default function GorillionaireLayout({ children }: { children: React.Reac
 
     <Providers>
             <AuthProvider>
+              <TradeProvider> 
             <div className="flex h-screen bg-gray-100 text-gray-800">
               {/* Mobile menu button */}
               <button
@@ -78,6 +80,7 @@ export default function GorillionaireLayout({ children }: { children: React.Reac
                 {children}
               </div>
             </div>
+            </TradeProvider>
         </AuthProvider>
 
           </Providers>
