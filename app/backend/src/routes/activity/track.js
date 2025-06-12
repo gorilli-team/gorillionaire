@@ -104,7 +104,7 @@ router.post("/trade-points", async (req, res) => {
     });
 
     if (!userAuth) {
-      return res.status(400).json({ error: "User not found" });
+      return res.status(400).json({ error: "User not found in Trade Points" });
     }
 
     const userActivity = await UserActivity.findOne({
@@ -130,8 +130,12 @@ router.post("/trade-points", async (req, res) => {
     if (intent.status !== "pending") {
       return res.status(400).json({ error: "Intent already completed" });
     }
-    if (intent.userAddress !== address) {
-      return res.status(400).json({ error: "Intent not for this address" });
+    if (intent.userAddress.toLowerCase !== address.toLowerCase) {
+      return res.status(400).json({
+        error: "Intent not for this address",
+        intentUserAddress: intent.userAddress,
+        address,
+      });
     }
 
     const provider = new ethers.JsonRpcProvider(
@@ -261,6 +265,11 @@ router.get("/me", async (req, res) => {
       return res.status(400).json({ error: "No address provided" });
     }
 
+    const dollarValue = await Intent.aggregate([
+      { $match: { userAddress: address.toLowerCase(), status: "completed" } },
+      { $group: { _id: null, total: { $sum: "$usdValue" } } },
+    ]);
+
     // Get user activity with paginated activities
     const userActivity = await UserActivity.findOne(
       { address: address.toLowerCase() },
@@ -316,6 +325,7 @@ router.get("/me", async (req, res) => {
     res.json({
       userActivity: {
         ...result,
+        dollarValue: dollarValue ? dollarValue[0].total : 0,
         pagination: {
           total: totalActivities[0]?.count || 0,
           page,
@@ -326,7 +336,7 @@ router.get("/me", async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching user activity:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Internal server error", error: error });
   }
 });
 

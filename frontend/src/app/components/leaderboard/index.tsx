@@ -8,6 +8,7 @@ import { getTimeAgo } from "@/app/utils/time";
 import { nnsClient } from "@/app/providers";
 import Link from "next/link";
 import MobilePagination from "@/app/components/ui/MobilePagination";
+import { getLevelInfo } from "@/app/utils/xp";
 
 interface Investor {
   rank: number;
@@ -16,6 +17,12 @@ interface Investor {
   nadAvatar?: string;
   points: number;
   activitiesList: Activity[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
 }
 
 interface Activity {
@@ -31,6 +38,13 @@ const isValidUrl = (urlString: string): boolean => {
   } catch {
     return false;
   }
+};
+
+const shortenAddress = (address: string): string => {
+  if (!address) return "";
+  return `${address.substring(0, 6)}...${address.substring(
+    address.length - 4
+  )}`;
 };
 
 const LeaderboardComponent = () => {
@@ -94,6 +108,12 @@ const LeaderboardComponent = () => {
           nadProfile[0]?.avatar || `/avatar_${data.userActivity?.rank % 6}.png`,
         points: data.userActivity?.points || 0,
         activitiesList: data.userActivity?.activitiesList || [],
+        pagination: data.userActivity?.pagination || {
+          total: 0,
+          page: 1,
+          limit: 10,
+          totalPages: 1,
+        },
       };
 
       setMyData(myInvestorData);
@@ -260,37 +280,31 @@ const LeaderboardComponent = () => {
                           </td>
                           <td className="py-4 h-16 text-center text-gray-700 pr-2">
                             <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium rounded-full bg-blue-50 text-blue-700">
-                              {myInvestor.activitiesList.length}
+                              {myInvestor.pagination.total}
                             </span>
                           </td>
                           <td className="py-4 h-16 text-gray-700 pr-2 font-bold">
-                            {myInvestor.points}
+                            <div className="flex items-center gap-1.5">
+                              <span>{myInvestor.points}</span>
+                              <span className="inline-flex items-center justify-center px-2 py-0.5 text-[10px] font-medium rounded-full bg-white border border-violet-200 text-violet-700">
+                                Level {getLevelInfo(myInvestor.points).level}
+                              </span>
+                            </div>
                           </td>
                           <td className="py-4 h-16 text-gray-700">
-                            {myInvestor.activitiesList &&
-                              myInvestor.activitiesList.length > 0 && (
+                            {myInvestor.pagination &&
+                              myInvestor.pagination.total > 0 && (
                                 <div className="flex flex-col">
                                   <span className="text-sm font-medium">
-                                    {
-                                      myInvestor.activitiesList[
-                                        myInvestor.activitiesList.length - 1
-                                      ].name
-                                    }
+                                    {myInvestor.activitiesList[0].name}
                                     <span className="ml-2 text-xs font-normal text-blue-600">
-                                      +
-                                      {
-                                        myInvestor.activitiesList[
-                                          myInvestor.activitiesList.length - 1
-                                        ].points
-                                      }
+                                      +{myInvestor.activitiesList[0].points}
                                       pts
                                     </span>
                                   </span>
                                   <span className="text-xs text-gray-500">
                                     {getTimeAgo(
-                                      myInvestor.activitiesList[
-                                        myInvestor.activitiesList.length - 1
-                                      ].date
+                                      myInvestor.activitiesList[0].date
                                     )}
                                   </span>
                                 </div>
@@ -362,7 +376,8 @@ const LeaderboardComponent = () => {
                               )}
                             </div>
                             <span className="text-gray-700 font-bold truncate max-w-[10px] md:max-w-full">
-                              {investor?.nadName || investor.address}
+                              {investor?.nadName ||
+                                shortenAddress(investor.address)}
                             </span>
                           </Link>
                         </td>
@@ -372,7 +387,12 @@ const LeaderboardComponent = () => {
                           </span>
                         </td>
                         <td className="py-4 h-16 text-gray-700 pr-2 font-bold">
-                          {investor.points}
+                          <div className="flex items-center gap-1.5">
+                            <span>{investor.points}</span>
+                            <span className="inline-flex items-center justify-center px-2 py-0.5 text-[10px] font-medium rounded-full bg-white border border-violet-200 text-violet-700">
+                              Level {getLevelInfo(investor.points).level}
+                            </span>
+                          </div>
                         </td>
                         <td className="py-4 h-16 text-gray-700">
                           {investor.activitiesList &&
@@ -423,93 +443,87 @@ const LeaderboardComponent = () => {
                 </table>
 
                 {/* Mobile View */}
-                <div className="sm:hidden space-y-4">
+                <div className="sm:hidden space-y-3">
                   {myInvestor && (
                     <>
                       <div
-                        className="border rounded-lg px-3 py-2 bg-violet-100 border-violet-300"
-                        style={{ marginBottom: 8 }}
+                        className={`border rounded-lg px-4 py-3 bg-white hover:border-gray-300 transition-colors ${
+                          isCurrentUserAddress(myInvestor.address)
+                            ? "bg-violet-100 border-violet-300"
+                            : ""
+                        }`}
                       >
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-2">
                             {myInvestor.rank <= 3 ? (
-                              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-800 font-bold text-xs">
+                              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-100 text-amber-800 font-bold text-sm">
                                 {myInvestor.rank}
                               </span>
                             ) : (
-                              <span className="text-gray-700 font-medium text-xs">
+                              <span className="text-gray-700 font-medium text-sm">
                                 {myInvestor.rank}
                               </span>
                             )}
-                            <div className="w-6 h-6 rounded-full flex items-center justify-center overflow-hidden">
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden border border-gray-100">
                               {myInvestor.nadAvatar &&
                               myInvestor.nadAvatar !== "" &&
                               isValidUrl(myInvestor.nadAvatar) ? (
                                 <Image
                                   src={myInvestor.nadAvatar}
                                   alt="User Avatar"
-                                  width={24}
-                                  height={24}
+                                  width={32}
+                                  height={32}
                                   className="w-full h-full object-cover"
                                 />
                               ) : (
                                 <Image
                                   src={`/avatar_${myInvestor.rank % 6}.png`}
                                   alt="User Avatar"
-                                  width={24}
-                                  height={24}
+                                  width={32}
+                                  height={32}
                                   className="w-full h-full object-cover"
                                 />
                               )}
                             </div>
-                            <Link
-                              href={`/users/${myInvestor.address}`}
-                              className="text-gray-800 font-semibold text-xs hover:underline"
-                            >
-                              {myInvestor?.nadName || myInvestor.address}
-                            </Link>
-                          </div>
-                          <div className="flex flex-col items-end min-w-[40px]">
-                            <span className="text-violet-700 font-bold text-sm leading-tight">
-                              {myInvestor.points}
-                            </span>
-                            <span className="text-[9px] text-gray-400 leading-none">
-                              pts
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center justify-between mt-1">
-                          <span className="text-[10px] text-gray-400">
-                            {myInvestor.activitiesList.length} activities
-                          </span>
-                          {myInvestor.activitiesList &&
-                            myInvestor.activitiesList.length > 0 && (
-                              <span className="text-[10px] text-gray-500 text-right">
-                                <span className="font-medium text-gray-700">
-                                  {
-                                    myInvestor.activitiesList[
-                                      myInvestor.activitiesList.length - 1
-                                    ].name
-                                  }
-                                </span>
-                                <span className="ml-1 text-blue-600 font-medium">
-                                  +
-                                  {
-                                    myInvestor.activitiesList[
-                                      myInvestor.activitiesList.length - 1
-                                    ].points
-                                  }
-                                </span>
-                                <span className="ml-1">
-                                  {getTimeAgo(
-                                    myInvestor.activitiesList[
-                                      myInvestor.activitiesList.length - 1
-                                    ].date
-                                  )}
-                                </span>
+                            <div className="flex flex-col">
+                              <Link
+                                href={`/users/${myInvestor.address}`}
+                                className="text-gray-800 font-semibold text-sm hover:underline"
+                              >
+                                {myInvestor?.nadName ||
+                                  shortenAddress(myInvestor.address)}
+                              </Link>
+                              <span className="text-[10px] text-gray-500">
+                                {myInvestor.pagination.total} activities
                               </span>
-                            )}
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-violet-700 font-bold text-sm">
+                                {myInvestor.points} pts
+                              </span>
+                              <span className="inline-flex items-center justify-center px-2 py-0.5 text-[10px] font-medium rounded-full bg-white border border-violet-200 text-violet-700">
+                                Level {getLevelInfo(myInvestor.points).level}
+                              </span>
+                            </div>
+                            {myInvestor.activitiesList &&
+                              myInvestor.activitiesList.length > 0 && (
+                                <span className="text-[10px] text-gray-500 text-right mt-0.5">
+                                  <span className="font-medium text-gray-700">
+                                    {myInvestor.activitiesList[0].name}
+                                  </span>
+                                  <span className="ml-1 text-blue-600 font-medium">
+                                    +{myInvestor.activitiesList[0].points}
+                                  </span>
+                                  <span className="ml-1">
+                                    {getTimeAgo(
+                                      myInvestor.activitiesList[0].date
+                                    )}
+                                  </span>
+                                </span>
+                              )}
+                          </div>
                         </div>
                       </div>
                       <div style={{ height: 8 }}></div>
@@ -518,93 +532,94 @@ const LeaderboardComponent = () => {
                   {pageInvestors.map((investor) => (
                     <div
                       key={investor.address}
-                      className={`border rounded-lg px-3 py-2 bg-white hover:border-gray-300 transition-colors ${
+                      className={`border rounded-lg px-4 py-3 bg-white hover:border-gray-300 transition-colors ${
                         isCurrentUserAddress(investor.address)
                           ? "bg-violet-100 border-violet-300"
                           : ""
                       }`}
-                      style={{ marginBottom: 8 }}
                     >
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-2">
                           {investor.rank <= 3 ? (
-                            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-800 font-bold text-xs">
+                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-100 text-amber-800 font-bold text-sm">
                               {investor.rank}
                             </span>
                           ) : (
-                            <span className="text-gray-700 font-medium text-xs">
+                            <span className="text-gray-700 font-medium text-sm">
                               {investor.rank}
                             </span>
                           )}
-                          <div className="w-6 h-6 rounded-full flex items-center justify-center overflow-hidden">
+                          <div className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden border border-gray-100">
                             {investor.nadAvatar &&
                             investor.nadAvatar !== "" &&
                             isValidUrl(investor.nadAvatar) ? (
                               <Image
                                 src={investor.nadAvatar}
                                 alt="User Avatar"
-                                width={24}
-                                height={24}
+                                width={32}
+                                height={32}
                                 className="w-full h-full object-cover"
                               />
                             ) : (
                               <Image
                                 src={`/avatar_${investor.rank % 6}.png`}
                                 alt="User Avatar"
-                                width={24}
-                                height={24}
+                                width={32}
+                                height={32}
                                 className="w-full h-full object-cover"
                               />
                             )}
                           </div>
-                          <Link
-                            href={`/users/${investor.address}`}
-                            className="text-gray-800 font-semibold text-xs hover:underline"
-                          >
-                            {investor?.nadName || investor.address}
-                          </Link>
-                        </div>
-                        <div className="flex flex-col items-end min-w-[40px]">
-                          <span className="text-violet-700 font-bold text-sm leading-tight">
-                            {investor.points}
-                          </span>
-                          <span className="text-[9px] text-gray-400 leading-none">
-                            pts
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between mt-1">
-                        <span className="text-[10px] text-gray-400">
-                          {investor.activitiesList.length} activities
-                        </span>
-                        {investor.activitiesList &&
-                          investor.activitiesList.length > 0 && (
-                            <span className="text-[10px] text-gray-500 text-right">
-                              <span className="font-medium text-gray-700">
-                                {
-                                  investor.activitiesList[
-                                    investor.activitiesList.length - 1
-                                  ].name
-                                }
-                              </span>
-                              <span className="ml-1 text-blue-600 font-medium">
-                                +
-                                {
-                                  investor.activitiesList[
-                                    investor.activitiesList.length - 1
-                                  ].points
-                                }
-                              </span>
-                              <span className="ml-1">
-                                {getTimeAgo(
-                                  investor.activitiesList[
-                                    investor.activitiesList.length - 1
-                                  ].date
-                                )}
-                              </span>
+                          <div className="flex flex-col">
+                            <Link
+                              href={`/users/${investor.address}`}
+                              className="text-gray-800 font-semibold text-sm hover:underline"
+                            >
+                              {investor?.nadName ||
+                                shortenAddress(investor.address)}
+                            </Link>
+                            <span className="text-[10px] text-gray-500">
+                              {investor.activitiesList.length} activities
                             </span>
-                          )}
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-violet-700 font-bold text-sm">
+                              {investor.points} pts
+                            </span>
+                            <span className="inline-flex items-center justify-center px-2 py-0.5 text-[10px] font-medium rounded-full bg-white border border-violet-200 text-violet-700">
+                              Level {getLevelInfo(investor.points).level}
+                            </span>
+                          </div>
+                          {investor.activitiesList &&
+                            investor.activitiesList.length > 0 && (
+                              <span className="text-[10px] text-gray-500 text-right mt-0.5">
+                                <span className="font-medium text-gray-700">
+                                  {
+                                    investor.activitiesList[
+                                      investor.activitiesList.length - 1
+                                    ].name
+                                  }
+                                </span>
+                                <span className="ml-1 text-blue-600 font-medium">
+                                  +
+                                  {
+                                    investor.activitiesList[
+                                      investor.activitiesList.length - 1
+                                    ].points
+                                  }
+                                </span>
+                                <span className="ml-1">
+                                  {getTimeAgo(
+                                    investor.activitiesList[
+                                      investor.activitiesList.length - 1
+                                    ].date
+                                  )}
+                                </span>
+                              </span>
+                            )}
+                        </div>
                       </div>
                     </div>
                   ))}

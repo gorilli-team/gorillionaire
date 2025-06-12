@@ -1,4 +1,6 @@
 const UserActivity = require("../models/UserActivity");
+const Quest = require("../models/Quest"); // AGGIUNTO
+const UserQuest = require("../models/UserQuest"); // AGGIUNTO
 const { WebhookClient } = require("discord.js");
 const { defineChain, createPublicClient, http } = require("viem");
 const { NNS } = require("@nadnameservice/nns-viem-sdk");
@@ -22,6 +24,83 @@ async function awardRefuseSignalPoints(address, signalId) {
   });
   await userActivity.save();
   await trackOnDiscordXpGained("Signal Refused", address, 5, totalPoints);
+}
+
+/**
+ * Creates/updates UserQuest when a signal is accepted
+ * @param {string} address - User's wallet address
+ * @param {string} signalId - ID of the accepted signal
+ */
+async function createAcceptedSignalUserQuests(address, signalId) {
+  try {
+    const allQuests = await Quest.find({ 
+      questType: { $ne: "discord" }
+    });
+
+    for (const quest of allQuests) {
+      // Only quests of type "acceptedSignals" should be updated
+      if (quest.questType === "acceptedSignals") {
+        // Check if a UserQuest already exists for this quest and user
+        let userQuest = await UserQuest.findOne({
+          questId: quest._id,
+          address: address,
+        });
+
+        if (!userQuest) {
+          // If it doesn't exist, create it
+          userQuest = new UserQuest({
+            questId: quest._id,
+            address: address,
+            currentProgress: 1,
+            isCompleted: false,
+            lastProgressUpdate: new Date()
+          });
+          
+          console.log(`Created UserQuest for ${address}: ${quest.questName}`);
+        } else {
+          if (!userQuest.isCompleted) {
+            userQuest.currentProgress += 1;
+            userQuest.lastProgressUpdate = new Date();
+            
+            console.log(`Updated UserQuest for ${address}: ${quest.questName} (${userQuest.currentProgress}/${quest.questRequirement})`);
+          } else {
+            console.log(`Quest already completed for ${address}: ${quest.questName} - skipping progress update`);
+            continue;
+          }
+        }
+
+        // Check if the quest is completed
+        if (userQuest.currentProgress >= quest.questRequirement && !userQuest.isCompleted) {
+          userQuest.isCompleted = true;
+          userQuest.completedAt = new Date();
+          
+          console.log(`🎉 User ${address} completed quest: ${quest.questName}`);
+        }
+
+        await userQuest.save();
+      } else {
+        const existingUserQuest = await UserQuest.findOne({
+          questId: quest._id,
+          address: address,
+        });
+
+        if (!existingUserQuest) {
+          const userQuest = new UserQuest({
+            questId: quest._id,
+            address: address,
+            currentProgress: 0,
+            isCompleted: false,
+            lastProgressUpdate: new Date()
+          });
+          
+          await userQuest.save();
+          console.log(`Created UserQuest placeholder for ${address}: ${quest.questName}`);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error creating/updating UserQuests:', error);
+  }
 }
 
 /**
@@ -84,7 +163,29 @@ async function trackOnDiscordXpGained(action, address, points, totalPoints) {
   }
 }
 
+async function awardDiscordConnectionPoints(address) {
+  const userActivity = await UserActivity.findOne({
+    address: address.toLowerCase(),
+  });
+
+  if (!userActivity) {
+    throw new Error("User activity not found");
+  }
+
+  const totalPoints = userActivity.points + 50;
+  userActivity.points += 50;
+  userActivity.activitiesList.push({
+    name: "Discord Connected",
+    points: 50,
+    date: new Date(),
+  });
+  await userActivity.save();
+  await trackOnDiscordXpGained("Discord Connected", address, 50, totalPoints);
+}
+
 module.exports = {
   awardRefuseSignalPoints,
+  createAcceptedSignalUserQuests, // AGGIUNTO
   trackOnDiscordXpGained,
+  awardDiscordConnectionPoints,
 };

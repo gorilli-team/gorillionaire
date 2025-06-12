@@ -35,6 +35,8 @@ app.use("/events/token", require("./routes/events/token"));
 app.use("/trade", require("./routes/trade/0x"));
 app.use("/nillion/data", require("./routes/nillion/data"));
 app.use("/activity/track", require("./routes/activity/track"));
+app.use("/activity/quests", require("./routes/activity/quests"));
+// app.use("/activity/badges", require("./routes/activity/badges"));
 app.use("/token/holders", require("./routes/token/holders"));
 app.use("/gorilli-nft/holders", require("./routes/gorilliNft/holders"));
 app.use(
@@ -45,6 +47,7 @@ app.use("/auth/privy", require("./routes/auth/privy"));
 
 // Sentry error handler must be registered after all controllers but before other error handlers
 app.use(expressErrorHandler());
+app.use("/discord/membership", require("./routes/discord/membership"));
 
 // Basic error handling
 app.use((err, req, res, next) => {

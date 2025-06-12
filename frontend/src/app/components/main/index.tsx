@@ -40,8 +40,6 @@ export default function Main({ selectedPage, setSelectedPage }: MainProps) {
             <Leaderboard />
           </div>
         );
-      default:
-        return <div className="p-4 text-gray-800">Select a page</div>;
     }
   };
 

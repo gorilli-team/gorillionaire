@@ -7,6 +7,7 @@ import LeaderboardBadge from "../leaderboard_badge";
 import Cookies from "js-cookie";
 import { useGetProfile } from "@nadnameservice/nns-wagmi-hooks";
 import { HexString } from "@/app/types";
+import { useDisconnect } from "wagmi";
 
 interface Notification {
   type: string;
@@ -25,11 +26,28 @@ interface Notification {
 
 export default function Header() {
   const { ready, authenticated, user, logout } = usePrivy();
+  const { disconnect } = useDisconnect();
   const { profile: nadProfile } = useGetProfile(
     (user?.wallet?.address || "0x") as HexString
   );
 
   const userAddress = useMemo(() => user?.wallet?.address, [user]);
+  const [address, setAddress] = useState<string | null>(userAddress || null);
+
+  // Update address when userAddress changes
+  useEffect(() => {
+    if (!authenticated) {
+      setAddress(null);
+    } else {
+      setAddress(userAddress || null);
+    }
+  }, [userAddress, authenticated]);
+
+  const handleLogout = async () => {
+    setAddress(null);
+    disconnect();
+    await logout();
+  };
 
   const { login } = useLogin({
     onComplete: async ({ user }) => {
@@ -108,7 +126,7 @@ export default function Header() {
   // WebSocket for notifications
   useEffect(() => {
     // Only connect when authenticated and we have an address
-    if (!authenticated || !userAddress) {
+    if (!authenticated || !address) {
       return;
     }
 
@@ -130,8 +148,8 @@ export default function Header() {
         if (
           message.type === "NOTIFICATION" &&
           notificationAddress &&
-          userAddress &&
-          notificationAddress.toLowerCase() === userAddress.toLowerCase()
+          address &&
+          notificationAddress.toLowerCase() === address.toLowerCase()
         ) {
           // Extract relevant data
           const { action, tokenAmount, tokenPrice, tokenSymbol } =
@@ -160,7 +178,7 @@ export default function Header() {
         wsRef.current = null;
       }
     };
-  }, [authenticated, userAddress]);
+  }, [authenticated, address]);
 
   // Memoize fetchPrice to prevent unnecessary recreations
   const fetchPrice = useCallback(async () => {
@@ -257,17 +275,15 @@ export default function Header() {
                   {nadProfile.primaryName}
                 </div>
               ) : (
-                userAddress && (
+                address && (
                   <div className="text-xs sm:text-sm text-gray-600 truncate max-w-[80px] sm:max-w-none">
-                    {userAddress.slice(0, 6)}...
-                    {userAddress.slice(-4)}
+                    {address.slice(0, 6)}...
+                    {address.slice(-4)}
                   </div>
                 )
               )}
               <button
-                onClick={() => {
-                  logout();
-                }}
+                onClick={handleLogout}
                 className="px-2 sm:px-4 py-1 sm:py-2 text-xs sm:text-sm font-medium text-white bg-violet-600 rounded-md hover:bg-violet-400"
               >
                 Disconnect
