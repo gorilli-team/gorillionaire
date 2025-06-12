@@ -529,27 +529,8 @@ const UserProfilePage = () => {
                 <div className="bg-white rounded-lg shadow-lg p-3 transform transition-all duration-300 hover:shadow-xl">
                   <div className="flex justify-between items-center mb-3">
                     <h2 className="text-base font-bold text-gray-900">
-                      Your Next Quests
+                      Quests
                     </h2>
-                    <a
-                      href={`/badges/${params.address}`}
-                      className="text-violet-600 hover:text-violet-800 text-xs font-medium flex items-center gap-1"
-                    >
-                      See more
-                      <svg
-                        className="w-3 h-3"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M9 5l7 7-7 7"
-                        />
-                      </svg>
-                    </a>
                   </div>
                   <div className="space-y-3">
                     {quests
@@ -606,7 +587,7 @@ const UserProfilePage = () => {
                               className="ml-4 px-4 py-2 bg-violet-600 text-white rounded-lg font-medium hover:bg-violet-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
                               disabled={quest.currentProgress < quest.questRequirement || !!quest.claimedAt || claimedQuests.has(quest._id)}
                             >
-                              {quest.claimedAt || claimedQuests.has(quest._id) ? "✓ Claimed" : "Claim"}
+                              {quest.claimedAt || claimedQuests.has(quest._id) ? "Claimed" : "Claim"}
                             </button>
                           )}
                         </div>
@@ -620,7 +601,7 @@ const UserProfilePage = () => {
                   <div className="bg-white rounded-xl p-4">
                     <div className="flex justify-between items-center mb-3">
                       <h2 className="text-base font-bold text-gray-900">
-                        Latest Transactions
+                        Latest Activities
                       </h2>
                       <a
                         href={`/transactions/${params.address}`}
@@ -646,11 +627,6 @@ const UserProfilePage = () => {
                       <div className="space-y-3">
                         {userProfile.activitiesList
                           .slice(0, 5)
-                          .filter(
-                            (activity) =>
-                              activity?.intentId?.action === "buy" ||
-                              activity?.intentId?.action === "sell"
-                          )
                           .map((activity, index) => (
                             <div
                               key={index}
@@ -660,12 +636,14 @@ const UserProfilePage = () => {
                                 className="shrink-0 flex items-center justify-center w-10 h-10 rounded-full mr-4"
                                 style={{
                                   backgroundColor:
-                                    activity.intentId.action === "buy"
+                                    activity?.intentId?.action === "buy"
                                       ? "#E9F9EE"
-                                      : "#FDECEC",
+                                      : activity?.intentId?.action === "sell"
+                                      ? "#FDECEC"
+                                      : "#F3F4F6",
                                 }}
                               >
-                                {activity.intentId.action === "buy" ? (
+                                {activity?.intentId?.action === "buy" ? (
                                   <svg
                                     className="w-5 h-5 text-green-500"
                                     fill="none"
@@ -679,7 +657,7 @@ const UserProfilePage = () => {
                                       d="M5 10l7-7m0 0l7 7m-7-7v18"
                                     />
                                   </svg>
-                                ) : (
+                                ) : activity?.intentId?.action === "sell" ? (
                                   <svg
                                     className="w-5 h-5 text-red-500"
                                     fill="none"
@@ -693,66 +671,111 @@ const UserProfilePage = () => {
                                       d="M19 14l-7 7m0 0l-7-7m7 7V3"
                                     />
                                   </svg>
+                                ) : activity.name === "Signal Refused" ? (
+                                  <svg
+                                    className="w-5 h-5 text-gray-500"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth="2"
+                                      d="M6 18L18 6M6 6l12 12"
+                                    />
+                                  </svg>
+                                ) : activity.name === "Discord Connected" ? (
+                                  <svg
+                                    className="w-5 h-5 text-indigo-500"
+                                    viewBox="0 0 24 24"
+                                    fill="currentColor"
+                                  >
+                                    <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.30z" />
+                                  </svg>
+                                ) : activity.name.includes("Quest") ? (
+                                  <svg
+                                    className="w-5 h-5 text-violet-500"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth="2"
+                                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                    />
+                                  </svg>
+                                ) : (
+                                  <svg
+                                    className="w-5 h-5 text-gray-500"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth="2"
+                                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                    />
+                                  </svg>
                                 )}
                               </div>
 
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-3 mb-1">
-                                  {activity.intentId?.tokenSymbol && (
-                                    <Image
-                                      src={`/tokens/${activity.intentId.tokenSymbol.toLowerCase()}.png`}
-                                      alt={activity.intentId.tokenSymbol}
-                                      width={24}
-                                      height={24}
-                                      className="rounded-full"
-                                      onError={(e) => {
-                                        (
-                                          e.currentTarget as HTMLImageElement
-                                        ).style.display = "none";
-                                      }}
-                                      unoptimized
-                                    />
-                                  )}
+                                {/* Trading Activity */}
+                                {activity?.intentId?.tokenSymbol && (
+                                  <>
+                                    <div className="flex items-center gap-3 mb-1">
+                                      <Image
+                                        src={`/tokens/${activity.intentId.tokenSymbol.toLowerCase()}.png`}
+                                        alt={activity.intentId.tokenSymbol}
+                                        width={24}
+                                        height={24}
+                                        className="rounded-full"
+                                        onError={(e) => {
+                                          (e.currentTarget as HTMLImageElement).style.display = "none";
+                                        }}
+                                        unoptimized
+                                      />
+                                      <span className="font-semibold text-gray-900">
+                                        {activity.intentId.tokenAmount.toLocaleString()}{" "}
+                                        {activity.intentId.tokenSymbol}
+                                      </span>
+                                      <span
+                                        className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                          activity.intentId.tokenPrice > 1
+                                            ? "bg-pink-100 text-pink-600"
+                                            : "bg-orange-100 text-orange-600"
+                                        }`}
+                                      >
+                                        {activity.intentId.tokenPrice > 1 ? "V2" : "V1"}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                                      <span>${formatNumber(activity.intentId.tokenPrice)}</span>
+                                      <span>•</span>
+                                      <span>
+                                        ${formatNumber(activity.intentId.tokenAmount * activity.intentId.tokenPrice)}
+                                      </span>
+                                    </div>
+                                  </>
+                                )}
 
-                                  <span className="font-semibold text-gray-900">
-                                    {activity.intentId.tokenAmount.toLocaleString()}{" "}
-                                    {activity.intentId.tokenSymbol}
-                                  </span>
+                                {/* Non-Trading Activity */}
+                                {!activity?.intentId?.tokenSymbol && (
+                                  <div className="font-semibold text-gray-900">
+                                    {activity.name}
+                                  </div>
+                                )}
 
-                                  <span
-                                    className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                                      activity.intentId.tokenPrice > 1
-                                        ? "bg-pink-100 text-pink-600"
-                                        : "bg-orange-100 text-orange-600"
-                                    }`}
-                                  >
-                                    {activity.intentId.tokenPrice > 1
-                                      ? "V2"
-                                      : "V1"}
-                                  </span>
-                                </div>
-
-                                <div className="flex items-center gap-2 text-sm text-gray-500">
-                                  <span>
-                                    $
-                                    {formatNumber(activity.intentId.tokenPrice)}
-                                  </span>
-                                  <span>•</span>
-                                  <span>
-                                    $
-                                    {formatNumber(
-                                      activity.intentId.tokenAmount *
-                                        activity.intentId.tokenPrice
-                                    )}
-                                  </span>
-                                </div>
-
-                                {activity.name === "trade" && (
+                                {/* Trading Details */}
+                                {activity.name === "trade" && activity?.intentId && (
                                   <div className="mt-2 flex flex-wrap gap-2">
                                     <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg text-xs">
-                                      <span className="text-gray-500">
-                                        Type:
-                                      </span>
+                                      <span className="text-gray-500">Type:</span>
                                       <span
                                         className={`font-medium ${
                                           activity.intentId.action === "buy"
@@ -764,21 +787,15 @@ const UserProfilePage = () => {
                                       </span>
                                     </div>
                                     <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg text-xs">
-                                      <span className="text-gray-500">
-                                        Token:
-                                      </span>
+                                      <span className="text-gray-500">Token:</span>
                                       <span className="font-medium text-gray-900">
                                         {activity.intentId.tokenSymbol}
                                       </span>
                                     </div>
                                     <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg text-xs">
-                                      <span className="text-gray-500">
-                                        Amount:
-                                      </span>
+                                      <span className="text-gray-500">Amount:</span>
                                       <span className="font-medium text-gray-900">
-                                        {formatNumber(
-                                          activity.intentId.tokenAmount
-                                        )}
+                                        {formatNumber(activity.intentId.tokenAmount)}
                                       </span>
                                     </div>
                                     {activity.intentId.txHash && (
@@ -821,7 +838,7 @@ const UserProfilePage = () => {
                       </div>
                     ) : (
                       <div className="text-center p-6 text-gray-400 text-sm">
-                        No recent trades.
+                        No recent activities.
                       </div>
                     )}
                   </div>
@@ -839,35 +856,35 @@ const UserProfilePage = () => {
                           name: "Social Gorilla",
                           description:
                             "Follow Gorilli Twitter, Discord and Telegram profiles.",
-                          image: "/badges/social-gorilla.png",
+                          image: "/01.png",
                           status: "coming-soon",
                         },
                         {
                           name: "Jungle Ambassador",
                           description:
                             "Invite a friend to join Gorillionaire family.",
-                          image: "/badges/jungle-ambassador.png",
+                          image: "/02.png",
                           status: "coming-soon",
                         },
                         {
                           name: "Streak Ape",
                           description:
                             "Accept at least 1 signal per day for 7 consecutive days.",
-                          image: "/badges/streak-ape.png",
+                          image: "/03.png",
                           status: "coming-soon",
                         },
                         {
                           name: "Early Adopter",
                           description:
                             "Be one of the first user to join Gorillionaire v2.",
-                          image: "/badges/early-adopter.png",
+                          image: "/04.png",
                           status: "coming-soon",
                         },
                         {
                           name: "Silverback OG",
                           description:
                             "Reach your first 1,000 points on Gorillionaire.",
-                          image: "/badges/silverback-og.png",
+                          image: "/05.png",
                           status: "coming-soon",
                         },
                       ].map((badge, idx) => (
@@ -877,7 +894,7 @@ const UserProfilePage = () => {
                         >
                           <div className="w-12 h-12 flex items-center justify-center rounded-full bg-violet-50 border">
                             <Image
-                              src={"/propic.png"}
+                              src={badge.image}
                               alt={badge.name}
                               width={48}
                               height={48}
