@@ -80,7 +80,6 @@ const UserProfilePage = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [discordUsername, setDiscordUsername] = useState<string | null>(null);
   const [discordQuestCompleted, setDiscordQuestCompleted] = useState(false);
-  const [isClaimingQuest, setIsClaimingQuest] = useState<string | null>(null);
   const [claimedQuests, setClaimedQuests] = useState<Set<string>>(new Set());
   const currentPage = 1;
   const itemsPerPage = 5;
@@ -98,8 +97,6 @@ const UserProfilePage = () => {
 
   const handleClaimQuest = async (questId: string) => {
     if (!params.address) return;
-    
-    setIsClaimingQuest(questId);
     
     try {
       const response = await fetch(
@@ -142,8 +139,6 @@ const UserProfilePage = () => {
       
     } catch (error) {
       console.error('Error claiming quest:', error);
-    } finally {
-      setIsClaimingQuest(null);
     }
   };
 
