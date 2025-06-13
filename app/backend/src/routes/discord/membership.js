@@ -107,8 +107,6 @@ router.post("/verify", async (req, res) => {
 
         await awardDiscordConnectionPoints(address);
 
-        console.log(`User ${address} completed Discord quest and earned 50 points`);
-
       } catch (questError) {
         console.error("Error handling Discord quest:", questError);
       }
