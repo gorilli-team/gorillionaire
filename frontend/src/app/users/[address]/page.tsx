@@ -578,26 +578,28 @@ const UserProfilePage = () => {
                                 )}
                             </div>
                           </div>
-                          {isOwnProfile && (
-                            <button
-                              onClick={() => handleClaimQuest(quest._id)}
-                              className={`ml-4 px-4 py-2 rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed ${
-                                quest.claimedAt || claimedQuests.has(quest._id)
-                                  ? "bg-violet-600 text-white hover:bg-violet-700"
-                                  : "bg-indigo-600 transition-colors text-white hover:bg-indigo-700"
-                              }`}
-                              disabled={
-                                quest.currentProgress <
-                                  quest.questRequirement ||
-                                !!quest.claimedAt ||
-                                claimedQuests.has(quest._id)
-                              }
-                            >
-                              {quest.claimedAt || claimedQuests.has(quest._id)
-                                ? "Claimed"
-                                : "Claim"}
-                            </button>
-                          )}
+                          {isOwnProfile &&
+                            !(
+                              quest.claimedAt || claimedQuests.has(quest._id)
+                            ) && (
+                              <button
+                                onClick={() => handleClaimQuest(quest._id)}
+                                className={`ml-4 px-4 py-2 rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed ${
+                                  quest.claimedAt ||
+                                  claimedQuests.has(quest._id)
+                                    ? "bg-violet-600 text-white hover:bg-violet-700"
+                                    : "bg-indigo-600 transition-colors text-white hover:bg-indigo-700"
+                                }`}
+                                disabled={
+                                  quest.currentProgress <
+                                    quest.questRequirement ||
+                                  !!quest.claimedAt ||
+                                  claimedQuests.has(quest._id)
+                                }
+                              >
+                                Claim
+                              </button>
+                            )}
                         </div>
                       ))}
                   </div>

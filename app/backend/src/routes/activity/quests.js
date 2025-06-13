@@ -6,9 +6,9 @@ const UserActivity = require("../../models/UserActivity");
 
 router.get("/:address", async (req, res) => {
   const { address } = req.params;
-  
-  const user = await UserActivity.findOne({ 
-    address: { $in: [address, address.toLowerCase()] }
+
+  const user = await UserActivity.findOne({
+    address: { $in: [address, address.toLowerCase()] },
   });
 
   if (!user) {
@@ -18,31 +18,34 @@ router.get("/:address", async (req, res) => {
   try {
     // Get all quests sorted by requirement
     const quests = await Quest.find({}).sort({ questRequirement: 1 });
-    
+
     // Get all user quests for this address
-    const userQuests = await UserQuest.find({ 
-      address: { $in: [address, address.toLowerCase()] }
+    const userQuests = await UserQuest.find({
+      address: { $regex: new RegExp(`^${address}$`, "i") },
     });
-    
+
+    console.log("userQuests", address, userQuests);
+
     // Create a map for quick lookup of user progress
     const userQuestMap = {};
-    userQuests.forEach(uq => {
+    userQuests.forEach((uq) => {
       userQuestMap[uq.questId.toString()] = uq;
     });
 
     // Combine quest data with user progress
-    const questsWithProgress = quests.map(quest => {
+    const questsWithProgress = quests.map((quest) => {
       const userQuest = userQuestMap[quest._id.toString()];
-      
+
       const currentProgress = userQuest ? userQuest.currentProgress : 0;
       const isCompleted = userQuest ? userQuest.isCompleted : false;
       const completedAt = userQuest ? userQuest.completedAt : null;
       const claimedAt = userQuest ? userQuest.claimedAt : null;
-      
+
       // Calculate progress percentage
-      const progressPercentage = quest.questRequirement > 0 
-        ? Math.min((currentProgress / quest.questRequirement) * 100, 100)
-        : 0;
+      const progressPercentage =
+        quest.questRequirement > 0
+          ? Math.min((currentProgress / quest.questRequirement) * 100, 100)
+          : 0;
 
       return {
         ...quest.toObject(),
@@ -51,7 +54,7 @@ router.get("/:address", async (req, res) => {
         completedAt,
         claimedAt,
         isClaimed: !!claimedAt,
-        progressPercentage: Math.round(progressPercentage)
+        progressPercentage: Math.round(progressPercentage),
       };
     });
 
@@ -66,8 +69,8 @@ router.post("/claim", async (req, res) => {
   const { address, questId } = req.body;
 
   if (!address || !questId) {
-    return res.status(400).json({ 
-      error: "Missing required fields: address and questId" 
+    return res.status(400).json({
+      error: "Missing required fields: address and questId",
     });
   }
 
@@ -81,7 +84,7 @@ router.post("/claim", async (req, res) => {
     // Find the user quest
     const userQuest = await UserQuest.findOne({
       questId: questId,
-      address: { $in: [address, address.toLowerCase()] }
+      address: { $in: [address, address.toLowerCase()] },
     });
 
     if (!userQuest) {
@@ -100,7 +103,7 @@ router.post("/claim", async (req, res) => {
 
     // Find user activity to award points
     const userActivity = await UserActivity.findOne({
-      address: { $in: [address, address.toLowerCase()] }
+      address: { $in: [address, address.toLowerCase()] },
     });
 
     if (!userActivity) {
@@ -118,10 +121,9 @@ router.post("/claim", async (req, res) => {
         name: `Quest Completed: ${quest.questName}`,
         points: rewardPoints,
         date: new Date(),
-        questId: questId
+        questId: questId,
       });
       await userActivity.save();
-
     }
 
     res.json({
@@ -129,11 +131,10 @@ router.post("/claim", async (req, res) => {
       message: "Quest reward claimed successfully",
       reward: {
         type: quest.questRewardType,
-        amount: quest.questRewardAmount
+        amount: quest.questRewardAmount,
       },
-      claimedAt: userQuest.claimedAt
+      claimedAt: userQuest.claimedAt,
     });
-
   } catch (error) {
     console.error("Error claiming quest reward:", error);
     res.status(500).json({ error: "Internal server error" });
