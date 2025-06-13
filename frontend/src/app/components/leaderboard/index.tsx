@@ -185,7 +185,7 @@ const LeaderboardComponent = () => {
   return (
     <div className="w-full bg-gray-100 px-2">
       <div className="w-full mx-auto px-1 sm:px-4 md:px-6 pt-4">
-        <div className="bg-white rounded-lg shadow-sm p-1 sm:p-3 md:p-6 mt-4">
+        <div className="bg-white rounded-lg shadow-sm p-1 sm:p-3 md:p-6 mt-4 flex flex-col h-[calc(100vh-120px)]">
           {/* Search */}
           <div className="mb-3 sm:mb-6 px-1 sm:px-0">
             <div className="relative">
@@ -218,7 +218,7 @@ const LeaderboardComponent = () => {
           {/* Table with reduced padding on mobile */}
           <div className="overflow-x-auto -mx-1 sm:-mx-3 md:-mx-6">
             <div className="px-1 sm:px-3 md:px-6">
-              <div className="h-[400px] sm:h-[500px] md:h-[600px] lg:h-[680px] overflow-auto">
+              <div className="h-[calc(100vh-280px)] sm:h-[500px] md:h-[600px] lg:h-[680px] overflow-auto pb-20 sm:pb-0">
                 {/* Desktop/Tablet View */}
                 <table className="w-full border-collapse hidden sm:table">
                   <thead className="sticky top-0 bg-white z-10">
@@ -636,7 +636,7 @@ const LeaderboardComponent = () => {
             </div>
           </div>
 
-          <div className="mt-2 flex flex-col items-center w-full gap-1">
+          <div className="mt-2 flex flex-col items-center w-full gap-1 flex-1">
             <span className="text-xs text-gray-500 text-center w-full">
               Showing{" "}
               {investors.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}-
@@ -645,13 +645,6 @@ const LeaderboardComponent = () => {
             </span>
             <div className="w-full overflow-x-auto">
               <div className="flex justify-center min-w-[320px]">
-                <div className="w-full sm:hidden">
-                  <MobilePagination
-                    currentPage={currentPage}
-                    totalPages={totalInvestorPages > 0 ? totalInvestorPages : 1}
-                    onPageChange={onPageChange}
-                  />
-                </div>
                 <div className="hidden sm:block">
                   <Pagination
                     currentPage={currentPage}
@@ -664,6 +657,16 @@ const LeaderboardComponent = () => {
             </div>
             <hr className="w-full border-t border-gray-200 mt-2" />
           </div>
+        </div>
+      </div>
+      {/* Mobile pagination fixed at bottom */}
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-40">
+        <div className="w-full">
+          <MobilePagination
+            currentPage={currentPage}
+            totalPages={totalInvestorPages > 0 ? totalInvestorPages : 1}
+            onPageChange={onPageChange}
+          />
         </div>
       </div>
     </div>

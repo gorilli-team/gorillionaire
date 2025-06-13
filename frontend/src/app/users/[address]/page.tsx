@@ -235,11 +235,13 @@ const UserProfilePage = () => {
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const discordErrorParam = urlParams.get('discord_error');
-    const discordError = urlParams.get('discordError');
-    
-    if (discordErrorParam === 'not_member' || discordError === 'true') {
-      setDiscordError("You are not part of the Discord server. Join the server by clicking 'Connect Discord' first.");
+    const discordErrorParam = urlParams.get("discord_error");
+    const discordError = urlParams.get("discordError");
+
+    if (discordErrorParam === "not_member" || discordError === "true") {
+      setDiscordError(
+        "You are not part of the Discord server. Join the server by clicking 'Connect Discord' first."
+      );
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, []);
@@ -354,14 +356,14 @@ const UserProfilePage = () => {
       <main className="flex-1">
         <Header />
         <div className="flex-1 overflow-y-auto">
-          <div className="w-full px-4 pt-4 pb-8">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-              <div className="lg:col-span-2 space-y-3">
-                <div className="bg-white rounded-lg shadow-lg p-8 transform transition-all duration-300 hover:shadow-xl">
-                  <div className="flex items-start justify-between mb-6">
-                    <div className="flex items-center gap-4">
+          <div className="w-full px-2 sm:px-4 pt-2 sm:pt-4 pb-4 sm:pb-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 sm:gap-3">
+              <div className="lg:col-span-2 space-y-2 sm:space-y-3">
+                <div className="bg-white rounded-lg shadow-lg p-4 sm:p-8 transform transition-all duration-300 hover:shadow-xl">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
+                    <div className="flex items-center gap-3 sm:gap-4">
                       <div className="relative">
-                        <div className="w-20 h-20 rounded-full overflow-hidden border-4 border-violet-200 shadow-md">
+                        <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border-4 border-violet-200 shadow-md">
                           <Image
                             src={
                               userProfile.nadAvatar ||
@@ -376,7 +378,7 @@ const UserProfilePage = () => {
                       </div>
 
                       <div>
-                        <h1 className="text-2xl font-bold text-gray-900 mb-1">
+                        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">
                           {userProfile.nadName ||
                             formatAddress(userProfile.address)}
                         </h1>
@@ -390,7 +392,7 @@ const UserProfilePage = () => {
                         {isOwnProfile && (
                           <div className="flex flex-col gap-2">
                             {/* Discord buttons */}
-                            <div className="flex gap-2">
+                            <div className="flex flex-wrap gap-2">
                               {!discordUsername && (
                                 <a
                                   href="https://discord.gg/yYtgzHywRF"
@@ -459,8 +461,7 @@ const UserProfilePage = () => {
                                 <button
                                   onClick={() => setDiscordError(null)}
                                   className="ml-auto text-red-500 hover:text-red-700"
-                                >
-                                </button>
+                                ></button>
                               </div>
                             )}
                           </div>
@@ -531,12 +532,12 @@ const UserProfilePage = () => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
                     <div>
                       <h3 className="text-sm font-medium text-gray-500 mb-1">
                         Total Volume
                       </h3>
-                      <div className="text-2xl font-bold text-gray-900 mb-1">
+                      <div className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">
                         $
                         {typeof userProfile.dollarValue === "number"
                           ? userProfile.dollarValue.toLocaleString(undefined, {
@@ -551,7 +552,7 @@ const UserProfilePage = () => {
                       <h3 className="text-sm font-medium text-gray-500 mb-1">
                         Total Points
                       </h3>
-                      <div className="text-2xl font-bold text-gray-900 mb-1">
+                      <div className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">
                         {userProfile.points.toLocaleString()}
                       </div>
                     </div>
@@ -560,7 +561,7 @@ const UserProfilePage = () => {
                       <h3 className="text-sm font-medium text-gray-500 mb-1">
                         Global Rank
                       </h3>
-                      <div className="text-2xl font-bold text-gray-900 mb-1">
+                      <div className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">
                         {userProfile.rank}
                         {getOrdinalSuffix(userProfile.rank)}
                       </div>
@@ -573,15 +574,15 @@ const UserProfilePage = () => {
                       Quests
                     </h2>
                   </div>
-                  <div className="space-y-3">
+                  <div className="space-y-2 sm:space-y-3">
                     {quests
                       .filter((quest) => quest.questType !== "discord")
                       .map((quest, idx) => (
                         <div
                           key={idx}
-                          className="flex items-center bg-white rounded-xl shadow p-4"
+                          className="flex flex-col sm:flex-row sm:items-center bg-white rounded-xl shadow p-3 sm:p-4"
                         >
-                          <div className="w-12 h-12 flex items-center justify-center bg-violet-100 rounded-lg mr-4">
+                          <div className="w-12 h-12 flex items-center justify-center bg-violet-100 rounded-lg mb-3 sm:mb-0 sm:mr-4">
                             <Image
                               src={"/propic.png"}
                               alt={quest.questName}
@@ -590,7 +591,7 @@ const UserProfilePage = () => {
                             />
                           </div>
                           <div className="flex-1 flex flex-col gap-1">
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                               <div className="font-semibold text-gray-900">
                                 {quest.questName}
                               </div>
@@ -634,7 +635,7 @@ const UserProfilePage = () => {
                             ) && (
                               <button
                                 onClick={() => handleClaimQuest(quest._id)}
-                                className={`ml-4 px-4 py-2 rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed ${
+                                className={`mt-3 sm:mt-0 sm:ml-4 px-4 py-2 rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed ${
                                   quest.claimedAt ||
                                   claimedQuests.has(quest._id)
                                     ? "bg-violet-600 text-white hover:bg-violet-700"

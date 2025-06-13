@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Sidebar from "@/app/components/sidebar";
 import Header from "@/app/components/header";
 import LeaderboardComponent from "@/app/components/leaderboard/index";
+import MobilePagination from "@/app/components/ui/MobilePagination";
 
 const LeaderboardPage = () => {
   const [selectedPage, setSelectedPage] = useState("Leaderboard");
@@ -67,7 +68,7 @@ const LeaderboardPage = () => {
       {/* Main content with adjusted width and positioning */}
       <div className="lg:ml-0 flex-1 flex flex-col w-full overflow-hidden">
         <Header />
-        <div className="flex-1 overflow-auto pb-10">
+        <div className="flex-1 overflow-auto pb-20">
           <LeaderboardComponent />
         </div>
       </div>
