@@ -17,14 +17,14 @@ const DiscordPage = () => {
       const error = urlParams.get("error");
 
       if (error) {
-        router.push(`/users/${state}?discordError=true`);
+        router.push(`/users/${state}?discord_error=auth_error`);
         return;
       }
 
       if (code && state) {
         try {
           // Call backend to verify membership
-          await fetch(
+          const response = await fetch(
             `${process.env.NEXT_PUBLIC_API_URL}/discord/membership/verify`,
             {
               method: "POST",
@@ -36,10 +36,17 @@ const DiscordPage = () => {
             }
           );
 
-          router.push(`/users/${state}`);
+          const data = await response.json();
+
+          if (response.ok && data.isMember === true) {
+            router.push(`/users/${state}`);
+          } else {
+            router.push(`/users/${state}?discord_error=not_member`);
+          }
+
         } catch (error) {
           console.error("Discord verification failed:", error);
-          router.push(`/users/${state}?discordError=true`);
+          router.push(`/users/${state}?discord_error=network_error`);
         }
       }
     };
