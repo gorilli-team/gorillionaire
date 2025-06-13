@@ -24,8 +24,6 @@ router.get("/:address", async (req, res) => {
       address: { $regex: new RegExp(`^${address}$`, "i") },
     });
 
-    console.log("userQuests", address, userQuests);
-
     // Create a map for quick lookup of user progress
     const userQuestMap = {};
     userQuests.forEach((uq) => {
