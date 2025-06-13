@@ -134,7 +134,7 @@ const LeaderboardComponent = () => {
 
     // Cleanup interval on component unmount
     return () => clearInterval(interval);
-  }, [address, currentPage]);
+  }, [address, currentPage, fetchMe]);
 
   // Effect to update filteredInvestors when investors change
   useEffect(() => {

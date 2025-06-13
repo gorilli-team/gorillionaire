@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import Sidebar from "@/app/components/sidebar";
 import Header from "@/app/components/header";
 import LeaderboardComponent from "@/app/components/leaderboard/index";
-import MobilePagination from "@/app/components/ui/MobilePagination";
 
 const LeaderboardPage = () => {
   const [selectedPage, setSelectedPage] = useState("Leaderboard");
