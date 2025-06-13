@@ -55,21 +55,20 @@ router.post("/verify", async (req, res) => {
 
     const discordUser = await userResponse.json();
 
-    try {
-      await UserActivity.findOneAndUpdate(
-        { address: { $in: [address, address.toLowerCase()] } },
-        { 
-          discordUsername: discordUser.username 
-        },
-        { upsert: true, new: true }
-      );
-    } catch (activityError) {
-      console.error("Error updating Discord username in UserActivity:", activityError);
-    }
-
     const isMember = await checkDiscordGuildMembership(access_token, GORILLIONAIRE_GUILD_ID);
 
     if (isMember) {
+      try {
+        await UserActivity.findOneAndUpdate(
+          { address: { $in: [address, address.toLowerCase()] } },
+          { 
+            discordUsername: discordUser.username 
+          },
+          { upsert: true, new: true }
+        );
+      } catch (activityError) {
+        console.error("Error updating Discord username in UserActivity:", activityError);
+      }
       try {
         const discordQuest = await Quest.findOne({ questType: "discord" });
         
@@ -108,19 +107,26 @@ router.post("/verify", async (req, res) => {
 
         await awardDiscordConnectionPoints(address);
 
-        console.log(`User ${address} completed Discord quest and earned 50 points`);
-
       } catch (questError) {
         console.error("Error handling Discord quest:", questError);
       }
+
+      // Return success response
+      return res.json({ 
+        isMember: true,
+        address: address,
+        discordUsername: discordUser.username
+      });
+
+    } else {      
+      return res.status(400).json({ 
+        error: "not_member",
+        message: "You are not part of the Discord server. Join the server by clicking 'Connect Discord' first.",
+        isMember: false,
+        address: address,
+        discordUsername: null
+      });
     }
-    
-    // Return JSON response
-    return res.json({ 
-      isMember: isMember,
-      address: address,
-      discordUsername: discordUser.username
-    });
 
   } catch (error) {
     console.error("Token exchange error:", error);
@@ -220,4 +226,5 @@ router.get("/status/:address", async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
+
 module.exports = router;

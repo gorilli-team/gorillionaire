@@ -286,6 +286,10 @@ router.get("/me", async (req, res) => {
         model: "Intent",
       });
 
+    if (!userActivity) {
+      return res.status(404).json({ error: "User activity not found" });
+    }
+
     userActivity.activitiesList = userActivity.activitiesList.sort(
       (a, b) => new Date(b.date) - new Date(a.date)
     );
@@ -295,15 +299,15 @@ router.get("/me", async (req, res) => {
       skip + limit
     );
 
-    if (!userActivity) {
-      return res.status(404).json({ error: "User activity not found" });
-    }
-
     // Get total count of activities
     const totalActivities = await UserActivity.aggregate([
       { $match: { address: address.toLowerCase() } },
       { $project: { count: { $size: "$activitiesList" } } },
     ]);
+
+    const totalCount = totalActivities && totalActivities.length > 0 && totalActivities[0] 
+      ? totalActivities[0].count 
+      : 0;
 
     //count the number of users with more points than the user
     const count = await UserActivity.countDocuments({
@@ -325,18 +329,18 @@ router.get("/me", async (req, res) => {
     res.json({
       userActivity: {
         ...result,
-        dollarValue: dollarValue ? dollarValue[0].total : 0,
+        dollarValue: dollarValue && dollarValue.length > 0 ? dollarValue[0].total : 0,
         pagination: {
-          total: totalActivities[0]?.count || 0,
+          total: totalCount,
           page,
           limit,
-          totalPages: Math.ceil((totalActivities[0]?.count || 0) / limit),
+          totalPages: Math.ceil(totalCount / limit),
         },
       },
     });
   } catch (error) {
     console.error("Error fetching user activity:", error);
-    res.status(500).json({ error: "Internal server error", error: error });
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
