@@ -100,12 +100,10 @@ export default function TokenPage() {
 
   const fetchHolders = async (tokenAddress: string) => {
     try {
-      console.log("fetching holders", tokenAddress);
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/token/holders/${tokenAddress}`
       );
       const data = await response.json();
-      console.log("holders", data);
       setTokenHolders({
         total: data.total,
         holders: data.holders,
@@ -197,7 +195,6 @@ export default function TokenPage() {
     }
 
     const wsUrl = `${process.env.NEXT_PUBLIC_API_URL}/events/token/${token.name}`;
-    console.log(`Connecting to WebSocket: ${wsUrl}`);
     wsRef.current = new WebSocket(wsUrl);
 
     wsRef.current.onopen = () => {

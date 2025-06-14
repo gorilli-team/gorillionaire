@@ -404,37 +404,36 @@ const Signals = () => {
   const executeTrade = useCallback(
     async (inputAmount: string) => {
       if (!currentDexToken || !user?.wallet?.address) return;
-  
+
       const token = currentDexToken;
       const type = currentDexType;
       const amount = parseFloat(inputAmount);
-  
+
       const params = new URLSearchParams({
         token: token.symbol,
         amount: amount.toString(),
         type: type.toLowerCase(),
         userAddress: user?.wallet?.address,
       });
-  
+
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/trade/0x-quote?${params.toString()}`
       );
       const quoteData = await res.json();
-      console.log("QUOTE DATA:", quoteData);
-  
+
       if (!quoteData) return;
-  
+
       if (quoteData.issues?.balance) {
         return toast.error("Insufficient balance");
       }
-  
+
       const isNativeSell =
         quoteData.sellToken?.toLowerCase() === MON_ADDRESS.toLowerCase();
       if (isNativeSell && !quoteData.transaction) {
         toast.error("Trade quote did not return a transaction object.");
         return;
       }
-  
+
       if (!isNativeSell && !quoteData.transaction) {
         toast.error("Trade quote did not return a transaction object.");
         return;
@@ -456,7 +455,7 @@ const Signals = () => {
           transition: Bounce,
         }
       );
-  
+
       // Native token flow (SELL MON)
       if (isNativeSell) {
         const txHash = await sendTransactionAsync({
@@ -472,12 +471,12 @@ const Signals = () => {
             : undefined,
           chainId: MONAD_CHAIN_ID,
         });
-  
+
         await waitForTransactionReceipt(wagmiConfig, {
           hash: txHash,
           confirmations: 1,
         });
-  
+
         await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/activity/track/trade-points`,
           {
@@ -532,7 +531,7 @@ const Signals = () => {
             }),
           }
         );
-  
+
         setIsModalOpen(false);
         return;
       } else if (
@@ -541,7 +540,7 @@ const Signals = () => {
         toast.error("Trade quote did not return a transaction object.");
         return;
       }
-  
+
       // ERC20 token flow (BUY tokens)
       if (quoteData.issues && quoteData.issues.allowance !== null) {
         try {
@@ -554,7 +553,7 @@ const Signals = () => {
               parseUnits(amount.toString(), token.decimals),
             ],
           });
-  
+
           await waitForTransactionReceipt(wagmiConfig, {
             hash,
             confirmations: 1,
@@ -563,13 +562,13 @@ const Signals = () => {
           console.error("Error approving Permit2:", error);
         }
       }
-  
+
       const transaction = quoteData?.transaction;
       if (!transaction) {
         toast.error("Trade quote did not return a transaction object.");
         return;
       }
-      
+
       let signature;
       let signatureLengthInHex;
       if (quoteData?.permit2?.eip712) {
@@ -584,7 +583,7 @@ const Signals = () => {
           signature,
         ]);
       }
-  
+
       const hash = await sendTransactionAsync({
         account: user?.wallet?.address as `0x${string}`,
         gas: transaction.gas ? BigInt(transaction.gas) : undefined,
@@ -592,7 +591,7 @@ const Signals = () => {
         data: transaction.data,
         chainId: MONAD_CHAIN_ID,
       });
-  
+
       await waitForTransactionReceipt(wagmiConfig, {
         hash,
         confirmations: 1,

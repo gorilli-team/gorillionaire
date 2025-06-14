@@ -147,13 +147,10 @@ const UserProfilePage = () => {
   };
 
   const fetchUserQuests = async () => {
-    console.log("fetching user quests");
-
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/activity/quests/${params.address}`
     );
     const data = await response.json();
-    console.log(data);
     setQuests(data.quests);
 
     const alreadyClaimed: Set<string> = new Set(

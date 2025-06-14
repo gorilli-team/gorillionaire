@@ -60,9 +60,7 @@ const Tokens = () => {
 
   const getUntrackedTokens = async (page: number = 1) => {
     try {
-      console.log("getUntrackedTokens: page", page);
       const fetchedUntrackedTokens = await fetchUntrackedTokens(page);
-      console.log("fetchedUntrackedTokens", fetchedUntrackedTokens);
       setUntrackedTokens(fetchedUntrackedTokens?.listings || []);
       setPaginationData(
         fetchedUntrackedTokens?.pagination || {

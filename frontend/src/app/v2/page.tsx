@@ -51,8 +51,6 @@ const V2Page = () => {
   // Set token ID if user has NFT
   const effectiveTokenId = address && balanceData && balanceData > 0 ? 1 : null;
 
-  console.log("effectiveTokenId", effectiveTokenId);
-
   const [chainId, setChainId] = useState<number | null>(null);
 
   const alreadyMinted = useMemo(() => (balanceData ?? 0) > 0, [balanceData]);

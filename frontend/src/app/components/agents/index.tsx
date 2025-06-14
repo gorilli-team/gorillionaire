@@ -107,7 +107,6 @@ const Agents = () => {
           data = JSON.parse(text);
         } catch (parseError) {
           console.error("Error parsing JSON response:", parseError);
-          console.log("Raw response:", text);
           setHolders([]);
           return;
         }

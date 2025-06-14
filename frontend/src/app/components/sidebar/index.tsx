@@ -22,7 +22,6 @@ export default function Sidebar({
 
   const handlePageChange = (page: string) => {
     setSelectedPage(page);
-    console.log("page", page);
     if (page === "Profile") {
       router.push(`/users/${address}`);
     } else {
