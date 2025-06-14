@@ -1,4 +1,12 @@
 {
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node src/index.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
     "@langchain/community": "^0.3.34",
     "@supabase/supabase-js": "^2.49.1",
