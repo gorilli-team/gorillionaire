@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Pagination } from "flowbite-react";
 import { useAccount } from "wagmi";
 import Image from "next/image";
@@ -88,7 +88,7 @@ const LeaderboardComponent = () => {
     }
   };
 
-  const fetchMe = async () => {
+  const fetchMe = useCallback(async () => {
     try {
       if (!address) return;
       const response = await fetch(
@@ -120,13 +120,12 @@ const LeaderboardComponent = () => {
     } catch (error) {
       console.error("Error fetching user activity:", error);
     }
-  };
+  }, [address]);
 
   useEffect(() => {
     fetchLeaderboard(currentPage);
     fetchMe();
 
-    // Set up an interval to refresh data every 30 seconds
     const interval = setInterval(() => {
       fetchLeaderboard(currentPage);
       fetchMe();
