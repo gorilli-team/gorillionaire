@@ -122,6 +122,12 @@ router.post("/claim", async (req, res) => {
         questId: questId,
       });
       await userActivity.save();
+      await trackOnDiscordXpGained(
+        `Quest Completed: ${quest.questName}`,
+        address,
+        rewardPoints,
+        userActivity.points
+      );
     }
 
     res.json({

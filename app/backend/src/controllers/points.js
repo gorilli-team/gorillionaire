@@ -33,8 +33,8 @@ async function awardRefuseSignalPoints(address, signalId) {
  */
 async function createAcceptedSignalUserQuests(address, signalId) {
   try {
-    const allQuests = await Quest.find({ 
-      questType: { $ne: "discord" }
+    const allQuests = await Quest.find({
+      questType: { $ne: "discord" },
     });
 
     for (const quest of allQuests) {
@@ -53,27 +53,34 @@ async function createAcceptedSignalUserQuests(address, signalId) {
             address: address,
             currentProgress: 1,
             isCompleted: false,
-            lastProgressUpdate: new Date()
+            lastProgressUpdate: new Date(),
           });
-          
+
           console.log(`Created UserQuest for ${address}: ${quest.questName}`);
         } else {
           if (!userQuest.isCompleted) {
             userQuest.currentProgress += 1;
             userQuest.lastProgressUpdate = new Date();
-            
-            console.log(`Updated UserQuest for ${address}: ${quest.questName} (${userQuest.currentProgress}/${quest.questRequirement})`);
+
+            console.log(
+              `Updated UserQuest for ${address}: ${quest.questName} (${userQuest.currentProgress}/${quest.questRequirement})`
+            );
           } else {
-            console.log(`Quest already completed for ${address}: ${quest.questName} - skipping progress update`);
+            console.log(
+              `Quest already completed for ${address}: ${quest.questName} - skipping progress update`
+            );
             continue;
           }
         }
 
         // Check if the quest is completed
-        if (userQuest.currentProgress >= quest.questRequirement && !userQuest.isCompleted) {
+        if (
+          userQuest.currentProgress >= quest.questRequirement &&
+          !userQuest.isCompleted
+        ) {
           userQuest.isCompleted = true;
           userQuest.completedAt = new Date();
-          
+
           console.log(`🎉 User ${address} completed quest: ${quest.questName}`);
         }
 
@@ -90,16 +97,18 @@ async function createAcceptedSignalUserQuests(address, signalId) {
             address: address,
             currentProgress: 0,
             isCompleted: false,
-            lastProgressUpdate: new Date()
+            lastProgressUpdate: new Date(),
           });
-          
+
           await userQuest.save();
-          console.log(`Created UserQuest placeholder for ${address}: ${quest.questName}`);
+          console.log(
+            `Created UserQuest placeholder for ${address}: ${quest.questName}`
+          );
         }
       }
     }
   } catch (error) {
-    console.error('Error creating/updating UserQuests:', error);
+    console.error("Error creating/updating UserQuests:", error);
   }
 }
 
@@ -168,19 +177,26 @@ async function awardDiscordConnectionPoints(address) {
     address: address.toLowerCase(),
   });
 
+  const DISCORD_CONNECTION_POINTS = 50;
+
   if (!userActivity) {
     throw new Error("User activity not found");
   }
 
-  const totalPoints = userActivity.points + 50;
-  userActivity.points += 50;
+  const totalPoints = userActivity.points + DISCORD_CONNECTION_POINTS;
+  userActivity.points += DISCORD_CONNECTION_POINTS;
   userActivity.activitiesList.push({
     name: "Discord Connected",
-    points: 50,
+    points: DISCORD_CONNECTION_POINTS,
     date: new Date(),
   });
   await userActivity.save();
-  await trackOnDiscordXpGained("Discord Connected", address, 50, totalPoints);
+  await trackOnDiscordXpGained(
+    "Discord Connected",
+    address,
+    DISCORD_CONNECTION_POINTS,
+    totalPoints
+  );
 }
 
 module.exports = {
