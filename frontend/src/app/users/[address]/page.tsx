@@ -85,6 +85,7 @@ const UserProfilePage = () => {
   const currentPage = 1;
   const itemsPerPage = 5;
   const [discordError, setDiscordError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const { data: v2NFTBalance } = useReadContract({
     abi,
@@ -119,6 +120,12 @@ const UserProfilePage = () => {
 
       if (response.ok) {
         setClaimedQuests((prev) => new Set(prev).add(questId));
+        setSuccessMessage("Quest completed successfully! 🎉");
+
+        // Clear success message after 3 seconds
+        setTimeout(() => {
+          setSuccessMessage(null);
+        }, 3000);
 
         await fetchUserQuests();
 
@@ -140,9 +147,15 @@ const UserProfilePage = () => {
         }
       } else {
         console.error("Error claiming quest:", data.error);
+        setDiscordError(
+          data.error || "Failed to claim quest. Please try again."
+        );
       }
     } catch (error) {
       console.error("Error claiming quest:", error);
+      setDiscordError(
+        "An error occurred while claiming the quest. Please try again."
+      );
     }
   };
 
@@ -459,6 +472,43 @@ const UserProfilePage = () => {
                                   onClick={() => setDiscordError(null)}
                                   className="ml-auto text-red-500 hover:text-red-700"
                                 ></button>
+                              </div>
+                            )}
+
+                            {successMessage && (
+                              <div className="flex items-center gap-2 px-3 py-2 text-green-700 bg-green-50 rounded-lg text-sm">
+                                <svg
+                                  className="w-4 h-4 flex-shrink-0"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth="2"
+                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                  />
+                                </svg>
+                                <span>{successMessage}</span>
+                                <button
+                                  onClick={() => setSuccessMessage(null)}
+                                  className="ml-auto text-green-500 hover:text-green-700"
+                                >
+                                  <svg
+                                    className="w-4 h-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth="2"
+                                      d="M6 18L18 6M6 6l12 12"
+                                    />
+                                  </svg>
+                                </button>
                               </div>
                             )}
                           </div>

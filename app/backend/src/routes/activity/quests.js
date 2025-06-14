@@ -3,6 +3,7 @@ const router = express.Router();
 const UserQuest = require("../../models/UserQuest");
 const Quest = require("../../models/Quest");
 const UserActivity = require("../../models/UserActivity");
+const { trackOnDiscordXpGained } = require("../../controllers/points");
 
 router.get("/:address", async (req, res) => {
   const { address } = req.params;
@@ -64,15 +65,15 @@ router.get("/:address", async (req, res) => {
 });
 
 router.post("/claim", async (req, res) => {
-  const { address, questId } = req.body;
-
-  if (!address || !questId) {
-    return res.status(400).json({
-      error: "Missing required fields: address and questId",
-    });
-  }
-
   try {
+    const { address, questId } = req.body;
+
+    if (!address || !questId) {
+      return res.status(400).json({
+        error: "Missing required fields: address and questId",
+      });
+    }
+
     // Find the quest to get reward information
     const quest = await Quest.findById(questId);
     if (!quest) {
@@ -122,6 +123,7 @@ router.post("/claim", async (req, res) => {
         questId: questId,
       });
       await userActivity.save();
+
       await trackOnDiscordXpGained(
         `Quest Completed: ${quest.questName}`,
         address,
@@ -146,18 +148,23 @@ router.post("/claim", async (req, res) => {
 });
 
 router.post("/", async (req, res) => {
-  //post a dummy quest
-  const quest = await Quest.create({
-    questName: "Accept 10 Signals",
-    questDescription: "Accept 10 signals to complete this quest",
-    questImage: "https://via.placeholder.com/150",
-    questType: "acceptedSignals",
-    questRequirement: 10,
-    questRewardType: "points",
-    questRewardAmount: 5,
-  });
+  try {
+    //post a dummy quest
+    const quest = await Quest.create({
+      questName: "Accept 10 Signals",
+      questDescription: "Accept 10 signals to complete this quest",
+      questImage: "https://via.placeholder.com/150",
+      questType: "acceptedSignals",
+      questRequirement: 10,
+      questRewardType: "points",
+      questRewardAmount: 5,
+    });
 
-  res.json({ quest });
+    res.json({ quest });
+  } catch (error) {
+    console.error("Error creating quest:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 module.exports = router;
