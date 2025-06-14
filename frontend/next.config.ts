@@ -8,7 +8,7 @@ const nextConfig: NextConfig = {
     loader: "imgix",
     path: "",
     disableStaticImages: true,
-  }
+  },
 };
-
+export const dynamic = "force-dynamic";
 export default nextConfig;

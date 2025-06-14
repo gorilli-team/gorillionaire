@@ -25,9 +25,14 @@ export interface TradingViewWidgetOptions {
 
 export interface Token {
   address: `0x${string}`;
+  chainId?: number;
   symbol: string;
   name: string;
   decimals: number;
+  imageUrl?: string;
+  totalHolding: number;
+  price: number;
+
 }
 export type HexString = `0x${string}`;
 
