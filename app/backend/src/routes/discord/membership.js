@@ -1,7 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const router = express.Router();
-const { awardDiscordConnectionPoints } = require('../../controllers/points');
+const { trackOnDiscordXpGained } = require('../../controllers/points');
 const Quest = require('../../models/Quest');
 const UserQuest = require('../../models/UserQuest');
 const UserActivity = require('../../models/UserActivity');
@@ -69,6 +69,7 @@ router.post("/verify", async (req, res) => {
       } catch (activityError) {
         console.error("Error updating Discord username in UserActivity:", activityError);
       }
+      
       try {
         const discordQuest = await Quest.findOne({ questType: "discord" });
         
@@ -93,6 +94,7 @@ router.post("/verify", async (req, res) => {
           });
         }
 
+        //Autoclaim
         const userQuest = await UserQuest.findOneAndUpdate(
           { 
             questId: discordQuest._id,
@@ -100,12 +102,36 @@ router.post("/verify", async (req, res) => {
           },
           { 
             isCompleted: true, 
-            completedAt: new Date()
+            completedAt: new Date(),
+            claimedAt: new Date()
           },
           { upsert: true, new: true }
         );
 
-        await awardDiscordConnectionPoints(address);
+        const userActivity = await UserActivity.findOne({
+          address: { $in: [address, address.toLowerCase()] }
+        });
+
+        if (userActivity) {
+          const rewardPoints = discordQuest.questRewardAmount;
+          userActivity.points += rewardPoints;
+
+          userActivity.activitiesList.push({
+            name: `Quest Completed: ${discordQuest.questName}`,
+            points: rewardPoints,
+            date: new Date(),
+            questId: discordQuest._id,
+          });
+          
+          await userActivity.save();
+
+          await trackOnDiscordXpGained(
+            `Quest Completed: ${discordQuest.questName}`,
+            address,
+            rewardPoints,
+            userActivity.points
+          );
+        }
 
       } catch (questError) {
         console.error("Error handling Discord quest:", questError);
