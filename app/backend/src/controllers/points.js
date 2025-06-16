@@ -1,6 +1,6 @@
 const UserActivity = require("../models/UserActivity");
-const Quest = require("../models/Quest"); // AGGIUNTO
-const UserQuest = require("../models/UserQuest"); // AGGIUNTO
+const Quest = require("../models/Quest");
+const UserQuest = require("../models/UserQuest");
 const { WebhookClient } = require("discord.js");
 const { defineChain, createPublicClient, http } = require("viem");
 const { NNS } = require("@nadnameservice/nns-viem-sdk");
@@ -201,7 +201,7 @@ async function awardDiscordConnectionPoints(address) {
 
 module.exports = {
   awardRefuseSignalPoints,
-  createAcceptedSignalUserQuests, // AGGIUNTO
+  createAcceptedSignalUserQuests,
   trackOnDiscordXpGained,
   awardDiscordConnectionPoints,
 };
