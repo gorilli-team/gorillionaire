@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import "@coinbase/onchainkit/styles.css";
 import "./styles/globals.css";
 import Script from "next/script";
-import ReferralBanner from "./components/ReferralBanner";
 import { Providers } from "./providers";
 import { ThemeModeScript } from "flowbite-react";
 
@@ -47,11 +46,15 @@ export default function RootLayout({
           data-website-id="1ac7b906-684c-46cb-95d7-f7719fb51940"
         />
       </head>
-      <body suppressHydrationWarning>
-        <Providers>
-          <ReferralBanner />
-          {children}
-        </Providers>
+      <body>
+        <div className="bg-purple-700 text-white py-2 text-center font-medium">
+          🚀 Gorillionaire v2 is coming soon!{" "}
+          <a href="/v2" className="underline font-bold hover:text-gray-200">
+            Check it out
+          </a>{" "}
+          to see what&apos;s new.
+        </div>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
