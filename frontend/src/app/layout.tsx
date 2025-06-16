@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "@coinbase/onchainkit/styles.css";
 import "./styles/globals.css";
 import Script from "next/script";
-import { Providers } from "./providers";
+import Layout from "./main";
 import { ThemeModeScript } from "flowbite-react";
 
 export const metadata: Metadata = {
@@ -54,7 +54,19 @@ export default function RootLayout({
           </a>{" "}
           to see what&apos;s new.
         </div>
-        <Providers>{children}</Providers>
+        <Layout>{children}</Layout>
+        <Script
+          id="crate-widget"
+          src="https://cdn.jsdelivr.net/npm/@widgetbot/crate@3"
+          async
+          defer
+          strategy="afterInteractive"
+        >
+          {`new Crate({
+              server: '1322537506427895859', // Gorillionaire
+              channel: '1322537507115765823' // #🦍general
+            })`}
+        </Script>
       </body>
     </html>
   );
