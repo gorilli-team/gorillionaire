@@ -630,12 +630,23 @@ const UserProfilePage = () => {
                           className="flex flex-col sm:flex-row sm:items-center bg-white rounded-xl shadow p-3 sm:p-4"
                         >
                           <div className="w-12 h-12 flex items-center justify-center bg-violet-100 rounded-lg mb-3 sm:mb-0 sm:mr-4">
-                            <Image
-                              src={"/propic.png"}
-                              alt={quest.questName}
-                              width={32}
-                              height={32}
-                            />
+                            {quest.questType === "discord" ? (
+                              <Image
+                                src={"/discord.png"}
+                                alt={quest.questName}
+                                className="rounded-md"
+                                width={36}
+                                height={36}
+                              />
+                            ) : (
+                              <Image
+                                src={"/propic.png"}
+                                alt={quest.questName}
+                                className="rounded-md"
+                                width={36}
+                                height={36}
+                              />
+                            )}
                           </div>
                           <div className="flex-1 flex flex-col gap-1">
                             <div className="flex flex-wrap items-center gap-2">
@@ -660,13 +671,15 @@ const UserProfilePage = () => {
                                   <div
                                     className="bg-gradient-to-r from-violet-500 to-indigo-600 h-2 rounded-full transition-all duration-300"
                                     style={{
-                                      width: `${quest.progressPercentage || 0}%`,
+                                      width: quest.isCompleted
+                                        ? "100%"
+                                        : `${quest.progressPercentage || 0}%`,
                                     }}
                                   ></div>
                                 </div>
                               </div>
                               {!quest.claimedAt &&
-                                !claimedQuests.has(quest._id) && 
+                                !claimedQuests.has(quest._id) &&
                                 quest.questType !== "discord" && (
                                   <span className="text-xs text-gray-500 min-w-fit">
                                     {quest.currentProgress || 0}/
@@ -674,20 +687,23 @@ const UserProfilePage = () => {
                                   </span>
                                 )}
                             </div>
-
                           </div>
                           {isOwnProfile &&
-                            !(quest.claimedAt || claimedQuests.has(quest._id)) &&
+                            !(
+                              quest.claimedAt || claimedQuests.has(quest._id)
+                            ) &&
                             quest.questType !== "discord" && (
                               <button
                                 onClick={() => handleClaimQuest(quest._id)}
                                 className={`mt-3 sm:mt-0 sm:ml-4 px-4 py-2 rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed ${
-                                  quest.claimedAt || claimedQuests.has(quest._id)
+                                  quest.claimedAt ||
+                                  claimedQuests.has(quest._id)
                                     ? "bg-violet-600 text-white hover:bg-violet-700"
                                     : "bg-indigo-600 transition-colors text-white hover:bg-indigo-700"
                                 }`}
                                 disabled={
-                                  quest.currentProgress < quest.questRequirement ||
+                                  quest.currentProgress <
+                                    quest.questRequirement ||
                                   !!quest.claimedAt ||
                                   claimedQuests.has(quest._id)
                                 }
