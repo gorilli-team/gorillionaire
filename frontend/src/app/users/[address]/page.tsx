@@ -13,6 +13,7 @@ import { abi } from "@/app/abi/early-nft";
 import { NFT_ACCESS_ADDRESS } from "@/app/utils/constants";
 import { getLevelInfo, getXpProgress } from "@/app/utils/xp";
 import { LoadingOverlay } from "@/app/components/ui/LoadingSpinner";
+import { CountdownTimer } from "@/app/components/CountdownTimer";
 
 const formatNumber = (num: number): string => {
   if (num === 0) return "0.00";
@@ -69,6 +70,7 @@ interface Quest {
   claimedAt: Date | null;
   isClaimed: boolean;
   progressPercentage: number;
+  questEndDate: string;
 }
 
 const UserProfilePage = () => {
@@ -630,7 +632,15 @@ const UserProfilePage = () => {
                           className="flex flex-col sm:flex-row sm:items-center bg-white rounded-xl shadow p-3 sm:p-4"
                         >
                           <div className="w-12 h-12 flex items-center justify-center bg-violet-100 rounded-lg mb-3 sm:mb-0 sm:mr-4">
-                            {quest.questType === "discord" ? (
+                            {quest.questName.includes("Foundry") ? (
+                              <Image
+                                src={"/foundry.png"}
+                                alt={quest.questName}
+                                className="rounded-md"
+                                width={36}
+                                height={36}
+                              />
+                            ) : quest.questType === "discord" ? (
                               <Image
                                 src={"/discord.png"}
                                 alt={quest.questName}
@@ -665,6 +675,11 @@ const UserProfilePage = () => {
                             <div className="text-gray-500 text-sm">
                               {quest.questDescription}
                             </div>
+                            {quest.questName.includes("Foundry") && (
+                              <div className="text-gray-500 text-sm">
+                                <CountdownTimer targetDate="2025-06-19T00:00:00" />{" "}
+                              </div>
+                            )}
                             <div className="flex items-center gap-2 mt-2">
                               <div className="flex-1">
                                 <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
