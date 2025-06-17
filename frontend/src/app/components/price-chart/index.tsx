@@ -51,6 +51,7 @@ const PriceChart: React.FC<PriceChartProps> = ({
   const [timeRange, setTimeRange] = useState<"1d" | "7d" | "30d" | "all">(
     "all"
   );
+  const [monAmount, setMonAmount] = useState(1);
   const priceStats = useMemo(() => {
     if (!data || data.length === 0) return null;
     const sortedData = [...data].sort((a, b) => {
@@ -593,7 +594,7 @@ const PriceChart: React.FC<PriceChartProps> = ({
         {/* Prediction Panel */}
         <div className="w-full max-w-xs bg-white rounded-lg shadow-md p-6 flex flex-col gap-4">
           <h4 className="font-semibold text-base mb-1">
-            Predict Price for the next 24h
+            Predict Snapshot Price
           </h4>
           {/* <div className="text-xs text-gray-500 bg-gray-50 rounded-md p-3 mb-2">
             Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur
@@ -612,7 +613,7 @@ const PriceChart: React.FC<PriceChartProps> = ({
               ↓ Price Down
             </button>
             <button
-              className={`flex-1 py-2 rounded-r-md border border-l-0 font-medium focus:outline-none ${
+              className={`flex-1 py-2 rounded-r-md border font-medium focus:outline-none ${
                 predictionDirection === "up"
                   ? "border-purple-500 bg-purple-50 text-purple-700"
                   : "border-gray-200 bg-gray-50 text-gray-700"
@@ -623,19 +624,39 @@ const PriceChart: React.FC<PriceChartProps> = ({
             </button>
           </div>
           <div className="bg-gray-50 rounded-md p-4 flex flex-col items-start mb-2">
-            <span className="text-xl font-semibold">0.2 MON</span>
+            <input
+              type="number"
+              // no step, only integer values allowed
+              value={monAmount}
+              onChange={(e) => setMonAmount(Number(e.target.value))}
+              className="text-xl font-semibold bg-transparent border-none focus:ring-0 focus:outline-none w-auto p-0 mb-0"
+              style={{ width: `${String(monAmount).length + 3}ch` }}
+            />
+            <span className="text-xs text-gray-500 mt-1">MON</span>
           </div>
           <div className="flex gap-2 mb-2">
-            <button className="flex-1 py-1 text-xs bg-gray-100 rounded-md font-medium">
-              +1$
+            <button
+              className="flex-1 py-1 text-xs bg-gray-100 rounded-md font-medium"
+              onClick={() => setMonAmount((prev) => +(prev + 1).toFixed(2))}
+            >
+              +1
             </button>
-            <button className="flex-1 py-1 text-xs bg-gray-100 rounded-md font-medium">
-              +20$
+            <button
+              className="flex-1 py-1 text-xs bg-gray-100 rounded-md font-medium"
+              onClick={() => setMonAmount((prev) => +(prev + 20).toFixed(2))}
+            >
+              +20
             </button>
-            <button className="flex-1 py-1 text-xs bg-gray-100 rounded-md font-medium">
-              +100$
+            <button
+              className="flex-1 py-1 text-xs bg-gray-100 rounded-md font-medium"
+              onClick={() => setMonAmount((prev) => +(prev + 100).toFixed(2))}
+            >
+              +100
             </button>
-            <button className="flex-1 py-1 text-xs bg-gray-100 rounded-md font-medium">
+            <button
+              className="flex-1 py-1 text-xs bg-gray-100 rounded-md font-medium"
+              onClick={() => setMonAmount(1000)}
+            >
               Max
             </button>
           </div>

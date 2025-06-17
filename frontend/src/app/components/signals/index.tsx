@@ -776,10 +776,19 @@ const Signals = () => {
                         </span>
                       </span>
                       {token.price && token.price > 0 ? (
-                        <span className="text-sm text-gray-500 mt-1">
-                          Price: ${token?.price?.toFixed(4)}
-                        </span>
+                        <>
+                          <span className="text-sm text-gray-500 mt-1">
+                            Price: ${token?.price?.toFixed(4)}
+                          </span>
+                        </>
                       ) : null}
+                      {token.symbol !== "MON" && (
+                        <Link href={`/tokens/${token.address}`}>
+                          <button className="text-sm text-gray-500 mt-1 bg-violet-700 text-white rounded-md px-2 py-1 w-full">
+                            Predict Price
+                          </button>
+                        </Link>
+                      )}
                     </div>
                   </div>
                   <div className="flex flex-col items-end"></div>
