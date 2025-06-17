@@ -6,7 +6,7 @@ The Gorillionaire Access NFT can be purchased by the user at a fixed price set a
 ## Smart Contract
 The AccessNFT smart contract has been deployed on the Monad Testnet at the following address:
 
-- **AccessNFT**: 0x12bF70e3325104ed2D7fefbB8f3e88cE2Dd66A30
+- **AccessNFT**: 0x8d901Da7BF9F26857994FE776C076053cB1B8596
 
 ## Main functions
 The smart contract is a standard ERC721 contract. The two main functions of AccessNFT are:
