@@ -217,7 +217,12 @@ const Tokens = () => {
 
         {selectedToken && priceData.length > 0 && (
           <div className="mb-8">
-            <PriceChart data={priceData} tokenSymbol={selectedToken.symbol} />
+            <PriceChart
+              data={priceData}
+              tokenSymbol={selectedToken.symbol}
+              trackedSince={selectedToken.trackedSince}
+              signalsGenerated={selectedToken.signalsGenerated}
+            />
           </div>
         )}
 

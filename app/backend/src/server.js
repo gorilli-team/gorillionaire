@@ -70,9 +70,12 @@ async function startServer() {
 
       // Initialize cron jobs with error handling
       try {
-        initTokenHoldersCron();
-        initPriceUpdateCron();
-        console.log("Cron jobs initialized successfully");
+        if (process.env.NODE_ENV === "production") {
+          initTokenHoldersCron();
+          initPriceUpdateCron();
+        } else {
+          console.log("NODE_ENV is not production, skipping cron jobs");
+        }
 
         Sentry.setContext("services", {
           cronJobs: "initialized",

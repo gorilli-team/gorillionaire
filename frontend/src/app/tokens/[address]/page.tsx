@@ -6,7 +6,6 @@ import Sidebar from "../../components/sidebar";
 import Header from "../../components/header";
 import PriceChart from "../../components/price-chart";
 import { trackedTokens } from "@/app/shared/tokenData";
-import Image from "next/image";
 import { getTimeAgo } from "@/app/utils/time";
 import { Time } from "lightweight-charts";
 
@@ -442,8 +441,13 @@ export default function TokenPage() {
     }
 
     return (
-      <div className="bg-white rounded-lg shadow p-4 mb-6">
-        <PriceChart data={priceData} tokenSymbol={token?.symbol || ""} />
+      <div className="bg-white rounded-lg shadow">
+        <PriceChart
+          data={priceData}
+          tokenSymbol={token?.symbol || ""}
+          trackedSince={token?.trackedSince}
+          signalsGenerated={token?.signalsGenerated}
+        />
       </div>
     );
   };
@@ -509,51 +513,6 @@ export default function TokenPage() {
         <Header />
         <div className="flex-1 overflow-auto bg-gray-50">
           <div className="container mx-auto px-4 py-8">
-            <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-              <div className="flex items-center">
-                {token.image ? (
-                  <Image
-                    src={token.image}
-                    alt={token.name}
-                    width={64}
-                    height={64}
-                    className="rounded-full"
-                  />
-                ) : (
-                  <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center">
-                    <span className="text-2xl font-bold">
-                      {token.symbol[0]}
-                    </span>
-                  </div>
-                )}
-                <div className="ml-4">
-                  <h1 className="text-2xl font-bold">{token.name}</h1>
-                  <p className="text-gray-600">{token.symbol}</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
-                <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
-                  <p className="text-sm text-gray-600">Tracked Since</p>
-                  <p className="text-lg sm:text-lg font-semibold truncate">
-                    {token.trackedSince || "N/A"}
-                  </p>
-                </div>
-                <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
-                  <p className="text-sm text-gray-600">Events Tracked</p>
-                  <p className="text-lg sm:text-lg font-semibold">
-                    {eventsNumber || 0}
-                  </p>
-                </div>
-                <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
-                  <p className="text-sm text-gray-600">Holders</p>
-                  <p className="text-lg sm:text-lg font-semibold">
-                    {tokenHolders?.total?.toLocaleString() || "N/A"}
-                  </p>
-                </div>
-              </div>
-            </div>
-
             {renderPriceChart()}
 
             <div className="bg-white rounded-lg shadow-md p-6">

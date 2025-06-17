@@ -9,6 +9,7 @@ import {
   AreaSeries,
   Time,
 } from "lightweight-charts";
+import { getTokenImage } from "@/app/utils/tokens";
 
 interface PriceData {
   time: Time;
@@ -18,103 +19,31 @@ interface PriceData {
 interface PriceChartProps {
   data: PriceData[];
   tokenSymbol: string;
+  trackedSince?: string;
+  signalsGenerated?: number;
 }
 
-interface PriceStats {
-  current: number;
-  change1h: number;
-  change6h: number;
-  change24h: number;
-}
-
-const PriceChart: React.FC<PriceChartProps> = ({ data, tokenSymbol }) => {
+const PriceChart: React.FC<PriceChartProps> = ({
+  data,
+  tokenSymbol,
+  trackedSince,
+  signalsGenerated,
+}) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const [isClient, setIsClient] = useState(false);
-  const [timeRange, setTimeRange] = useState<"1d" | "7d" | "30d" | "all">(
-    "all"
-  );
-  const [priceStats, setPriceStats] = useState<PriceStats | null>(null);
   const [allTimeHighLow, setAllTimeHighLow] = useState<{
     high: { value: number; time: Time };
     low: { value: number; time: Time };
   } | null>(null);
+  const [predictionDirection, setPredictionDirection] = useState<"down" | "up">(
+    "down"
+  );
 
   useLayoutEffect(() => {
     setIsClient(true);
   }, []);
 
-  // Calculate price statistics
-  useEffect(() => {
-    if (!data || data.length === 0) return;
-
-    const sortedData = [...data].sort((a, b) => {
-      const timeA =
-        typeof a.time === "number"
-          ? a.time
-          : new Date(a.time.toString()).getTime();
-      const timeB =
-        typeof b.time === "number"
-          ? b.time
-          : new Date(b.time.toString()).getTime();
-      return timeA - timeB;
-    });
-
-    const current = sortedData[sortedData.length - 1].value;
-    const now = Date.now() / 1000; // Current time in seconds
-
-    // Find data points closest to 1h, 6h, and 24h ago
-    const oneHourAgo = now - 3600;
-    const sixHoursAgo = now - 3600 * 6;
-    const twentyFourHoursAgo = now - 3600 * 24;
-
-    let price1h = current;
-    let price6h = current;
-    let price24h = current;
-
-    for (let i = sortedData.length - 1; i >= 0; i--) {
-      const dataPoint = sortedData[i];
-      const itemTimeMs =
-        typeof dataPoint.time === "number"
-          ? dataPoint.time * 1000 // Convert seconds to milliseconds
-          : new Date(dataPoint.time.toString()).getTime();
-
-      const itemTimeSec = itemTimeMs / 1000; // Convert to seconds for comparison
-
-      if (itemTimeSec <= oneHourAgo && price1h === current) {
-        price1h = dataPoint.value;
-      }
-
-      if (itemTimeSec <= sixHoursAgo && price6h === current) {
-        price6h = dataPoint.value;
-      }
-
-      if (itemTimeSec <= twentyFourHoursAgo && price24h === current) {
-        price24h = dataPoint.value;
-      }
-
-      // Break if we've found all time periods
-      if (price1h !== current && price6h !== current && price24h !== current)
-        break;
-    }
-
-    // Calculate percentage changes
-    const change1h =
-      price1h !== current ? ((current - price1h) / price1h) * 100 : 0;
-    const change6h =
-      price6h !== current ? ((current - price6h) / price6h) * 100 : 0;
-    const change24h =
-      price24h !== current ? ((current - price24h) / price24h) * 100 : 0;
-
-    setPriceStats({
-      current,
-      change1h,
-      change6h,
-      change24h,
-    });
-  }, [data]);
-
-  // Find all-time high and low
   useEffect(() => {
     if (!data || data.length === 0) return;
 
@@ -198,7 +127,7 @@ const PriceChart: React.FC<PriceChartProps> = ({ data, tokenSymbol }) => {
         }, {} as Record<string, (typeof data)[0] & { originalIndex: number }>);
 
       // Convert back to array and sort by timestamp
-      let uniqueSortedData = Object.values(formattedData)
+      const uniqueSortedData = Object.values(formattedData)
         .sort((a, b) => {
           // Convert both times to numbers for comparison
           const timeA =
@@ -215,34 +144,6 @@ const PriceChart: React.FC<PriceChartProps> = ({ data, tokenSymbol }) => {
             : timeCompare;
         })
         .map(({ time, value }) => ({ time, value }));
-
-      // Filter data based on selected time range
-      if (timeRange !== "all" && uniqueSortedData.length > 0) {
-        const now = Date.now() / 1000; // Current time in seconds
-        let cutoffTime;
-
-        switch (timeRange) {
-          case "1d":
-            cutoffTime = now - 86400; // 24 hours
-            break;
-          case "7d":
-            cutoffTime = now - 86400 * 7; // 7 days
-            break;
-          case "30d":
-            cutoffTime = now - 86400 * 30; // 30 days
-            break;
-          default:
-            cutoffTime = 0;
-        }
-
-        uniqueSortedData = uniqueSortedData.filter((item) => {
-          const itemTime =
-            typeof item.time === "number"
-              ? item.time
-              : new Date(item.time.toString()).getTime() / 1000;
-          return itemTime >= cutoffTime;
-        });
-      }
 
       // Set the data
       lineSeries.setData(uniqueSortedData);
@@ -397,47 +298,7 @@ const PriceChart: React.FC<PriceChartProps> = ({ data, tokenSymbol }) => {
     } catch (error) {
       console.error("Error initializing chart:", error);
     }
-  }, [data, isClient, timeRange, allTimeHighLow]);
-
-  // Function to export data as CSV
-  const exportDataAsCSV = () => {
-    if (!data || data.length === 0) return;
-
-    // Create CSV content
-    let csvContent = "data:text/csv;charset=utf-8,";
-    csvContent += "Date,Price\n";
-
-    // Sort data by time
-    const sortedData = [...data].sort((a, b) => {
-      const timeA =
-        typeof a.time === "number"
-          ? a.time
-          : new Date(a.time.toString()).getTime();
-      const timeB =
-        typeof b.time === "number"
-          ? b.time
-          : new Date(b.time.toString()).getTime();
-      return timeA - timeB;
-    });
-
-    // Add each data point to CSV
-    sortedData.forEach((item) => {
-      const date =
-        typeof item.time === "number"
-          ? new Date(item.time * 1000).toISOString()
-          : new Date(item.time.toString()).toISOString();
-      csvContent += `${date},${item.value}\n`;
-    });
-
-    // Create download link
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `${tokenSymbol}_price_data.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+  }, [data, isClient, allTimeHighLow]);
 
   // Server-side and initial client render
   if (!isClient || !data || data.length === 0) {
@@ -455,125 +316,139 @@ const PriceChart: React.FC<PriceChartProps> = ({ data, tokenSymbol }) => {
 
   return (
     <div className="w-full p-4 bg-white rounded-lg shadow-md">
-      <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-4">
-        <h3 className="text-lg font-semibold mb-2 md:mb-0">{tokenSymbol} Price Chart</h3>
-
-        {priceStats && (
-          <div className="flex flex-wrap gap-4 md:gap-4 md:justify-end mt-1 md:mt-0">
-            <div className="flex flex-col">
-              <span className="text-xs text-gray-500">Price</span>
-              <span className="font-medium">
-                ${priceStats.current.toFixed(6)}
-              </span>
+      <div className="flex gap-6">
+        {/* Left Column: Token Info Card + Chart */}
+        <div className="flex-1 bg-white rounded-lg flex flex-col gap-4">
+          {/* Token Info Card */}
+          <div className="bg-gray-50 rounded-lg p-4 flex items-center gap-4 mb-2">
+            <div className="w-14 h-14 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+              {/* Token image from symbol */}
+              <img
+                src={getTokenImage(tokenSymbol)}
+                alt="Token Avatar"
+                className="w-full h-full object-cover"
+              />
             </div>
-            <div className="flex flex-col">
-              <span className="text-xs text-gray-500">1h</span>
-              <span
-                className={`font-medium ${
-                  priceStats.change1h >= 0 ? "text-green-500" : "text-red-500"
-                }`}
-              >
-                {priceStats.change1h >= 0 ? "+" : ""}
-                {priceStats.change1h.toFixed(2)}%
-              </span>
+            <div className="flex-1">
+              <div className="font-semibold text-lg leading-tight">
+                Molandak
+              </div>
+              <div className="text-xs text-gray-500">DAK</div>
             </div>
-            <div className="flex flex-col">
-              <span className="text-xs text-gray-500">6h</span>
-              <span
-                className={`font-medium ${
-                  priceStats.change6h >= 0 ? "text-green-500" : "text-red-500"
-                }`}
-              >
-                {priceStats.change6h >= 0 ? "+" : ""}
-                {priceStats.change6h.toFixed(2)}%
-              </span>
+            <div className="flex flex-col gap-1 text-xs min-w-[120px]">
+              <div className="bg-white rounded-md px-3 py-2 flex flex-col items-start border border-gray-100">
+                <span className="text-gray-500">Tracked since</span>
+                <span className="font-medium text-gray-800">
+                  {trackedSince || "N/A"}
+                </span>
+              </div>
             </div>
-            <div className="flex flex-col">
-              <span className="text-xs text-gray-500">24h</span>
-              <span
-                className={`font-medium ${
-                  priceStats.change24h >= 0 ? "text-green-500" : "text-red-500"
-                }`}
-              >
-                {priceStats.change24h >= 0 ? "+" : ""}
-                {priceStats.change24h.toFixed(2)}%
-              </span>
+            <div className="flex flex-col gap-1 text-xs min-w-[100px]">
+              <div className="bg-white rounded-md px-3 py-2 flex flex-col items-start border border-gray-100">
+                <span className="text-gray-500">Tracking time</span>
+                <span className="font-medium text-gray-800">123 days</span>
+              </div>
+            </div>
+            <div className="flex flex-col gap-1 text-xs min-w-[100px]">
+              <div className="bg-white rounded-md px-3 py-2 flex flex-col items-start border border-gray-100">
+                <span className="text-gray-500">Events generated</span>
+                <span className="font-medium text-gray-800">
+                  {signalsGenerated ?? "N/A"}
+                </span>
+              </div>
             </div>
           </div>
-        )}
-      </div>
+          {/* Chart Section */}
+          <div className="bg-white rounded-lg">
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold mb-2">Price chart</h3>
+            </div>
+            <div className="relative">
+              <div ref={chartContainerRef} className="w-full" />
+            </div>
+          </div>
+        </div>
 
-      <div className="flex justify-between mb-4">
-        <div className="flex space-x-2">
-          <button
-            onClick={exportDataAsCSV}
-            className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-md flex items-center"
-            title="Download data as CSV"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-4 w-4 mr-1"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
+        {/* Prediction Panel */}
+        <div className="w-full max-w-xs bg-white rounded-lg shadow-md p-6 flex flex-col gap-4">
+          <h4 className="font-semibold text-base mb-1">
+            Predict Price for the next 24h
+          </h4>
+          {/* <div className="text-xs text-gray-500 bg-gray-50 rounded-md p-3 mb-2">
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur
+            vulputate venenatis ligula, posuere rutrum sapien dictum sit amet.
+            Donec eget eros eros. Proin et sem erat. Aliquam vel commodo dui.
+          </div> */}
+          <div className="flex mb-2">
+            <button
+              className={`flex-1 py-2 rounded-l-md border font-medium focus:outline-none ${
+                predictionDirection === "down"
+                  ? "border-purple-500 bg-purple-50 text-purple-700"
+                  : "border-gray-200 bg-gray-50 text-gray-700"
+              }`}
+              onClick={() => setPredictionDirection("down")}
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-              />
-            </svg>
-            CSV
+              ↓ Price Down
+            </button>
+            <button
+              className={`flex-1 py-2 rounded-r-md border border-l-0 font-medium focus:outline-none ${
+                predictionDirection === "up"
+                  ? "border-purple-500 bg-purple-50 text-purple-700"
+                  : "border-gray-200 bg-gray-50 text-gray-700"
+              }`}
+              onClick={() => setPredictionDirection("up")}
+            >
+              ↑ Price Up
+            </button>
+          </div>
+          <div className="bg-gray-50 rounded-md p-4 flex flex-col items-start mb-2">
+            <span className="text-xl font-semibold">0.2 MON</span>
+          </div>
+          <div className="flex gap-2 mb-2">
+            <button className="flex-1 py-1 text-xs bg-gray-100 rounded-md font-medium">
+              +1$
+            </button>
+            <button className="flex-1 py-1 text-xs bg-gray-100 rounded-md font-medium">
+              +20$
+            </button>
+            <button className="flex-1 py-1 text-xs bg-gray-100 rounded-md font-medium">
+              +100$
+            </button>
+            <button className="flex-1 py-1 text-xs bg-gray-100 rounded-md font-medium">
+              Max
+            </button>
+          </div>
+          <button className="w-full py-2 rounded-md bg-purple-600 hover:bg-purple-700 text-white font-semibold text-sm mb-2">
+            Make Prediction
           </button>
+          <div className="flex gap-2 text-xs mb-2">
+            <div className="flex-1 bg-gray-100 rounded-md p-2 text-center">
+              <div className="text-gray-500">Pool closes in</div>
+              <div className="font-semibold text-gray-800">3h : 27m : 15s</div>
+            </div>
+            <div className="flex-1 bg-gray-100 rounded-md p-2 text-center">
+              <div className="text-gray-500">Snapshot in</div>
+              <div className="font-semibold text-gray-800">15h : 27m : 15s</div>
+            </div>
+          </div>
+          <div>
+            <div className="text-xs text-gray-500 mb-1">Users Sentiment</div>
+            <div className="flex items-center w-full h-8 rounded-md overflow-hidden border">
+              <div
+                className="bg-red-100 text-red-600 flex items-center justify-center h-full"
+                style={{ width: "41%" }}
+              >
+                <span className="font-semibold text-sm">41%</span>
+              </div>
+              <div
+                className="bg-green-100 text-green-600 flex items-center justify-center h-full"
+                style={{ width: "59%" }}
+              >
+                <span className="font-semibold text-sm">59%</span>
+              </div>
+            </div>
+          </div>
         </div>
-
-        <div className="flex bg-gray-100 rounded-lg p-1">
-          <button
-            className={`px-3 py-1 text-sm rounded-md ${
-              timeRange === "1d"
-                ? "bg-white shadow-sm"
-                : "text-gray-600 hover:bg-gray-200"
-            }`}
-            onClick={() => setTimeRange("1d")}
-          >
-            1D
-          </button>
-          <button
-            className={`px-3 py-1 text-sm rounded-md ${
-              timeRange === "7d"
-                ? "bg-white shadow-sm"
-                : "text-gray-600 hover:bg-gray-200"
-            }`}
-            onClick={() => setTimeRange("7d")}
-          >
-            1W
-          </button>
-          <button
-            className={`px-3 py-1 text-sm rounded-md ${
-              timeRange === "30d"
-                ? "bg-white shadow-sm"
-                : "text-gray-600 hover:bg-gray-200"
-            }`}
-            onClick={() => setTimeRange("30d")}
-          >
-            1M
-          </button>
-          <button
-            className={`px-3 py-1 text-sm rounded-md ${
-              timeRange === "all"
-                ? "bg-white shadow-sm"
-                : "text-gray-600 hover:bg-gray-200"
-            }`}
-            onClick={() => setTimeRange("all")}
-          >
-            All
-          </button>
-        </div>
-      </div>
-
-      <div className="relative">
-        <div ref={chartContainerRef} className="w-full" />
       </div>
     </div>
   );
