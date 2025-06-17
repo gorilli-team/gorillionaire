@@ -26,6 +26,7 @@ interface PriceData {
 interface PriceChartProps {
   data: PriceData[];
   tokenSymbol: string;
+  tokenName: string;
   trackedSince?: string;
   signalsGenerated?: number;
 }
@@ -33,6 +34,7 @@ interface PriceChartProps {
 const PriceChart: React.FC<PriceChartProps> = ({
   data,
   tokenSymbol,
+  tokenName,
   trackedSince,
   signalsGenerated,
 }) => {
@@ -437,9 +439,9 @@ const PriceChart: React.FC<PriceChartProps> = ({
             </div>
             <div className="flex-1">
               <div className="font-semibold text-lg leading-tight">
-                Molandak
+                {tokenName}
               </div>
-              <div className="text-xs text-gray-500">DAK</div>
+              <div className="text-xs text-gray-500">{tokenSymbol}</div>
             </div>
             <div className="flex flex-col gap-1 text-xs min-w-[120px]">
               <div className="bg-white rounded-md px-3 py-2 flex flex-col items-start border border-gray-100">

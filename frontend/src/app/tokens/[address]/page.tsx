@@ -445,6 +445,7 @@ export default function TokenPage() {
         <PriceChart
           data={priceData}
           tokenSymbol={token?.symbol || ""}
+          tokenName={token?.name || ""}
           trackedSince={token?.trackedSince}
           signalsGenerated={token?.signalsGenerated}
         />
