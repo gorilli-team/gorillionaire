@@ -16,6 +16,7 @@ import {
   Time,
 } from "lightweight-charts";
 import { getTokenImage } from "@/app/utils/tokens";
+import Image from "next/image";
 
 interface PriceData {
   time: Time;
@@ -426,8 +427,10 @@ const PriceChart: React.FC<PriceChartProps> = ({
           <div className="bg-gray-50 rounded-lg p-4 flex items-center gap-4 mb-2">
             <div className="w-14 h-14 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
               {/* Token image from symbol */}
-              <img
+              <Image
                 src={getTokenImage(tokenSymbol)}
+                width={48}
+                height={48}
                 alt="Token Avatar"
                 className="w-full h-full object-cover"
               />
@@ -444,12 +447,6 @@ const PriceChart: React.FC<PriceChartProps> = ({
                 <span className="font-medium text-gray-800">
                   {trackedSince || "N/A"}
                 </span>
-              </div>
-            </div>
-            <div className="flex flex-col gap-1 text-xs min-w-[100px]">
-              <div className="bg-white rounded-md px-3 py-2 flex flex-col items-start border border-gray-100">
-                <span className="text-gray-500">Tracking time</span>
-                <span className="font-medium text-gray-800">123 days</span>
               </div>
             </div>
             <div className="flex flex-col gap-1 text-xs min-w-[100px]">
