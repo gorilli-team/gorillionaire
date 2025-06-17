@@ -6,7 +6,7 @@ const baseURL =
   process.env.BLOCKVISION_API_URL || "https://api.blockvision.org/v2/monad";
 const apiKey = process.env.BLOCKVISION_API_KEY;
 const GORILLI_NFT_CONTRACT_ADDRESS =
-  "0x12bF70e3325104ed2D7fefbB8f3e88cE2Dd66A30";
+  "0x8d901Da7BF9F26857994FE776C076053cB1B8596";
 
 // Function to retrieve token holders
 const retrieveTokenHolders = async ({
