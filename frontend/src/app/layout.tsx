@@ -4,6 +4,7 @@ import "./styles/globals.css";
 import Script from "next/script";
 import Layout from "./main";
 import { ThemeModeScript } from "flowbite-react";
+import { CountdownTimer } from "@/app/components/CountdownTimer";
 
 export const metadata: Metadata = {
   title: "Gorillionaire – AI-Powered Crypto Signals & Gamified Trading",
@@ -48,11 +49,14 @@ export default function RootLayout({
       </head>
       <body>
         <div className="bg-purple-700 text-white py-2 text-center font-medium">
-          🚀 Gorillionaire v2 is coming soon!{" "}
-          <a href="/v2" className="underline font-bold hover:text-gray-200">
-            Check it out
+          🎉 Foundry Fest{" "}
+          <CountdownTimer targetDate="2025-06-19T00:00:00" />{" "}
+          <a
+            href="/profile/me"
+            className="underline font-bold hover:text-gray-200"
+          >
+            Get extra XPs now!
           </a>{" "}
-          to see what&apos;s new.
         </div>
         <Layout>{children}</Layout>
         <Script
