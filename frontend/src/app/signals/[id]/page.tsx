@@ -660,19 +660,19 @@ export default function SignalDetails() {
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header />
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           {isLoading ? (
             <LoadingOverlay />
           ) : error ? (
             <div className="text-red-500">{error}</div>
           ) : !signal ? (
-            <div className="p-4">
+            <div className="p-3 sm:p-4">
               <div className="text-red-500">Signal not found</div>
               <div className="text-sm text-gray-500 mt-2">ID: {params.id}</div>
             </div>
           ) : (
             <div className="max-w-4xl mx-auto">
-              <div className="bg-white rounded-lg shadow p-6">
+              <div className="bg-white rounded-lg shadow p-4 sm:p-6">
                 <div className="flex items-center gap-4 mb-6">
                   <div className="w-12 h-12 rounded-full overflow-hidden">
                     <Image
@@ -786,7 +786,7 @@ export default function SignalDetails() {
                         {signal.userSignals.map((userSignal, index) => (
                           <div
                             key={index}
-                            className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm"
+                            className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-white rounded-lg shadow-sm gap-2"
                           >
                             <div className="flex items-center space-x-3">
                               <div
@@ -799,12 +799,13 @@ export default function SignalDetails() {
                                 {userSignal.choice}
                               </div>
                               <div
-                                className="text-sm text-gray-600 hover:text-violet-600 cursor-pointer transition-colors duration-200"
+                                className="text-sm text-gray-600 hover:text-violet-600 cursor-pointer transition-colors duration-200 max-w-[200px] truncate"
                                 onClick={() =>
                                   router.push(
                                     `/users/${userSignal.userAddress}`
                                   )
                                 }
+                                title={userSignal.userAddress}
                               >
                                 {userSignal.userAddress}
                               </div>
