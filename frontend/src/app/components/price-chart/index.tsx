@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useLayoutEffect, useRef, useState, useEffect } from "react";
+import React, {
+  useLayoutEffect,
+  useRef,
+  useState,
+  useEffect,
+  useMemo,
+} from "react";
 import dynamic from "next/dynamic";
 import {
   IChartApi,
@@ -39,6 +45,54 @@ const PriceChart: React.FC<PriceChartProps> = ({
   const [predictionDirection, setPredictionDirection] = useState<"down" | "up">(
     "down"
   );
+  const [timeRange, setTimeRange] = useState<"1d" | "7d" | "30d" | "all">(
+    "all"
+  );
+  const priceStats = useMemo(() => {
+    if (!data || data.length === 0) return null;
+    const sortedData = [...data].sort((a, b) => {
+      const timeA =
+        typeof a.time === "number"
+          ? a.time
+          : new Date(a.time.toString()).getTime();
+      const timeB =
+        typeof b.time === "number"
+          ? b.time
+          : new Date(b.time.toString()).getTime();
+      return timeA - timeB;
+    });
+    const current = sortedData[sortedData.length - 1].value;
+    const now = Date.now() / 1000;
+    const oneHourAgo = now - 3600;
+    const sixHoursAgo = now - 3600 * 6;
+    const twentyFourHoursAgo = now - 3600 * 24;
+    let price1h = current,
+      price6h = current,
+      price24h = current;
+    for (let i = sortedData.length - 1; i >= 0; i--) {
+      const dataPoint = sortedData[i];
+      const itemTimeMs =
+        typeof dataPoint.time === "number"
+          ? dataPoint.time * 1000
+          : new Date(dataPoint.time.toString()).getTime();
+      const itemTimeSec = itemTimeMs / 1000;
+      if (itemTimeSec <= oneHourAgo && price1h === current)
+        price1h = dataPoint.value;
+      if (itemTimeSec <= sixHoursAgo && price6h === current)
+        price6h = dataPoint.value;
+      if (itemTimeSec <= twentyFourHoursAgo && price24h === current)
+        price24h = dataPoint.value;
+      if (price1h !== current && price6h !== current && price24h !== current)
+        break;
+    }
+    const change1h =
+      price1h !== current ? ((current - price1h) / price1h) * 100 : 0;
+    const change6h =
+      price6h !== current ? ((current - price6h) / price6h) * 100 : 0;
+    const change24h =
+      price24h !== current ? ((current - price24h) / price24h) * 100 : 0;
+    return { current, change1h, change6h, change24h };
+  }, [data]);
 
   useLayoutEffect(() => {
     setIsClient(true);
@@ -98,9 +152,9 @@ const PriceChart: React.FC<PriceChartProps> = ({
 
       // Create the line series
       const lineSeries = chart.addSeries(AreaSeries, {
-        lineColor: "#2962FF",
-        topColor: "#2962FF",
-        bottomColor: "rgba(41, 98, 255, 0.28)",
+        lineColor: "#9333ea",
+        topColor: "#9333ea",
+        bottomColor: "rgba(147, 51, 234, 0.28)",
         priceFormat: {
           type: "price",
           precision: 6,
@@ -145,8 +199,25 @@ const PriceChart: React.FC<PriceChartProps> = ({
         })
         .map(({ time, value }) => ({ time, value }));
 
+      // Fix: define now before using in filter
+      const now = Date.now() / 1000;
+      // Filter uniqueSortedData based on timeRange
+      const filteredData = uniqueSortedData.filter((item) => {
+        const itemTimeMs =
+          typeof item.time === "number"
+            ? item.time * 1000
+            : new Date(item.time.toString()).getTime();
+        const itemTimeSec = itemTimeMs / 1000;
+        return (
+          (timeRange === "1d" && itemTimeSec >= now - 86400) ||
+          (timeRange === "7d" && itemTimeSec >= now - 86400 * 7) ||
+          (timeRange === "30d" && itemTimeSec >= now - 86400 * 30) ||
+          timeRange === "all"
+        );
+      });
+
       // Set the data
-      lineSeries.setData(uniqueSortedData);
+      lineSeries.setData(filteredData);
 
       // Add markers for all-time high and low if they're within the current time range
       if (allTimeHighLow) {
@@ -298,7 +369,39 @@ const PriceChart: React.FC<PriceChartProps> = ({
     } catch (error) {
       console.error("Error initializing chart:", error);
     }
-  }, [data, isClient, allTimeHighLow]);
+  }, [data, isClient, allTimeHighLow, timeRange]);
+
+  // CSV export logic
+  const exportDataAsCSV = () => {
+    if (!data || data.length === 0) return;
+    let csvContent = "data:text/csv;charset=utf-8,";
+    csvContent += "Date,Price\n";
+    const sortedData = [...data].sort((a, b) => {
+      const timeA =
+        typeof a.time === "number"
+          ? a.time
+          : new Date(a.time.toString()).getTime();
+      const timeB =
+        typeof b.time === "number"
+          ? b.time
+          : new Date(b.time.toString()).getTime();
+      return timeA - timeB;
+    });
+    sortedData.forEach((item) => {
+      const date =
+        typeof item.time === "number"
+          ? new Date(item.time * 1000).toISOString()
+          : new Date(item.time.toString()).toISOString();
+      csvContent += `${date},${item.value}\n`;
+    });
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `${tokenSymbol}_price_data.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   // Server-side and initial client render
   if (!isClient || !data || data.length === 0) {
@@ -360,8 +463,127 @@ const PriceChart: React.FC<PriceChartProps> = ({
           </div>
           {/* Chart Section */}
           <div className="bg-white rounded-lg">
-            <div className="mb-4">
-              <h3 className="text-lg font-semibold mb-2">Price chart</h3>
+            <div className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+              <div className="flex items-center gap-4">
+                <h3 className="text-lg font-semibold">
+                  {tokenSymbol} Price Chart
+                </h3>
+                <button
+                  onClick={exportDataAsCSV}
+                  className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-md flex items-center"
+                  title="Download data as CSV"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4 mr-1"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                    />
+                  </svg>
+                  CSV
+                </button>
+              </div>
+              {priceStats && (
+                <div className="flex gap-8 items-center">
+                  <div className="flex flex-col items-end">
+                    <span className="text-xs text-gray-500">Price</span>
+                    <span className="font-semibold text-base">
+                      ${priceStats.current.toFixed(6)}
+                    </span>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className="text-xs text-gray-500">1h</span>
+                    <span
+                      className={`font-medium ${
+                        priceStats.change1h >= 0
+                          ? "text-green-500"
+                          : "text-red-500"
+                      }`}
+                    >
+                      {priceStats.change1h >= 0 ? "+" : ""}
+                      {priceStats.change1h.toFixed(2)}%
+                    </span>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className="text-xs text-gray-500">6h</span>
+                    <span
+                      className={`font-medium ${
+                        priceStats.change6h >= 0
+                          ? "text-green-500"
+                          : "text-red-500"
+                      }`}
+                    >
+                      {priceStats.change6h >= 0 ? "+" : ""}
+                      {priceStats.change6h.toFixed(2)}%
+                    </span>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className="text-xs text-gray-500">24h</span>
+                    <span
+                      className={`font-medium ${
+                        priceStats.change24h >= 0
+                          ? "text-green-500"
+                          : "text-red-500"
+                      }`}
+                    >
+                      {priceStats.change24h >= 0 ? "+" : ""}
+                      {priceStats.change24h.toFixed(2)}%
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="flex justify-between mb-4">
+              <div></div>
+              <div className="flex bg-gray-100 rounded-lg p-1">
+                <button
+                  className={`px-3 py-1 text-sm rounded-md ${
+                    timeRange === "1d"
+                      ? "bg-white shadow-sm"
+                      : "text-gray-600 hover:bg-gray-200"
+                  }`}
+                  onClick={() => setTimeRange("1d")}
+                >
+                  1D
+                </button>
+                <button
+                  className={`px-3 py-1 text-sm rounded-md ${
+                    timeRange === "7d"
+                      ? "bg-white shadow-sm"
+                      : "text-gray-600 hover:bg-gray-200"
+                  }`}
+                  onClick={() => setTimeRange("7d")}
+                >
+                  1W
+                </button>
+                <button
+                  className={`px-3 py-1 text-sm rounded-md ${
+                    timeRange === "30d"
+                      ? "bg-white shadow-sm"
+                      : "text-gray-600 hover:bg-gray-200"
+                  }`}
+                  onClick={() => setTimeRange("30d")}
+                >
+                  1M
+                </button>
+                <button
+                  className={`px-3 py-1 text-sm rounded-md ${
+                    timeRange === "all"
+                      ? "bg-white shadow-sm"
+                      : "text-gray-600 hover:bg-gray-200"
+                  }`}
+                  onClick={() => setTimeRange("all")}
+                >
+                  All
+                </button>
+              </div>
             </div>
             <div className="relative">
               <div ref={chartContainerRef} className="w-full" />
