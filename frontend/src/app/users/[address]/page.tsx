@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import { nnsClient } from "@/app/providers";
-import { getTimeAgo } from "@/app/utils/time";
 import { HexString } from "@/app/types";
 import Sidebar from "@/app/components/sidebar";
 import Header from "@/app/components/header";
@@ -22,6 +21,44 @@ const formatNumber = (num: number): string => {
   if (num < 1) return num.toFixed(6);
   if (num < 100) return num.toFixed(4);
   return num.toFixed(2);
+};
+
+const formatDate = (dateString: string): string => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffTime = date.getTime() - now.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0) {
+    // Past date
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } else if (diffDays === 0) {
+    // Today
+    return `Today at ${date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+    })}`;
+  } else if (diffDays === 1) {
+    // Tomorrow
+    return `Tomorrow at ${date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+    })}`;
+  } else {
+    // Future date
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
 };
 
 interface UserActivity {
@@ -676,9 +713,35 @@ const UserProfilePage = () => {
                               {quest.questDescription}
                             </div>
                             {quest.questName.includes("Foundry") && (
-                              <div className="text-gray-500 text-sm">
-                                <CountdownTimer targetDate="2025-06-19T00:00:00" />{" "}
-                              </div>
+                              <>
+                                {quest.questEndDate && 
+                                new Date(quest.questEndDate) > new Date() ? (
+                                  <div className="text-gray-500 text-sm">
+                                    <CountdownTimer
+                                      targetDate={quest.questEndDate}
+                                    />{" "}
+                                  </div>
+                                ) : (
+                                  <div className="text-gray-500 text-sm">
+                                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-50 text-red-600 rounded-md text-xs font-medium">
+                                      <svg
+                                        className="w-3 h-3"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                      >
+                                        <path
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          strokeWidth="2"
+                                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                                        />
+                                      </svg>
+                                      Ended {formatDate(quest.questEndDate)}
+                                    </span>
+                                  </div>
+                                )}
+                              </>
                             )}
                             <div className="flex items-center gap-2 mt-2">
                               <div className="flex-1">
@@ -704,9 +767,7 @@ const UserProfilePage = () => {
                             </div>
                           </div>
                           {isOwnProfile &&
-                            !(
-                              quest.claimedAt || claimedQuests.has(quest._id)
-                            ) &&
+                            !(quest.claimedAt || claimedQuests.has(quest._id)) &&
                             quest.questType !== "discord" && (
                               <button
                                 onClick={() => handleClaimQuest(quest._id)}
@@ -984,8 +1045,21 @@ const UserProfilePage = () => {
                               </div>
 
                               <div className="flex flex-col items-end gap-1 ml-4">
-                                <span className="text-xs text-gray-500">
-                                  {getTimeAgo(activity.date)}
+                                <span className="inline-flex items-center gap-1 text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded-md">
+                                  <svg
+                                    className="w-3 h-3"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth="2"
+                                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                    />
+                                  </svg>
+                                  {formatDate(activity.date)}
                                 </span>
                                 <span className="px-2 py-0.5 rounded-md bg-violet-50 text-violet-700 text-xs font-semibold">
                                   +{activity.points} pts
