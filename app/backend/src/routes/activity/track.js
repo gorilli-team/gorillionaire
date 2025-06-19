@@ -6,6 +6,7 @@ const Intent = require("../../models/Intent");
 const { broadcastNotification } = require("../../websocket");
 const UserAuth = require("../../models/UserAuth");
 const { trackOnDiscordXpGained } = require("../../controllers/points");
+const Referral = require("../../models/Referral");
 
 //track user signin
 router.post("/signin", async (req, res) => {
@@ -168,6 +169,55 @@ router.post("/trade-points", async (req, res) => {
 
     await trackOnDiscordXpGained("Trade", address, points, totalPoints);
 
+    // Check if user has a referrer and award referral bonus
+    const referral = await Referral.findOne({
+      "referredUsers.address": address.toLowerCase(),
+    });
+
+    if (referral) {
+      const referralBonus = Math.ceil(points * 0.1); // 10% of trade points
+
+      // Award points to the referrer
+      const referrerActivity = await UserActivity.findOne({
+        address: referral.referrerAddress,
+      });
+
+      if (referrerActivity) {
+        referrerActivity.points += referralBonus;
+        referrerActivity.activitiesList.push({
+          name: "Referral Trade Bonus",
+          points: referralBonus,
+          date: new Date(),
+          referralId: referral._id,
+          referredUserAddress: address.toLowerCase(),
+          originalTradePoints: points,
+        });
+        await referrerActivity.save();
+
+        // Update the referral record
+        const referredUser = referral.referredUsers.find(
+          (user) => user.address === address.toLowerCase()
+        );
+        if (referredUser) {
+          referredUser.pointsEarned += referralBonus;
+        }
+        referral.totalPointsEarned += referralBonus;
+        await referral.save();
+
+        // Track on Discord
+        await trackOnDiscordXpGained(
+          "Referral Trade Bonus",
+          referral.referrerAddress,
+          referralBonus,
+          referrerActivity.points
+        );
+
+        console.log(
+          `Awarded ${referralBonus} referral bonus points to ${referral.referrerAddress} for trade by ${address}`
+        );
+      }
+    }
+
     //update intent status to completed
     intent.status = "completed";
     intent.txHash = txHash;
@@ -229,12 +279,34 @@ router.get("/leaderboard", async (req, res) => {
       UserActivity.countDocuments(),
     ]);
 
+    // Get referral data for all users in the current page
+    const userAddresses = users.map((user) => user.address);
+    const referrals = await Referral.find({
+      referrerAddress: { $in: userAddresses },
+    });
+
+    // Create a map of referral data for quick lookup
+    const referralMap = new Map();
+    referrals.forEach((referral) => {
+      referralMap.set(referral.referrerAddress, {
+        totalReferred: referral.referredUsers.length,
+        totalReferralPoints: referral.totalPointsEarned,
+      });
+    });
+
     // Calculate the real rank by adding the skip value
     const usersWithRank = users.map((user, index) => {
-      // Create a new object with all user properties plus the rank
+      const referralData = referralMap.get(user.address) || {
+        totalReferred: 0,
+        totalReferralPoints: 0,
+      };
+
+      // Create a new object with all user properties plus the rank and referral data
       return {
         ...user.toObject(), // Convert Mongoose document to plain object
         rank: skip + index + 1, // Adjust rank based on pagination
+        totalReferred: referralData.totalReferred,
+        totalReferralPoints: referralData.totalReferralPoints,
       };
     });
 
@@ -305,9 +377,10 @@ router.get("/me", async (req, res) => {
       { $project: { count: { $size: "$activitiesList" } } },
     ]);
 
-    const totalCount = totalActivities && totalActivities.length > 0 && totalActivities[0] 
-      ? totalActivities[0].count 
-      : 0;
+    const totalCount =
+      totalActivities && totalActivities.length > 0 && totalActivities[0]
+        ? totalActivities[0].count
+        : 0;
 
     //count the number of users with more points than the user
     const count = await UserActivity.countDocuments({
@@ -329,7 +402,8 @@ router.get("/me", async (req, res) => {
     res.json({
       userActivity: {
         ...result,
-        dollarValue: dollarValue && dollarValue.length > 0 ? dollarValue[0].total : 0,
+        dollarValue:
+          dollarValue && dollarValue.length > 0 ? dollarValue[0].total : 0,
         pagination: {
           total: totalCount,
           page,
