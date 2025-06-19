@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "@coinbase/onchainkit/styles.css";
 import "./styles/globals.css";
 import Script from "next/script";
-import Layout from "./main";
-import { ThemeModeScript } from "flowbite-react";
 import { CountdownTimer } from "@/app/components/CountdownTimer";
+import { ThemeModeScript } from "flowbite-react";
+import Layout from "./main";
 
 export const metadata: Metadata = {
   title: "Gorillionaire – AI-Powered Crypto Signals & Gamified Trading",
@@ -47,7 +47,7 @@ export default function RootLayout({
           data-website-id="1ac7b906-684c-46cb-95d7-f7719fb51940"
         />
       </head>
-      <body>
+      <body suppressHydrationWarning>
         <div className="bg-purple-700 text-white py-2 text-center font-medium">
           🎉 Foundry Fest <CountdownTimer targetDate="2025-06-19T00:00:00" />{" "}
           <a
