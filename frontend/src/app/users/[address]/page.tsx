@@ -73,6 +73,9 @@ interface UserActivity {
     tokenPrice: number;
   };
   signalId: string;
+  referredUserAddress?: string;
+  originalTradePoints?: number;
+  referralId?: string;
 }
 
 interface UserProfile {
@@ -110,6 +113,22 @@ interface Quest {
   questEndDate: string;
 }
 
+interface ReferredUser {
+  address: string;
+  joinedAt: string;
+  pointsEarned: number;
+  totalPoints: number;
+  nadName?: string;
+  nadAvatar?: string;
+}
+
+interface ReferralStats {
+  referralCode: string | null;
+  totalReferred: number;
+  totalPointsEarned: number;
+  referredUsers: ReferredUser[];
+}
+
 const UserProfilePage = () => {
   const params = useParams();
   const { address: connectedAddress } = useAccount();
@@ -125,6 +144,14 @@ const UserProfilePage = () => {
   const itemsPerPage = 5;
   const [discordError, setDiscordError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [referralStats, setReferralStats] = useState<ReferralStats | null>(
+    null
+  );
+  const [isGeneratingCode, setIsGeneratingCode] = useState(false);
+  const [referralError, setReferralError] = useState<string | null>(null);
+  const [hasReferrer, setHasReferrer] = useState<boolean | null>(null);
+  const [referralCodeInput, setReferralCodeInput] = useState("");
+  const [isSubmittingReferral, setIsSubmittingReferral] = useState(false);
 
   const { data: v2NFTBalance } = useReadContract({
     abi,
@@ -195,6 +222,137 @@ const UserProfilePage = () => {
       setDiscordError(
         "An error occurred while claiming the quest. Please try again."
       );
+    }
+  };
+
+  const generateReferralCode = async () => {
+    if (!params.address) return;
+
+    setIsGeneratingCode(true);
+    setReferralError(null);
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/referral/generate-code`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            address: params.address,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        await fetchReferralStats();
+        setSuccessMessage("Referral code generated successfully! 🎉");
+        setTimeout(() => {
+          setSuccessMessage(null);
+        }, 3000);
+      } else {
+        setReferralError(data.error || "Failed to generate referral code");
+      }
+    } catch (error) {
+      console.error("Error generating referral code:", error);
+      setReferralError("An error occurred while generating the referral code");
+    } finally {
+      setIsGeneratingCode(false);
+    }
+  };
+
+  const fetchReferralStats = async () => {
+    if (!params.address) return;
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/referral/stats/${params.address}`
+      );
+      const data = await response.json();
+
+      if (response.ok) {
+        setReferralStats(data);
+      } else {
+        console.error("Error fetching referral stats:", data.error);
+      }
+    } catch (error) {
+      console.error("Error fetching referral stats:", error);
+    }
+  };
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setSuccessMessage("Referral code copied to clipboard! 📋");
+      setTimeout(() => {
+        setSuccessMessage(null);
+      }, 2000);
+    } catch (error) {
+      console.error("Failed to copy to clipboard:", error);
+      setReferralError("Failed to copy to clipboard");
+    }
+  };
+
+  const checkIfUserHasReferrer = async () => {
+    if (!params.address) return;
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/referral/check-referrer/${params.address}`
+      );
+      const data = await response.json();
+
+      if (response.ok) {
+        setHasReferrer(data.hasReferrer);
+      } else {
+        console.error("Error checking referrer status:", data.error);
+      }
+    } catch (error) {
+      console.error("Error checking referrer status:", error);
+    }
+  };
+
+  const submitReferralCode = async () => {
+    if (!params.address || !referralCodeInput.trim()) return;
+
+    setIsSubmittingReferral(true);
+    setReferralError(null);
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/referral/process`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            referralCode: referralCodeInput.trim().toUpperCase(),
+            newUserAddress: params.address,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSuccessMessage("Referral code applied successfully! 🎉");
+        setReferralCodeInput("");
+        setHasReferrer(true);
+        setTimeout(() => {
+          setSuccessMessage(null);
+        }, 3000);
+      } else {
+        setReferralError(data.error || "Failed to apply referral code");
+      }
+    } catch (error) {
+      console.error("Error submitting referral code:", error);
+      setReferralError("An error occurred while applying the referral code");
+    } finally {
+      setIsSubmittingReferral(false);
     }
   };
 
@@ -294,6 +452,18 @@ const UserProfilePage = () => {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, []);
+
+  useEffect(() => {
+    if (params.address) {
+      fetchReferralStats();
+    }
+  }, [params.address]);
+
+  useEffect(() => {
+    if (params.address && isOwnProfile) {
+      checkIfUserHasReferrer();
+    }
+  }, [params.address, isOwnProfile]);
 
   const formatAddress = (address: string) => {
     if (!address) return "";
@@ -714,7 +884,7 @@ const UserProfilePage = () => {
                             </div>
                             {quest.questName.includes("Foundry") && (
                               <>
-                                {quest.questEndDate && 
+                                {quest.questEndDate &&
                                 new Date(quest.questEndDate) > new Date() ? (
                                   <div className="text-gray-500 text-sm">
                                     <CountdownTimer
@@ -767,7 +937,9 @@ const UserProfilePage = () => {
                             </div>
                           </div>
                           {isOwnProfile &&
-                            !(quest.claimedAt || claimedQuests.has(quest._id)) &&
+                            !(
+                              quest.claimedAt || claimedQuests.has(quest._id)
+                            ) &&
                             quest.questType !== "discord" && (
                               <button
                                 onClick={() => handleClaimQuest(quest._id)}
@@ -794,6 +966,232 @@ const UserProfilePage = () => {
               </div>
 
               <div className="lg:col-span-1">
+                {/* Referral Visualization - Moved to top */}
+                {referralStats && (
+                  <div className="bg-white rounded-lg shadow-lg transform transition-all duration-300 hover:shadow-xl mb-3">
+                    <div className="bg-white rounded-xl p-4">
+                      <div className="flex justify-between items-center mb-3">
+                        <h2 className="text-base font-bold text-gray-900">
+                          {isOwnProfile
+                            ? "Referral Program"
+                            : "Referral Statistics"}
+                        </h2>
+                      </div>
+                      <div className="flex flex-col gap-3">
+                        {/* Referral Code Input Section for New Users */}
+                        {isOwnProfile &&
+                          hasReferrer === false &&
+                          (userProfile?.activitiesList?.length || 0) < 3 && (
+                            <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-4 border border-green-200">
+                              <h3 className="text-sm font-semibold text-gray-900 mb-3">
+                                Enter Referral Code
+                              </h3>
+                              <div className="space-y-3">
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="text"
+                                    value={referralCodeInput}
+                                    onChange={(e) =>
+                                      setReferralCodeInput(e.target.value)
+                                    }
+                                    placeholder="Enter referral code (e.g., ABC12345)"
+                                    className="flex-1 bg-white rounded-lg px-3 py-2 border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                                    maxLength={8}
+                                  />
+                                  <button
+                                    onClick={submitReferralCode}
+                                    disabled={
+                                      !referralCodeInput.trim() ||
+                                      isSubmittingReferral
+                                    }
+                                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                                  >
+                                    {isSubmittingReferral ? (
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                        Applying...
+                                      </div>
+                                    ) : (
+                                      "Apply"
+                                    )}
+                                  </button>
+                                </div>
+                                <div className="text-xs text-gray-600">
+                                  Enter a friend&apos;s referral code to get
+                                  started and earn bonus points!
+                                </div>
+                                {referralError && (
+                                  <div className="text-red-600 text-xs">
+                                    {referralError}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                        {/* Referral Code Section */}
+                        {isOwnProfile &&
+                          (hasReferrer === true ||
+                            (userProfile?.activitiesList?.length || 0) >=
+                              3) && (
+                            <div className="bg-gradient-to-r from-violet-50 to-indigo-50 rounded-lg p-4 border border-violet-200">
+                              <h3 className="text-sm font-semibold text-gray-900 mb-3">
+                                Your Referral Code
+                              </h3>
+
+                              {referralStats?.referralCode ? (
+                                <div className="space-y-3">
+                                  <div className="flex items-center gap-2">
+                                    <div className="flex-1 bg-white rounded-lg px-3 py-2 border border-gray-200">
+                                      <code className="text-lg font-mono text-violet-600 font-bold">
+                                        {referralStats.referralCode}
+                                      </code>
+                                    </div>
+                                    <button
+                                      onClick={() =>
+                                        copyToClipboard(
+                                          referralStats.referralCode!
+                                        )
+                                      }
+                                      className="px-3 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors"
+                                      title="Copy to clipboard"
+                                    >
+                                      <svg
+                                        className="w-4 h-4"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                      >
+                                        <path
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          strokeWidth="2"
+                                          d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                                        />
+                                      </svg>
+                                    </button>
+                                  </div>
+                                  <div className="text-xs text-gray-600">
+                                    Share this code with friends to earn 100
+                                    points for each referral plus 10% of their
+                                    trade points!
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="space-y-3">
+                                  <button
+                                    onClick={generateReferralCode}
+                                    disabled={isGeneratingCode}
+                                    className="w-full px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                  >
+                                    {isGeneratingCode ? (
+                                      <div className="flex items-center justify-center gap-2">
+                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                        Generating...
+                                      </div>
+                                    ) : (
+                                      "Generate Referral Code"
+                                    )}
+                                  </button>
+                                  <div className="text-xs text-gray-600">
+                                    Create your unique referral code to start
+                                    earning points
+                                  </div>
+                                </div>
+                              )}
+
+                              {referralError && (
+                                <div className="text-red-600 text-xs mt-2">
+                                  {referralError}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                        {/* Referral Statistics */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="bg-white rounded-lg p-3 border border-gray-200 text-center">
+                            <div className="text-2xl font-bold text-violet-600">
+                              {referralStats.totalReferred}
+                            </div>
+                            <div className="text-xs text-gray-600">
+                              Total Referred
+                            </div>
+                          </div>
+                          <div className="bg-white rounded-lg p-3 border border-gray-200 text-center">
+                            <div className="text-2xl font-bold text-green-600">
+                              {referralStats.totalPointsEarned}
+                            </div>
+                            <div className="text-xs text-gray-600">
+                              Points Earned
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Referred Users List */}
+                        {referralStats.referredUsers.length > 0 && (
+                          <div className="space-y-2">
+                            <h4 className="text-sm font-semibold text-gray-900">
+                              Referred Users
+                            </h4>
+                            <div className="max-h-48 overflow-y-auto space-y-2">
+                              {referralStats.referredUsers.map(
+                                (user, index) => (
+                                  <div
+                                    key={user.address}
+                                    className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg"
+                                  >
+                                    <div className="w-8 h-8 rounded-full overflow-hidden border border-gray-200">
+                                      <Image
+                                        src={
+                                          user.nadAvatar ||
+                                          `/avatar_${index % 6}.png`
+                                        }
+                                        alt="User Avatar"
+                                        width={32}
+                                        height={32}
+                                        className="w-full h-full object-cover"
+                                      />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="text-sm font-medium text-gray-900 truncate">
+                                        {user.nadName ||
+                                          formatAddress(user.address)}
+                                      </div>
+                                      <div className="text-xs text-gray-500">
+                                        {user.totalPoints} pts • Joined{" "}
+                                        {formatDate(user.joinedAt)}
+                                      </div>
+                                    </div>
+                                    <div className="text-xs text-green-600 font-medium">
+                                      +{user.pointsEarned}
+                                    </div>
+                                  </div>
+                                )
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Empty State */}
+                        {referralStats.totalReferred === 0 && (
+                          <div className="text-center py-6 text-gray-500">
+                            <div className="text-4xl mb-2">🤝</div>
+                            <div className="text-sm font-medium mb-1">
+                              No referrals yet
+                            </div>
+                            <div className="text-xs">
+                              {isOwnProfile
+                                ? "Share your referral code to start earning points!"
+                                : "This user hasn't referred anyone yet"}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="bg-white rounded-lg shadow-lg transform transition-all duration-300 hover:shadow-xl">
                   <div className="bg-white rounded-xl p-4">
                     <div className="flex justify-between items-center mb-3">
@@ -904,6 +1302,20 @@ const UserProfilePage = () => {
                                       d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                                     />
                                   </svg>
+                                ) : activity.name === "Referral Trade Bonus" ? (
+                                  <svg
+                                    className="w-5 h-5 text-green-500"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth="2"
+                                      d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"
+                                    />
+                                  </svg>
                                 ) : (
                                   <svg
                                     className="w-5 h-5 text-gray-500"
@@ -978,6 +1390,27 @@ const UserProfilePage = () => {
                                 {!activity?.intentId?.tokenSymbol && (
                                   <div className="font-semibold text-gray-900">
                                     {activity.name}
+                                  </div>
+                                )}
+
+                                {/* Referral Trade Bonus Details */}
+                                {activity.name === "Referral Trade Bonus" && (
+                                  <div className="space-y-2">
+                                    <div className="text-sm text-gray-600">
+                                      Earned from{" "}
+                                      {activity.referredUserAddress
+                                        ? formatAddress(
+                                            activity.referredUserAddress
+                                          )
+                                        : "referred user"}
+                                      &apos;s trade
+                                    </div>
+                                    {activity.originalTradePoints && (
+                                      <div className="text-xs text-gray-500">
+                                        Original trade:{" "}
+                                        {activity.originalTradePoints} points
+                                      </div>
+                                    )}
                                   </div>
                                 )}
 

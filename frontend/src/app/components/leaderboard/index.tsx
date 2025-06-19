@@ -23,6 +23,8 @@ interface Investor {
     limit: number;
     totalPages: number;
   };
+  totalReferred?: number;
+  totalReferralPoints?: number;
 }
 
 interface Activity {
@@ -114,6 +116,8 @@ const LeaderboardComponent = () => {
           limit: 10,
           totalPages: 1,
         },
+        totalReferred: data.userActivity?.totalReferred || 0,
+        totalReferralPoints: data.userActivity?.totalReferralPoints || 0,
       };
 
       setMyData(myInvestorData);
@@ -228,6 +232,12 @@ const LeaderboardComponent = () => {
                         ACTIVITIES
                       </th>
                       <th className="pb-2 pr-2 font-medium">POINTS</th>
+                      <th className="pb-2 pr-2 font-medium text-center">
+                        REFERRALS
+                      </th>
+                      <th className="pb-2 pr-2 font-medium text-center">
+                        REFERRAL PTS
+                      </th>
                       <th className="pb-2 font-medium">LATEST ACTION</th>
                     </tr>
                   </thead>
@@ -290,6 +300,16 @@ const LeaderboardComponent = () => {
                               </span>
                             </div>
                           </td>
+                          <td className="py-4 h-16 text-center text-gray-700 pr-2">
+                            <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium rounded-full bg-green-50 text-green-700">
+                              {myInvestor.totalReferred || 0}
+                            </span>
+                          </td>
+                          <td className="py-4 h-16 text-center text-gray-700 pr-2">
+                            <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium rounded-full bg-orange-50 text-orange-700">
+                              {myInvestor.totalReferralPoints || 0}
+                            </span>
+                          </td>
                           <td className="py-4 h-16 text-gray-700">
                             {myInvestor.pagination &&
                               myInvestor.pagination.total > 0 && (
@@ -311,7 +331,7 @@ const LeaderboardComponent = () => {
                           </td>
                         </tr>
                         <tr>
-                          <td colSpan={5} style={{ height: 16 }}></td>
+                          <td colSpan={7} style={{ height: 16 }}></td>
                         </tr>
                       </>
                     )}
@@ -393,6 +413,16 @@ const LeaderboardComponent = () => {
                             </span>
                           </div>
                         </td>
+                        <td className="py-4 h-16 text-center text-gray-700 pr-2">
+                          <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium rounded-full bg-green-50 text-green-700">
+                            {investor.totalReferred || 0}
+                          </span>
+                        </td>
+                        <td className="py-4 h-16 text-center text-gray-700 pr-2">
+                          <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium rounded-full bg-orange-50 text-orange-700">
+                            {investor.totalReferralPoints || 0}
+                          </span>
+                        </td>
                         <td className="py-4 h-16 text-gray-700">
                           {investor.activitiesList &&
                             investor.activitiesList.length > 0 && (
@@ -431,6 +461,8 @@ const LeaderboardComponent = () => {
                         key={`empty-${index}`}
                         className="border-b border-gray-100"
                       >
+                        <td className="h-16"></td>
+                        <td className="h-16"></td>
                         <td className="h-16"></td>
                         <td className="h-16"></td>
                         <td className="h-16"></td>
@@ -495,6 +527,14 @@ const LeaderboardComponent = () => {
                               <span className="text-[10px] text-gray-500">
                                 {myInvestor.pagination.total} activities
                               </span>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-green-50 text-green-700">
+                                  {myInvestor.totalReferred || 0} referrals
+                                </span>
+                                <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
+                                  {myInvestor.totalReferralPoints || 0} ref pts
+                                </span>
+                              </div>
                             </div>
                           </div>
                           <div className="flex flex-col items-end">
@@ -580,6 +620,14 @@ const LeaderboardComponent = () => {
                             <span className="text-[10px] text-gray-500">
                               {investor.activitiesList.length} activities
                             </span>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-green-50 text-green-700">
+                                {investor.totalReferred || 0} referrals
+                              </span>
+                              <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
+                                {investor.totalReferralPoints || 0} ref pts
+                              </span>
+                            </div>
                           </div>
                         </div>
                         <div className="flex flex-col items-end">

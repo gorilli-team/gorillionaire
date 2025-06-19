@@ -44,6 +44,7 @@ app.use(
   require("./routes/signals/generated-signals")
 );
 app.use("/auth/privy", require("./routes/auth/privy"));
+app.use("/referral", require("./routes/referral"));
 
 // Sentry error handler must be registered after all controllers but before other error handlers
 app.use(expressErrorHandler());
