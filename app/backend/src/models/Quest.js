@@ -35,6 +35,9 @@ const questSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
+  questEndDate: {
+    type: Date,
+  },
 });
 
 module.exports = mongoose.model("Quest", questSchema);

@@ -46,6 +46,10 @@ async function createAcceptedSignalUserQuests(address, signalId) {
           address: address,
         });
 
+        if (quest.questEndDate && quest.questEndDate < new Date()) {
+          continue;
+        }
+
         if (!userQuest) {
           // If it doesn't exist, create it
           userQuest = new UserQuest({

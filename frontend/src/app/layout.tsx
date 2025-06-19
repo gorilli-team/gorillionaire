@@ -46,8 +46,7 @@ export default function RootLayout({
       </head>
       <body suppressHydrationWarning>
         <div className="bg-purple-700 text-white py-2 text-center font-medium">
-          🎉 Foundry Fest{" "}
-          <CountdownTimer targetDate="2025-06-19T00:00:00" />{" "}
+          🎉 Foundry Fest <CountdownTimer targetDate="2025-06-19T00:00:00" />{" "}
           <a
             href="/profile/me"
             className="underline font-bold hover:text-gray-200"
