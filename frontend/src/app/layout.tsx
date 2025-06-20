@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import "@coinbase/onchainkit/styles.css";
 import "./styles/globals.css";
 import Script from "next/script";
-import { CountdownTimer } from "@/app/components/CountdownTimer";
 import { ThemeModeScript } from "flowbite-react";
 import Layout from "./main";
 
@@ -48,14 +47,20 @@ export default function RootLayout({
         />
       </head>
       <body suppressHydrationWarning>
-        <div className="bg-purple-700 text-white py-2 text-center font-medium">
-          🎉 Foundry Fest <CountdownTimer targetDate="2025-06-19T00:00:00" />{" "}
-          <a
-            href="/profile/me"
-            className="underline font-bold hover:text-gray-200"
-          >
-            Get extra XPs now!
-          </a>{" "}
+        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 text-center font-medium relative overflow-hidden">
+          <div className="absolute inset-0 bg-black opacity-10"></div>
+          <div className="relative z-10 flex items-center justify-center gap-3">
+            <span>
+              <span className="font-bold">Referrals are live!</span>
+            </span>
+            <a
+              href="/profile/me"
+              rel="noopener noreferrer"
+              className="bg-white text-indigo-600 px-4 py-1.5 rounded-md font-bold text-sm hover:bg-gray-100 transition-colors duration-200 shadow-lg"
+            >
+              Get extra XPs now!
+            </a>
+          </div>
         </div>
         <Layout>{children}</Layout>
         <Script
