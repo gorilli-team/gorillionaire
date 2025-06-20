@@ -135,8 +135,10 @@ router.post("/process", async (req, res) => {
       return res.status(400).json({ error: "User already has a referrer" });
     }
 
+    // Determine points earned based on the number of referred users
+    const pointsEarned = referrer.referredUsers.length < 3 ? 100 : 0;
+
     // Add the new user to the referrer's referredUsers array
-    const pointsEarned = 100; // Default points for each referral
     referrer.referredUsers.push({
       address: newUserAddress.toLowerCase(),
       joinedAt: new Date(),

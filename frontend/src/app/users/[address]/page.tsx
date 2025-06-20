@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 import { nnsClient } from "@/app/providers";
 import { HexString } from "@/app/types";
 import Sidebar from "@/app/components/sidebar";
@@ -1137,9 +1138,10 @@ const UserProfilePage = () => {
                             <div className="max-h-48 overflow-y-auto space-y-2">
                               {referralStats.referredUsers.map(
                                 (user, index) => (
-                                  <div
+                                  <Link
+                                    href={`/users/${user.address}`}
                                     key={user.address}
-                                    className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg"
+                                    className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                                   >
                                     <div className="w-8 h-8 rounded-full overflow-hidden border border-gray-200">
                                       <Image
@@ -1166,7 +1168,7 @@ const UserProfilePage = () => {
                                     <div className="text-xs text-green-600 font-medium">
                                       +{user.pointsEarned}
                                     </div>
-                                  </div>
+                                  </Link>
                                 )
                               )}
                             </div>
