@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 import { nnsClient } from "@/app/providers";
 import { HexString } from "@/app/types";
 import Sidebar from "@/app/components/sidebar";
@@ -73,6 +74,9 @@ interface UserActivity {
     tokenPrice: number;
   };
   signalId: string;
+  referredUserAddress?: string;
+  originalTradePoints?: number;
+  referralId?: string;
 }
 
 interface UserProfile {
@@ -110,6 +114,22 @@ interface Quest {
   questEndDate: string;
 }
 
+interface ReferredUser {
+  address: string;
+  joinedAt: string;
+  pointsEarned: number;
+  totalPoints: number;
+  nadName?: string;
+  nadAvatar?: string;
+}
+
+interface ReferralStats {
+  referralCode: string | null;
+  totalReferred: number;
+  totalPointsEarned: number;
+  referredUsers: ReferredUser[];
+}
+
 const UserProfilePage = () => {
   const params = useParams();
   const { address: connectedAddress } = useAccount();
@@ -125,6 +145,14 @@ const UserProfilePage = () => {
   const itemsPerPage = 5;
   const [discordError, setDiscordError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [referralStats, setReferralStats] = useState<ReferralStats | null>(
+    null
+  );
+  const [isGeneratingCode, setIsGeneratingCode] = useState(false);
+  const [referralError, setReferralError] = useState<string | null>(null);
+  const [hasReferrer, setHasReferrer] = useState<boolean | null>(null);
+  const [referralCodeInput, setReferralCodeInput] = useState("");
+  const [isSubmittingReferral, setIsSubmittingReferral] = useState(false);
 
   const { data: v2NFTBalance } = useReadContract({
     abi,
@@ -195,6 +223,137 @@ const UserProfilePage = () => {
       setDiscordError(
         "An error occurred while claiming the quest. Please try again."
       );
+    }
+  };
+
+  const generateReferralCode = async () => {
+    if (!params.address) return;
+
+    setIsGeneratingCode(true);
+    setReferralError(null);
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/referral/generate-code`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            address: params.address,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        await fetchReferralStats();
+        setSuccessMessage("Referral code generated successfully! 🎉");
+        setTimeout(() => {
+          setSuccessMessage(null);
+        }, 3000);
+      } else {
+        setReferralError(data.error || "Failed to generate referral code");
+      }
+    } catch (error) {
+      console.error("Error generating referral code:", error);
+      setReferralError("An error occurred while generating the referral code");
+    } finally {
+      setIsGeneratingCode(false);
+    }
+  };
+
+  const fetchReferralStats = async () => {
+    if (!params.address) return;
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/referral/stats/${params.address}`
+      );
+      const data = await response.json();
+
+      if (response.ok) {
+        setReferralStats(data);
+      } else {
+        console.error("Error fetching referral stats:", data.error);
+      }
+    } catch (error) {
+      console.error("Error fetching referral stats:", error);
+    }
+  };
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setSuccessMessage("Referral code copied to clipboard! 📋");
+      setTimeout(() => {
+        setSuccessMessage(null);
+      }, 2000);
+    } catch (error) {
+      console.error("Failed to copy to clipboard:", error);
+      setReferralError("Failed to copy to clipboard");
+    }
+  };
+
+  const checkIfUserHasReferrer = async () => {
+    if (!params.address) return;
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/referral/check-referrer/${params.address}`
+      );
+      const data = await response.json();
+
+      if (response.ok) {
+        setHasReferrer(data.hasReferrer);
+      } else {
+        console.error("Error checking referrer status:", data.error);
+      }
+    } catch (error) {
+      console.error("Error checking referrer status:", error);
+    }
+  };
+
+  const submitReferralCode = async () => {
+    if (!params.address || !referralCodeInput.trim()) return;
+
+    setIsSubmittingReferral(true);
+    setReferralError(null);
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/referral/process`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            referralCode: referralCodeInput.trim().toUpperCase(),
+            newUserAddress: params.address,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSuccessMessage("Referral code applied successfully! 🎉");
+        setReferralCodeInput("");
+        setHasReferrer(true);
+        setTimeout(() => {
+          setSuccessMessage(null);
+        }, 3000);
+      } else {
+        setReferralError(data.error || "Failed to apply referral code");
+      }
+    } catch (error) {
+      console.error("Error submitting referral code:", error);
+      setReferralError("An error occurred while applying the referral code");
+    } finally {
+      setIsSubmittingReferral(false);
     }
   };
 
@@ -294,6 +453,18 @@ const UserProfilePage = () => {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, []);
+
+  useEffect(() => {
+    if (params.address) {
+      fetchReferralStats();
+    }
+  }, [params.address]);
+
+  useEffect(() => {
+    if (params.address && isOwnProfile) {
+      checkIfUserHasReferrer();
+    }
+  }, [params.address, isOwnProfile]);
 
   const formatAddress = (address: string) => {
     if (!address) return "";
@@ -452,10 +623,10 @@ const UserProfilePage = () => {
                                 >
                                   <svg
                                     className="w-4 h-4"
-                                    viewBox="0 0 24 24"
+                                    viewBox="0 -28.5 256 256"
                                     fill="currentColor"
                                   >
-                                    <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.30z" />
+                                    <path d="M216.856339,16.5966031 C200.285002,8.84328665 182.566144,3.2084988 164.041564,0 C161.766523,4.11318106 159.108624,9.64549908 157.276099,14.0464379 C137.583995,11.0849896 118.072967,11.0849896 98.7430163,14.0464379 C96.9108417,9.64549908 94.1925838,4.11318106 91.8971895,0 C73.3526068,3.2084988 55.6133949,8.86399117 39.0420583,16.6376612 C5.61752293,67.146514 -3.4433191,116.400813 1.08711069,164.955721 C23.2560196,181.510915 44.7403634,191.567697 65.8621325,198.148576 C71.0772151,190.971126 75.7283628,183.341335 79.7352139,175.300261 C72.104019,172.400575 64.7949724,168.822202 57.8887866,164.667963 C59.7209612,163.310589 61.5131304,161.891452 63.2445898,160.431257 C105.36741,180.133187 151.134928,180.133187 192.754523,160.431257 C194.506336,161.891452 196.298154,163.310589 198.110326,164.667963 C191.183787,168.842556 183.854737,172.420929 176.223542,175.320965 C180.230393,183.341335 184.861538,190.991831 190.096624,198.16893 C211.238746,191.588051 232.743023,181.531619 254.911949,164.955721 C260.227747,108.668201 245.831087,59.8662432 216.856339,16.5966031 Z M85.4738752,135.09489 C72.8290281,135.09489 62.4592217,123.290155 62.4592217,108.914901 C62.4592217,94.5396472 72.607595,82.7145587 85.4738752,82.7145587 C98.3405064,82.7145587 108.709962,94.5189427 108.488529,108.914901 C108.508531,123.290155 98.3405064,135.09489 85.4738752,135.09489 Z M170.525237,135.09489 C157.88039,135.09489 147.510584,123.290155 147.510584,108.914901 C147.510584,94.5396472 157.658606,82.7145587 170.525237,82.7145587 C183.391518,82.7145587 193.761324,94.5189427 193.539891,108.914901 C193.539891,123.290155 183.391518,135.09489 170.525237,135.09489 Z" />
                                   </svg>
                                   Connect Discord
                                 </a>
@@ -468,10 +639,10 @@ const UserProfilePage = () => {
                                 >
                                   <svg
                                     className="w-4 h-4"
-                                    viewBox="0 0 24 24"
+                                    viewBox="0 -28.5 256 256"
                                     fill="currentColor"
                                   >
-                                    <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.30z" />
+                                    <path d="M216.856339,16.5966031 C200.285002,8.84328665 182.566144,3.2084988 164.041564,0 C161.766523,4.11318106 159.108624,9.64549908 157.276099,14.0464379 C137.583995,11.0849896 118.072967,11.0849896 98.7430163,14.0464379 C96.9108417,9.64549908 94.1925838,4.11318106 91.8971895,0 C73.3526068,3.2084988 55.6133949,8.86399117 39.0420583,16.6376612 C5.61752293,67.146514 -3.4433191,116.400813 1.08711069,164.955721 C23.2560196,181.510915 44.7403634,191.567697 65.8621325,198.148576 C71.0772151,190.971126 75.7283628,183.341335 79.7352139,175.300261 C72.104019,172.400575 64.7949724,168.822202 57.8887866,164.667963 C59.7209612,163.310589 61.5131304,161.891452 63.2445898,160.431257 C105.36741,180.133187 151.134928,180.133187 192.754523,160.431257 C194.506336,161.891452 196.298154,163.310589 198.110326,164.667963 C191.183787,168.842556 183.854737,172.420929 176.223542,175.320965 C180.230393,183.341335 184.861538,190.991831 190.096624,198.16893 C211.238746,191.588051 232.743023,181.531619 254.911949,164.955721 C260.227747,108.668201 245.831087,59.8662432 216.856339,16.5966031 Z M85.4738752,135.09489 C72.8290281,135.09489 62.4592217,123.290155 62.4592217,108.914901 C62.4592217,94.5396472 72.607595,82.7145587 85.4738752,82.7145587 C98.3405064,82.7145587 108.709962,94.5189427 108.488529,108.914901 C108.508531,123.290155 98.3405064,135.09489 85.4738752,135.09489 Z M170.525237,135.09489 C157.88039,135.09489 147.510584,123.290155 147.510584,108.914901 C147.510584,94.5396472 157.658606,82.7145587 170.525237,82.7145587 C183.391518,82.7145587 193.761324,94.5189427 193.539891,108.914901 C193.539891,123.290155 183.391518,135.09489 170.525237,135.09489 Z" />
                                   </svg>
                                   Verify Discord
                                 </button>
@@ -481,10 +652,10 @@ const UserProfilePage = () => {
                                 <div className="flex items-center gap-2 px-3 py-1.5 bg-violet-400 text-white rounded-lg text-sm font-medium">
                                   <svg
                                     className="w-4 h-4"
-                                    viewBox="0 0 24 24"
+                                    viewBox="0 -28.5 256 256"
                                     fill="currentColor"
                                   >
-                                    <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.30z" />
+                                    <path d="M216.856339,16.5966031 C200.285002,8.84328665 182.566144,3.2084988 164.041564,0 C161.766523,4.11318106 159.108624,9.64549908 157.276099,14.0464379 C137.583995,11.0849896 118.072967,11.0849896 98.7430163,14.0464379 C96.9108417,9.64549908 94.1925838,4.11318106 91.8971895,0 C73.3526068,3.2084988 55.6133949,8.86399117 39.0420583,16.6376612 C5.61752293,67.146514 -3.4433191,116.400813 1.08711069,164.955721 C23.2560196,181.510915 44.7403634,191.567697 65.8621325,198.148576 C71.0772151,190.971126 75.7283628,183.341335 79.7352139,175.300261 C72.104019,172.400575 64.7949724,168.822202 57.8887866,164.667963 C59.7209612,163.310589 61.5131304,161.891452 63.2445898,160.431257 C105.36741,180.133187 151.134928,180.133187 192.754523,160.431257 C194.506336,161.891452 196.298154,163.310589 198.110326,164.667963 C191.183787,168.842556 183.854737,172.420929 176.223542,175.320965 C180.230393,183.341335 184.861538,190.991831 190.096624,198.16893 C211.238746,191.588051 232.743023,181.531619 254.911949,164.955721 C260.227747,108.668201 245.831087,59.8662432 216.856339,16.5966031 Z M85.4738752,135.09489 C72.8290281,135.09489 62.4592217,123.290155 62.4592217,108.914901 C62.4592217,94.5396472 72.607595,82.7145587 85.4738752,82.7145587 C98.3405064,82.7145587 108.709962,94.5189427 108.488529,108.914901 C108.508531,123.290155 98.3405064,135.09489 85.4738752,135.09489 Z M170.525237,135.09489 C157.88039,135.09489 147.510584,123.290155 147.510584,108.914901 C147.510584,94.5396472 157.658606,82.7145587 170.525237,82.7145587 C183.391518,82.7145587 193.761324,94.5189427 193.539891,108.914901 C193.539891,123.290155 183.391518,135.09489 170.525237,135.09489 Z" />
                                   </svg>
                                   <span>{discordUsername}</span>
                                 </div>
@@ -714,7 +885,7 @@ const UserProfilePage = () => {
                             </div>
                             {quest.questName.includes("Foundry") && (
                               <>
-                                {quest.questEndDate && 
+                                {quest.questEndDate &&
                                 new Date(quest.questEndDate) > new Date() ? (
                                   <div className="text-gray-500 text-sm">
                                     <CountdownTimer
@@ -767,7 +938,9 @@ const UserProfilePage = () => {
                             </div>
                           </div>
                           {isOwnProfile &&
-                            !(quest.claimedAt || claimedQuests.has(quest._id)) &&
+                            !(
+                              quest.claimedAt || claimedQuests.has(quest._id)
+                            ) &&
                             quest.questType !== "discord" && (
                               <button
                                 onClick={() => handleClaimQuest(quest._id)}
@@ -794,6 +967,230 @@ const UserProfilePage = () => {
               </div>
 
               <div className="lg:col-span-1">
+                {/* Referral Visualization - Moved to top */}
+                {referralStats && (
+                  <div
+                    id="referral"
+                    className="bg-white rounded-lg shadow-lg transform transition-all duration-300 hover:shadow-xl mb-3"
+                  >
+                    <div className="bg-white rounded-xl p-4">
+                      <div className="flex justify-between items-center mb-3">
+                        <h2 className="text-base font-bold text-gray-900">
+                          {isOwnProfile
+                            ? "Referral Program"
+                            : "Referral Statistics"}
+                        </h2>
+                      </div>
+                      <div className="flex flex-col gap-3">
+                        {/* Referral Code Input Section for New Users */}
+                        {isOwnProfile &&
+                          hasReferrer === false &&
+                          (userProfile?.activitiesList?.length || 0) < 3 && (
+                            <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-4 border border-green-200">
+                              <h3 className="text-sm font-semibold text-gray-900 mb-3">
+                                Enter Referral Code
+                              </h3>
+                              <div className="space-y-3">
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="text"
+                                    value={referralCodeInput}
+                                    onChange={(e) =>
+                                      setReferralCodeInput(e.target.value)
+                                    }
+                                    placeholder="Enter referral code (e.g., ABC12345)"
+                                    className="flex-1 bg-white rounded-lg px-3 py-2 border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                                    maxLength={8}
+                                  />
+                                  <button
+                                    onClick={submitReferralCode}
+                                    disabled={
+                                      !referralCodeInput.trim() ||
+                                      isSubmittingReferral
+                                    }
+                                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                                  >
+                                    {isSubmittingReferral ? (
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                        Applying...
+                                      </div>
+                                    ) : (
+                                      "Apply"
+                                    )}
+                                  </button>
+                                </div>
+                                <div className="text-xs text-gray-600">
+                                  Enter a friend&apos;s referral code to get
+                                  started and earn bonus points!
+                                </div>
+                                {referralError && (
+                                  <div className="text-red-600 text-xs">
+                                    {referralError}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                        {/* Referral Code Section */}
+                        {isOwnProfile &&
+                          (hasReferrer === true ||
+                            (userProfile?.activitiesList?.length || 0) >=
+                              3) && (
+                            <div className="bg-gradient-to-r from-violet-50 to-indigo-50 rounded-lg p-4 border border-violet-200">
+                              <h3 className="text-sm font-semibold text-gray-900 mb-3">
+                                Your Referral Code
+                              </h3>
+
+                              {referralStats?.referralCode ? (
+                                <div className="space-y-3">
+                                  <div className="flex items-center gap-2">
+                                    <div className="flex-1 bg-white rounded-lg px-3 py-2 border border-gray-200">
+                                      <code className="text-lg font-mono text-violet-600 font-bold">
+                                        {referralStats.referralCode}
+                                      </code>
+                                    </div>
+                                    <button
+                                      onClick={() =>
+                                        copyToClipboard(
+                                          referralStats.referralCode!
+                                        )
+                                      }
+                                      className="px-3 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors"
+                                      title="Copy to clipboard"
+                                    >
+                                      <svg
+                                        className="w-4 h-4"
+                                        viewBox="0 -28.5 256 256"
+                                        fill="currentColor"
+                                      >
+                                        <path d="M216.856339,16.5966031 C200.285002,8.84328665 182.566144,3.2084988 164.041564,0 C161.766523,4.11318106 159.108624,9.64549908 157.276099,14.0464379 C137.583995,11.0849896 118.072967,11.0849896 98.7430163,14.0464379 C96.9108417,9.64549908 94.1925838,4.11318106 91.8971895,0 C73.3526068,3.2084988 55.6133949,8.86399117 39.0420583,16.6376612 C5.61752293,67.146514 -3.4433191,116.400813 1.08711069,164.955721 C23.2560196,181.510915 44.7403634,191.567697 65.8621325,198.148576 C71.0772151,190.971126 75.7283628,183.341335 79.7352139,175.300261 C72.104019,172.400575 64.7949724,168.822202 57.8887866,164.667963 C59.7209612,163.310589 61.5131304,161.891452 63.2445898,160.431257 C105.36741,180.133187 151.134928,180.133187 192.754523,160.431257 C194.506336,161.891452 196.298154,163.310589 198.110326,164.667963 C191.183787,168.842556 183.854737,172.420929 176.223542,175.320965 C180.230393,183.341335 184.861538,190.991831 190.096624,198.16893 C211.238746,191.588051 232.743023,181.531619 254.911949,164.955721 C260.227747,108.668201 245.831087,59.8662432 216.856339,16.5966031 Z M85.4738752,135.09489 C72.8290281,135.09489 62.4592217,123.290155 62.4592217,108.914901 C62.4592217,94.5396472 72.607595,82.7145587 85.4738752,82.7145587 C98.3405064,82.7145587 108.709962,94.5189427 108.488529,108.914901 C108.508531,123.290155 98.3405064,135.09489 85.4738752,135.09489 Z M170.525237,135.09489 C157.88039,135.09489 147.510584,123.290155 147.510584,108.914901 C147.510584,94.5396472 157.658606,82.7145587 170.525237,82.7145587 C183.391518,82.7145587 193.761324,94.5189427 193.539891,108.914901 C193.539891,123.290155 183.391518,135.09489 170.525237,135.09489 Z" />
+                                      </svg>
+                                    </button>
+                                  </div>
+                                  <div className="text-xs text-gray-600">
+                                    Share this code with friends to earn 100
+                                    points for each referral plus 10% of their
+                                    trade points!
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="space-y-3">
+                                  <button
+                                    onClick={generateReferralCode}
+                                    disabled={isGeneratingCode}
+                                    className="w-full px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                  >
+                                    {isGeneratingCode ? (
+                                      <div className="flex items-center justify-center gap-2">
+                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                        Generating...
+                                      </div>
+                                    ) : (
+                                      "Generate Referral Code"
+                                    )}
+                                  </button>
+                                  <div className="text-xs text-gray-600">
+                                    Create your unique referral code to start
+                                    earning points
+                                  </div>
+                                </div>
+                              )}
+
+                              {referralError && (
+                                <div className="text-red-600 text-xs mt-2">
+                                  {referralError}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                        {/* Referral Statistics */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="bg-white rounded-lg p-3 border border-gray-200 text-center">
+                            <div className="text-2xl font-bold text-violet-600">
+                              {referralStats.totalReferred}
+                            </div>
+                            <div className="text-xs text-gray-600">
+                              Total Referred
+                            </div>
+                          </div>
+                          <div className="bg-white rounded-lg p-3 border border-gray-200 text-center">
+                            <div className="text-2xl font-bold text-green-600">
+                              {referralStats.totalPointsEarned}
+                            </div>
+                            <div className="text-xs text-gray-600">
+                              Points Earned
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Referred Users List */}
+                        {referralStats.referredUsers.length > 0 && (
+                          <div className="space-y-2">
+                            <h4 className="text-sm font-semibold text-gray-900">
+                              Referred Users
+                            </h4>
+                            <div className="max-h-48 overflow-y-auto space-y-2">
+                              {referralStats.referredUsers.map(
+                                (user, index) => (
+                                  <Link
+                                    href={`/users/${user.address}`}
+                                    key={user.address}
+                                    className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                                  >
+                                    <div className="w-8 h-8 rounded-full overflow-hidden border border-gray-200">
+                                      <Image
+                                        src={
+                                          user.nadAvatar ||
+                                          `/avatar_${index % 6}.png`
+                                        }
+                                        alt="User Avatar"
+                                        width={32}
+                                        height={32}
+                                        className="w-full h-full object-cover"
+                                      />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="text-sm font-medium text-gray-900 truncate">
+                                        {user.nadName ||
+                                          formatAddress(user.address)}
+                                      </div>
+                                      <div className="text-xs text-gray-500">
+                                        {user.totalPoints} pts • Joined{" "}
+                                        {formatDate(user.joinedAt)}
+                                      </div>
+                                    </div>
+                                    <div className="text-xs text-green-600 font-medium">
+                                      +{user.pointsEarned}
+                                    </div>
+                                  </Link>
+                                )
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Empty State */}
+                        {referralStats.totalReferred === 0 && (
+                          <div className="text-center py-6 text-gray-500">
+                            <div className="text-4xl mb-2">🤝</div>
+                            <div className="text-sm font-medium mb-1">
+                              No referrals yet
+                            </div>
+                            <div className="text-xs">
+                              {isOwnProfile
+                                ? "Share your referral code to start earning points!"
+                                : "This user hasn't referred anyone yet"}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="bg-white rounded-lg shadow-lg transform transition-all duration-300 hover:shadow-xl">
                   <div className="bg-white rounded-xl p-4">
                     <div className="flex justify-between items-center mb-3">
@@ -885,10 +1282,10 @@ const UserProfilePage = () => {
                                 ) : activity.name === "Discord Connected" ? (
                                   <svg
                                     className="w-5 h-5 text-indigo-500"
-                                    viewBox="0 0 24 24"
+                                    viewBox="0 -28.5 256 256"
                                     fill="currentColor"
                                   >
-                                    <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.30z" />
+                                    <path d="M216.856339,16.5966031 C200.285002,8.84328665 182.566144,3.2084988 164.041564,0 C161.766523,4.11318106 159.108624,9.64549908 157.276099,14.0464379 C137.583995,11.0849896 118.072967,11.0849896 98.7430163,14.0464379 C96.9108417,9.64549908 94.1925838,4.11318106 91.8971895,0 C73.3526068,3.2084988 55.6133949,8.86399117 39.0420583,16.6376612 C5.61752293,67.146514 -3.4433191,116.400813 1.08711069,164.955721 C23.2560196,181.510915 44.7403634,191.567697 65.8621325,198.148576 C71.0772151,190.971126 75.7283628,183.341335 79.7352139,175.300261 C72.104019,172.400575 64.7949724,168.822202 57.8887866,164.667963 C59.7209612,163.310589 61.5131304,161.891452 63.2445898,160.431257 C105.36741,180.133187 151.134928,180.133187 192.754523,160.431257 C194.506336,161.891452 196.298154,163.310589 198.110326,164.667963 C191.183787,168.842556 183.854737,172.420929 176.223542,175.320965 C180.230393,183.341335 184.861538,190.991831 190.096624,198.16893 C211.238746,191.588051 232.743023,181.531619 254.911949,164.955721 C260.227747,108.668201 245.831087,59.8662432 216.856339,16.5966031 Z M85.4738752,135.09489 C72.8290281,135.09489 62.4592217,123.290155 62.4592217,108.914901 C62.4592217,94.5396472 72.607595,82.7145587 85.4738752,82.7145587 C98.3405064,82.7145587 108.709962,94.5189427 108.488529,108.914901 C108.508531,123.290155 98.3405064,135.09489 85.4738752,135.09489 Z M170.525237,135.09489 C157.88039,135.09489 147.510584,123.290155 147.510584,108.914901 C147.510584,94.5396472 157.658606,82.7145587 170.525237,82.7145587 C183.391518,82.7145587 193.761324,94.5189427 193.539891,108.914901 C193.539891,123.290155 183.391518,135.09489 170.525237,135.09489 Z" />
                                   </svg>
                                 ) : activity.name.includes("Quest") ? (
                                   <svg
@@ -902,6 +1299,20 @@ const UserProfilePage = () => {
                                       strokeLinejoin="round"
                                       strokeWidth="2"
                                       d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                    />
+                                  </svg>
+                                ) : activity.name === "Referral Trade Bonus" ? (
+                                  <svg
+                                    className="w-5 h-5 text-green-500"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth="2"
+                                      d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"
                                     />
                                   </svg>
                                 ) : (
@@ -978,6 +1389,27 @@ const UserProfilePage = () => {
                                 {!activity?.intentId?.tokenSymbol && (
                                   <div className="font-semibold text-gray-900">
                                     {activity.name}
+                                  </div>
+                                )}
+
+                                {/* Referral Trade Bonus Details */}
+                                {activity.name === "Referral Trade Bonus" && (
+                                  <div className="space-y-2">
+                                    <div className="text-sm text-gray-600">
+                                      Earned from{" "}
+                                      {activity.referredUserAddress
+                                        ? formatAddress(
+                                            activity.referredUserAddress
+                                          )
+                                        : "referred user"}
+                                      &apos;s trade
+                                    </div>
+                                    {activity.originalTradePoints && (
+                                      <div className="text-xs text-gray-500">
+                                        Original trade:{" "}
+                                        {activity.originalTradePoints} points
+                                      </div>
+                                    )}
                                   </div>
                                 )}
 
