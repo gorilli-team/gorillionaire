@@ -17,15 +17,13 @@ export default function ReferralBanner() {
         <span>
           <span className="font-bold">Referrals are live!</span>
         </span>
-        {isConnected && (
-          <a
-            href="/profile/me"
-            rel="noopener noreferrer"
-            className="bg-white text-indigo-600 px-4 py-1.5 rounded-md font-bold text-sm hover:bg-gray-100 transition-colors duration-200 shadow-lg"
-          >
-            Get extra XPs now!
-          </a>
-        )}
+        <a
+          href="/profile/me"
+          rel="noopener noreferrer"
+          className="bg-white text-indigo-600 px-4 py-1.5 rounded-md font-bold text-sm hover:bg-gray-100 transition-colors duration-200 shadow-lg"
+        >
+          Get extra XPs now!
+        </a>
       </div>
     </div>
   );
