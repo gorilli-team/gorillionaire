@@ -214,18 +214,6 @@ const LeaderboardComponent = () => {
   const totalInvestorPages = Math.ceil(investorCount / itemsPerPage);
   const currentInvestors = investors; // Use directly, no filtering
 
-  // Function to create empty rows to maintain height
-  const getEmptyRows = <T,>(items: T[], itemsPerPage: number): null[] => {
-    const currentItemCount = items.length;
-    if (currentItemCount < itemsPerPage) {
-      return Array(itemsPerPage - currentItemCount).fill(null);
-    }
-    return [];
-  };
-
-  // Empty rows for both tables
-  const emptyInvestorRows = getEmptyRows(currentInvestors, itemsPerPage);
-
   // Use myData instead of finding in investors list
   const myInvestor = myData;
   const pageInvestors = currentInvestors;
@@ -501,21 +489,6 @@ const LeaderboardComponent = () => {
                         </td>
                       </tr>
                     ))}
-                    {/* Empty rows to maintain fixed height when fewer items */}
-                    {emptyInvestorRows.map((_, index) => (
-                      <tr
-                        key={`empty-${index}`}
-                        className="border-b border-gray-100"
-                      >
-                        <td className="h-16"></td>
-                        <td className="h-16"></td>
-                        <td className="h-16"></td>
-                        <td className="h-16"></td>
-                        <td className="h-16"></td>
-                        <td className="h-16"></td>
-                        <td className="h-16"></td>
-                      </tr>
-                    ))}
                   </tbody>
                 </table>
 
@@ -744,12 +717,11 @@ const LeaderboardComponent = () => {
                   ))}
 
                   {/* Empty state for mobile if needed */}
-                  {emptyInvestorRows.length > 0 &&
-                    currentInvestors.length === 0 && (
-                      <div className="text-center text-gray-500 text-sm py-8">
-                        No investors to display
-                      </div>
-                    )}
+                  {currentInvestors.length === 0 && (
+                    <div className="text-center text-gray-500 text-sm py-8">
+                      No investors to display
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
