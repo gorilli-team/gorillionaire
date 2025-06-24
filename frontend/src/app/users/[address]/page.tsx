@@ -130,6 +130,21 @@ interface ReferralStats {
   referredUsers: ReferredUser[];
 }
 
+interface FearGreedIndex {
+  score: number;
+  sentiment: string;
+  color: string;
+  bgColor: string;
+  description: string;
+  factors: {
+    buyRatio: number;
+    avgTradeSize: number;
+    tradeFrequency: number;
+    priceVolatility: number;
+    recentActivity: number;
+  };
+}
+
 const UserProfilePage = () => {
   const params = useParams();
   const { address: connectedAddress } = useAccount();
@@ -153,6 +168,10 @@ const UserProfilePage = () => {
   const [hasReferrer, setHasReferrer] = useState<boolean | null>(null);
   const [referralCodeInput, setReferralCodeInput] = useState("");
   const [isSubmittingReferral, setIsSubmittingReferral] = useState(false);
+  const [fearGreedIndex, setFearGreedIndex] = useState<FearGreedIndex | null>(
+    null
+  );
+  const [showGorillaIndexModal, setShowGorillaIndexModal] = useState(false);
 
   const { data: v2NFTBalance } = useReadContract({
     abi,
@@ -372,6 +391,144 @@ const UserProfilePage = () => {
     setClaimedQuests(alreadyClaimed);
   };
 
+  const calculateFearGreedIndex = (
+    activities: UserActivity[]
+  ): FearGreedIndex => {
+    // Filter only trading activities
+    const trades = activities.filter(
+      (activity) =>
+        activity.intentId &&
+        activity.intentId.action &&
+        activity.intentId.tokenAmount
+    );
+
+    if (trades.length === 0) {
+      return {
+        score: 50,
+        sentiment: "Neutral",
+        color: "text-gray-600",
+        bgColor: "bg-gray-100",
+        description: "No trading activity yet",
+        factors: {
+          buyRatio: 0,
+          avgTradeSize: 0,
+          tradeFrequency: 0,
+          priceVolatility: 0,
+          recentActivity: 0,
+        },
+      };
+    }
+
+    // Calculate buy ratio (0-100)
+    const buyTrades = trades.filter((trade) => trade.intentId.action === "buy");
+    const buyRatio = (buyTrades.length / trades.length) * 100;
+
+    // Calculate average trade size (normalized 0-100)
+    const tradeSizes = trades.map(
+      (trade) => trade.intentId.tokenAmount * trade.intentId.tokenPrice
+    );
+    const avgTradeSize =
+      tradeSizes.reduce((sum, size) => sum + size, 0) / trades.length;
+    const maxTradeSize = Math.max(...tradeSizes);
+    const normalizedTradeSize =
+      maxTradeSize > 0 ? (avgTradeSize / maxTradeSize) * 100 : 0;
+
+    // Calculate trade frequency (0-100)
+    const firstTrade = new Date(
+      Math.min(...trades.map((t) => new Date(t.date).getTime()))
+    );
+    const lastTrade = new Date(
+      Math.max(...trades.map((t) => new Date(t.date).getTime()))
+    );
+    const daysActive =
+      (lastTrade.getTime() - firstTrade.getTime()) / (1000 * 60 * 60 * 24);
+    const tradeFrequency =
+      daysActive > 0 ? Math.min((trades.length / daysActive) * 10, 100) : 0;
+
+    // Calculate price volatility (0-100)
+    const prices = trades.map((trade) => trade.intentId.tokenPrice);
+    const avgPrice =
+      prices.reduce((sum, price) => sum + price, 0) / prices.length;
+    const variance =
+      prices.reduce((sum, price) => sum + Math.pow(price - avgPrice, 2), 0) /
+      prices.length;
+    const volatility = (Math.sqrt(variance) / avgPrice) * 100;
+    const normalizedVolatility = Math.min(volatility * 10, 100);
+
+    // Calculate recent activity (0-100)
+    const now = new Date();
+    const recentTrades = trades.filter((trade) => {
+      const tradeDate = new Date(trade.date);
+      const daysDiff =
+        (now.getTime() - tradeDate.getTime()) / (1000 * 60 * 60 * 24);
+      return daysDiff <= 7; // Last 7 days
+    });
+    const recentActivity =
+      (recentTrades.length / Math.max(trades.length, 1)) * 100;
+
+    // Calculate overall score (0-100)
+    // Higher buy ratio = more greed
+    // Higher trade size = more greed
+    // Higher frequency = more greed
+    // Higher volatility = more fear
+    // Higher recent activity = more greed
+    const score = Math.round(
+      buyRatio * 0.3 +
+        normalizedTradeSize * 0.2 +
+        tradeFrequency * 0.2 +
+        (100 - normalizedVolatility) * 0.15 + // Invert volatility (higher volatility = more fear)
+        recentActivity * 0.15
+    );
+
+    // Determine sentiment and colors
+    let sentiment: string;
+    let color: string;
+    let bgColor: string;
+    let description: string;
+
+    if (score >= 80) {
+      sentiment = "Extreme Greed";
+      color = "text-red-600";
+      bgColor = "bg-red-100";
+      description = "Very aggressive trading behavior";
+    } else if (score >= 60) {
+      sentiment = "Greed";
+      color = "text-orange-600";
+      bgColor = "bg-orange-100";
+      description = "Optimistic trading approach";
+    } else if (score >= 40) {
+      sentiment = "Neutral";
+      color = "text-gray-600";
+      bgColor = "bg-gray-100";
+      description = "Balanced trading strategy";
+    } else if (score >= 20) {
+      sentiment = "Fear";
+      color = "text-blue-600";
+      bgColor = "bg-blue-100";
+      description = "Cautious trading behavior";
+    } else {
+      sentiment = "Extreme Fear";
+      color = "text-purple-600";
+      bgColor = "bg-purple-100";
+      description = "Very conservative approach";
+    }
+
+    return {
+      score,
+      sentiment,
+      color,
+      bgColor,
+      description,
+      factors: {
+        buyRatio: Math.round(buyRatio),
+        avgTradeSize: Math.round(normalizedTradeSize),
+        tradeFrequency: Math.round(tradeFrequency),
+        priceVolatility: Math.round(normalizedVolatility),
+        recentActivity: Math.round(recentActivity),
+      },
+    };
+  };
+
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
@@ -388,7 +545,7 @@ const UserProfilePage = () => {
           profile = await nnsClient.getProfile(address as HexString);
         }
 
-        setUserProfile({
+        const userProfileData = {
           address: data.userActivity?.address || address,
           nadName: profile?.primaryName,
           nadAvatar: profile?.avatar,
@@ -398,7 +555,15 @@ const UserProfilePage = () => {
           dollarValue: data.userActivity?.dollarValue ?? 0,
           pagination: data.userActivity?.pagination,
           hasV2NFT: Number(v2NFTBalance) > 0,
-        });
+        };
+
+        setUserProfile(userProfileData);
+
+        // Calculate fear and greed index
+        const fearGreed = calculateFearGreedIndex(
+          data.userActivity?.activitiesList || []
+        );
+        setFearGreedIndex(fearGreed);
       } catch (error) {
         console.error("Error fetching user profile:", error);
       } finally {
@@ -471,6 +636,22 @@ const UserProfilePage = () => {
     return `${address.substring(0, 6)}...${address.substring(
       address.length - 4
     )}`;
+  };
+
+  const getGorillaIndexBadgeColor = (score: number) => {
+    if (score >= 80) return "bg-red-100 text-red-800";
+    if (score >= 60) return "bg-orange-100 text-orange-800";
+    if (score >= 40) return "bg-gray-100 text-gray-800";
+    if (score >= 20) return "bg-blue-100 text-blue-800";
+    return "bg-purple-100 text-purple-800";
+  };
+
+  const getGorillaIndexIcon = (score: number) => {
+    if (score >= 80) return "🦍"; // Extreme Greed - Aggressive Gorilla
+    if (score >= 60) return "🐒"; // Greed - Active Monkey
+    if (score >= 40) return "🦧"; // Neutral - Balanced Orangutan
+    if (score >= 20) return "🦥"; // Fear - Sloth (slow/cautious)
+    return "🦘"; // Extreme Fear - Kangaroo (jumping away)
   };
 
   if (isLoading) {
@@ -727,22 +908,19 @@ const UserProfilePage = () => {
                     </div>
 
                     <div className="flex gap-2 flex-wrap">
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
-                        <svg
-                          className="w-4 h-4 mr-1"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
+                      {fearGreedIndex && (
+                        <button
+                          onClick={() => setShowGorillaIndexModal(true)}
+                          className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getGorillaIndexBadgeColor(
+                            fearGreedIndex.score
+                          )} hover:opacity-80 transition-opacity cursor-pointer`}
                         >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                          />
-                        </svg>
-                        Verified
-                      </span>
+                          <span className="mr-1">
+                            {getGorillaIndexIcon(fearGreedIndex.score)}
+                          </span>
+                          Gorilla Index {fearGreedIndex.score}
+                        </button>
+                      )}
 
                       {userProfile.hasV2NFT && (
                         <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-pink-100 text-pink-800">
@@ -1507,7 +1685,189 @@ const UserProfilePage = () => {
                     )}
                   </div>
                 </div>
-                <div className="bg-white rounded-lg shadow-lg transform transition-all duration-300 hover:shadow-xl mt-3">
+
+                {/* Fear & Greed Index */}
+                {fearGreedIndex && (
+                  <div className="bg-white rounded-lg shadow-lg transform transition-all duration-300 hover:shadow-xl mt-3">
+                    <div className="bg-white rounded-xl p-4">
+                      <div className="flex justify-between items-center mb-3">
+                        <h2 className="text-base font-bold text-gray-900">
+                          Gorilla Index
+                        </h2>
+                        <svg
+                          className="w-5 h-5 text-gray-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                      </div>
+
+                      {/* Main Score Display */}
+                      <div
+                        className={`${fearGreedIndex.bgColor} rounded-lg p-4 mb-4`}
+                      >
+                        <div className="text-center">
+                          <div
+                            className={`text-3xl font-bold ${fearGreedIndex.color} mb-2`}
+                          >
+                            {fearGreedIndex.score}
+                          </div>
+                          <div
+                            className={`text-lg font-semibold ${fearGreedIndex.color} mb-1`}
+                          >
+                            {fearGreedIndex.sentiment}
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            {fearGreedIndex.description}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Progress Bar */}
+                      <div className="mb-4">
+                        <div className="flex justify-between text-xs text-gray-500 mb-1">
+                          <span>Fear</span>
+                          <span>Greed</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div
+                            className="bg-gradient-to-r from-blue-500 via-gray-400 to-red-500 h-2 rounded-full transition-all duration-300"
+                            style={{ width: `${fearGreedIndex.score}%` }}
+                          ></div>
+                        </div>
+                      </div>
+
+                      {/* Factors Breakdown */}
+                      <div className="space-y-3">
+                        <h4 className="text-sm font-semibold text-gray-900">
+                          Trading Factors
+                        </h4>
+
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs text-gray-600">
+                              Buy Ratio
+                            </span>
+                            <span className="text-xs font-medium text-gray-900">
+                              {fearGreedIndex.factors.buyRatio}%
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-1">
+                            <div
+                              className="bg-green-500 h-1 rounded-full"
+                              style={{
+                                width: `${fearGreedIndex.factors.buyRatio}%`,
+                              }}
+                            ></div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs text-gray-600">
+                              Trade Size
+                            </span>
+                            <span className="text-xs font-medium text-gray-900">
+                              {fearGreedIndex.factors.avgTradeSize}%
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-1">
+                            <div
+                              className="bg-purple-500 h-1 rounded-full"
+                              style={{
+                                width: `${fearGreedIndex.factors.avgTradeSize}%`,
+                              }}
+                            ></div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs text-gray-600">
+                              Frequency
+                            </span>
+                            <span className="text-xs font-medium text-gray-900">
+                              {fearGreedIndex.factors.tradeFrequency}%
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-1">
+                            <div
+                              className="bg-orange-500 h-1 rounded-full"
+                              style={{
+                                width: `${fearGreedIndex.factors.tradeFrequency}%`,
+                              }}
+                            ></div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs text-gray-600">
+                              Volatility
+                            </span>
+                            <span className="text-xs font-medium text-gray-900">
+                              {fearGreedIndex.factors.priceVolatility}%
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-1">
+                            <div
+                              className="bg-red-500 h-1 rounded-full"
+                              style={{
+                                width: `${fearGreedIndex.factors.priceVolatility}%`,
+                              }}
+                            ></div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs text-gray-600">
+                              Recent Activity
+                            </span>
+                            <span className="text-xs font-medium text-gray-900">
+                              {fearGreedIndex.factors.recentActivity}%
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-1">
+                            <div
+                              className="bg-indigo-500 h-1 rounded-full"
+                              style={{
+                                width: `${fearGreedIndex.factors.recentActivity}%`,
+                              }}
+                            ></div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Legend */}
+                      <div className="mt-4 pt-3 border-t border-gray-200">
+                        <div className="text-xs text-gray-500">
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className="w-3 h-3 bg-blue-500 rounded"></div>
+                            <span>Fear: Conservative, risk-averse trading</span>
+                          </div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className="w-3 h-3 bg-gray-400 rounded"></div>
+                            <span>Neutral: Balanced approach</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 bg-red-500 rounded"></div>
+                            <span>Greed: Aggressive, risk-taking behavior</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="bg-white rounded-lg shadow-lg transform transition-all duration-300 hover:shadow-xl">
                   <div className="bg-white rounded-xl p-4">
                     <div className="flex justify-between items-center mb-3">
                       <h2 className="text-base font-bold text-gray-900">
@@ -1587,6 +1947,226 @@ const UserProfilePage = () => {
           </div>
         </div>
       </main>
+
+      {/* Gorilla Index Modal */}
+      {showGorillaIndexModal && fearGreedIndex && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                  <span>{getGorillaIndexIcon(fearGreedIndex.score)}</span>
+                  Gorilla Index
+                </h2>
+                <button
+                  onClick={() => setShowGorillaIndexModal(false)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <svg
+                    className="w-6 h-6"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Main Score Display */}
+              <div
+                className={`${fearGreedIndex.bgColor} rounded-lg p-6 mb-6 text-center`}
+              >
+                <div
+                  className={`text-4xl font-bold ${fearGreedIndex.color} mb-2`}
+                >
+                  {fearGreedIndex.score}
+                </div>
+                <div
+                  className={`text-xl font-semibold ${fearGreedIndex.color} mb-2`}
+                >
+                  {fearGreedIndex.sentiment}
+                </div>
+                <div className="text-sm text-gray-600">
+                  {fearGreedIndex.description}
+                </div>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="mb-6">
+                <div className="flex justify-between text-sm text-gray-500 mb-2">
+                  <span>Fear</span>
+                  <span>Greed</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-3">
+                  <div
+                    className="bg-gradient-to-r from-blue-500 via-gray-400 to-red-500 h-3 rounded-full transition-all duration-300"
+                    style={{ width: `${fearGreedIndex.score}%` }}
+                  ></div>
+                </div>
+              </div>
+
+              {/* Factors Breakdown */}
+              <div className="space-y-4">
+                <h4 className="text-lg font-semibold text-gray-900">
+                  Trading Factors
+                </h4>
+
+                <div className="space-y-3">
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm font-medium text-gray-700">
+                        Buy Ratio
+                      </span>
+                      <span className="text-sm font-bold text-gray-900">
+                        {fearGreedIndex.factors.buyRatio}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-green-500 h-2 rounded-full"
+                        style={{ width: `${fearGreedIndex.factors.buyRatio}%` }}
+                      ></div>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Percentage of buy vs sell trades
+                    </p>
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm font-medium text-gray-700">
+                        Trade Size
+                      </span>
+                      <span className="text-sm font-bold text-gray-900">
+                        {fearGreedIndex.factors.avgTradeSize}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-purple-500 h-2 rounded-full"
+                        style={{
+                          width: `${fearGreedIndex.factors.avgTradeSize}%`,
+                        }}
+                      ></div>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Average trade size relative to largest trade
+                    </p>
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm font-medium text-gray-700">
+                        Frequency
+                      </span>
+                      <span className="text-sm font-bold text-gray-900">
+                        {fearGreedIndex.factors.tradeFrequency}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-orange-500 h-2 rounded-full"
+                        style={{
+                          width: `${fearGreedIndex.factors.tradeFrequency}%`,
+                        }}
+                      ></div>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Trades per day over trading period
+                    </p>
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm font-medium text-gray-700">
+                        Volatility
+                      </span>
+                      <span className="text-sm font-bold text-gray-900">
+                        {fearGreedIndex.factors.priceVolatility}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-red-500 h-2 rounded-full"
+                        style={{
+                          width: `${fearGreedIndex.factors.priceVolatility}%`,
+                        }}
+                      ></div>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Price volatility of traded tokens
+                    </p>
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm font-medium text-gray-700">
+                        Recent Activity
+                      </span>
+                      <span className="text-sm font-bold text-gray-900">
+                        {fearGreedIndex.factors.recentActivity}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-indigo-500 h-2 rounded-full"
+                        style={{
+                          width: `${fearGreedIndex.factors.recentActivity}%`,
+                        }}
+                      ></div>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Percentage of trades in last 7 days
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Legend */}
+              <div className="mt-6 pt-4 border-t border-gray-200">
+                <h5 className="text-sm font-semibold text-gray-900 mb-3">
+                  What This Means
+                </h5>
+                <div className="space-y-2 text-sm text-gray-600">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-blue-500 rounded"></div>
+                    <span>
+                      <strong>Fear:</strong> Conservative, risk-averse trading
+                      approach
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-gray-400 rounded"></div>
+                    <span>
+                      <strong>Neutral:</strong> Balanced trading strategy
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-red-500 rounded"></div>
+                    <span>
+                      <strong>Greed:</strong> Aggressive, risk-taking behavior
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-gray-200">
+                <p className="text-xs text-gray-500 text-center">
+                  The Gorilla Index analyzes your trading behavior to determine
+                  your market sentiment. Use this insight to understand your
+                  trading psychology and potentially adjust your strategy.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
