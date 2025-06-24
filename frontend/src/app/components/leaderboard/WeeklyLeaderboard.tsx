@@ -34,6 +34,13 @@ interface Activity {
   date: string;
 }
 
+interface CountdownTime {
+  days: number;
+  hours: number;
+  minutes: number;
+  seconds: number;
+}
+
 const isValidUrl = (urlString: string): boolean => {
   try {
     const url = new URL(urlString);
@@ -61,8 +68,45 @@ const WeeklyLeaderboardComponent = () => {
   } | null>(null);
   const [hasReferrals, setHasReferrals] = useState(false);
   const [totalWeeklyPoints, setTotalWeeklyPoints] = useState(0);
+  const [countdown, setCountdown] = useState<CountdownTime>({
+    days: 0,
+    hours: 0,
+    minutes: 0,
+    seconds: 0,
+  });
 
   const { address } = useAccount();
+
+  // Calculate time remaining until end of week
+  const calculateTimeRemaining = useCallback(() => {
+    if (!weekInfo) return;
+
+    const now = new Date().getTime();
+    const endOfWeek = weekInfo.weekEnd.getTime();
+    const timeDifference = endOfWeek - now;
+
+    if (timeDifference > 0) {
+      const days = Math.floor(timeDifference / (1000 * 60 * 60 * 24));
+      const hours = Math.floor(
+        (timeDifference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+      );
+      const minutes = Math.floor(
+        (timeDifference % (1000 * 60 * 60)) / (1000 * 60)
+      );
+      const seconds = Math.floor((timeDifference % (1000 * 60)) / 1000);
+
+      setCountdown({ days, hours, minutes, seconds });
+    } else {
+      setCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+    }
+  }, [weekInfo]);
+
+  // Update countdown every second
+  useEffect(() => {
+    calculateTimeRemaining();
+    const timer = setInterval(calculateTimeRemaining, 1000);
+    return () => clearInterval(timer);
+  }, [calculateTimeRemaining]);
 
   const onPageChange = (page: number) => {
     setCurrentPage(page);
@@ -298,7 +342,21 @@ const WeeklyLeaderboardComponent = () => {
                 <h2 className="text-lg font-bold text-violet-800">
                   Weekly Leaderboard
                 </h2>
+                {countdown.days > 0 ||
+                countdown.hours > 0 ||
+                countdown.minutes > 0 ||
+                countdown.seconds > 0 ? (
+                  <span className="text-sm text-red-600 font-medium">
+                    • {countdown.days}d {countdown.hours}h {countdown.minutes}m{" "}
+                    {countdown.seconds}s left
+                  </span>
+                ) : (
+                  <span className="text-sm text-red-600 font-medium">
+                    • Time&apos;s up!
+                  </span>
+                )}
               </div>
+
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <p className="text-sm text-violet-700">
