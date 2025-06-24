@@ -8,11 +8,9 @@ export default function WeeklyRafflePromo() {
     <div className="bg-gradient-to-br from-violet-50 via-purple-50 to-indigo-50 border border-violet-200 rounded-xl p-6 mb-6">
       <div className="text-center mb-6">
         <div className="flex items-center justify-center gap-3 mb-3">
-          <span className="text-4xl">🏆</span>
           <h2 className="text-2xl font-bold text-violet-800">
             Weekly Raffle Competition
           </h2>
-          <span className="text-4xl">🎉</span>
         </div>
         <p className="text-violet-700 text-lg font-medium">
           Compete weekly for a chance to win{" "}
@@ -110,21 +108,21 @@ export default function WeeklyRafflePromo() {
             </div>
             <div className="flex items-center gap-2">
               <span className="text-green-500">✓</span>
-              <span>Daily check-ins</span>
+              <span>Completing quests</span>
             </div>
           </div>
           <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="text-green-500">✓</span>
-              <span>Completing quests</span>
-            </div>
             <div className="flex items-center gap-2">
               <span className="text-green-500">✓</span>
               <span>Earning referral bonuses</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-green-500">✓</span>
-              <span>Participating in events</span>
+              <span>Special trading events</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-green-500">✓</span>
+              <span>Community challenges</span>
             </div>
           </div>
         </div>
