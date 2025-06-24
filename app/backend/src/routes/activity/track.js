@@ -8,6 +8,47 @@ const UserAuth = require("../../models/UserAuth");
 const { trackOnDiscordXpGained } = require("../../controllers/points");
 const Referral = require("../../models/Referral");
 
+// Simple in-memory cache for weekly leaderboard
+const weeklyCache = {
+  data: null,
+  timestamp: null,
+  weekStart: null,
+  ttl: 5 * 60 * 1000, // 5 minutes cache
+};
+
+// Helper function to get cache key for the current week
+const getWeeklyCacheKey = () => {
+  const now = new Date();
+  const startOfWeek = new Date(now);
+  const dayOfWeek = now.getDay();
+  const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  startOfWeek.setDate(now.getDate() - daysToSubtract);
+  startOfWeek.setHours(0, 0, 0, 0);
+  return startOfWeek.getTime();
+};
+
+// Helper function to check if cache is valid
+const isCacheValid = () => {
+  if (!weeklyCache.data || !weeklyCache.timestamp || !weeklyCache.weekStart) {
+    return false;
+  }
+
+  const currentWeek = getWeeklyCacheKey();
+  const now = Date.now();
+
+  return (
+    weeklyCache.weekStart === currentWeek &&
+    now - weeklyCache.timestamp < weeklyCache.ttl
+  );
+};
+
+// Helper function to invalidate cache
+const invalidateWeeklyCache = () => {
+  weeklyCache.data = null;
+  weeklyCache.timestamp = null;
+  weeklyCache.weekStart = null;
+};
+
 //track user signin
 router.post("/signin", async (req, res) => {
   try {
@@ -47,6 +88,8 @@ router.post("/signin", async (req, res) => {
         ],
       });
       await newUserActivity.save();
+      // Invalidate weekly cache since new user activity was created
+      invalidateWeeklyCache();
       await trackOnDiscordXpGained("Account Connected", address, 50, 50);
       res.json({ message: "User activity created" });
     } else {
@@ -76,6 +119,8 @@ router.post("/signin", async (req, res) => {
         // Do nothing to maintain current streak
       }
       await userActivity.save();
+      // Invalidate weekly cache since activity was updated
+      invalidateWeeklyCache();
       res.json({ message: "User activity updated" });
     }
   } catch (error) {
@@ -167,6 +212,9 @@ router.post("/trade-points", async (req, res) => {
     userActivity.points += points;
     await userActivity.save();
 
+    // Invalidate weekly cache since new activity was added
+    invalidateWeeklyCache();
+
     await trackOnDiscordXpGained("Trade", address, points, totalPoints);
 
     // Check if user has a referrer and award referral bonus
@@ -193,6 +241,9 @@ router.post("/trade-points", async (req, res) => {
           originalTradePoints: points,
         });
         await referrerActivity.save();
+
+        // Invalidate weekly cache since referral activity was added
+        invalidateWeeklyCache();
 
         // Update the referral record
         const referredUser = referral.referredUsers.find(
@@ -326,6 +377,226 @@ router.get("/leaderboard", async (req, res) => {
   }
 });
 
+router.get("/leaderboard/weekly", async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    // Calculate the start of the current week (Monday)
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    const dayOfWeek = now.getDay();
+    const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Sunday = 0, Monday = 1
+    startOfWeek.setDate(now.getDate() - daysToSubtract);
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    // Check if we have valid cached data
+    if (isCacheValid()) {
+      const cachedData = weeklyCache.data;
+      const total = cachedData.length;
+      const paginatedUsers = cachedData.slice(skip, skip + limit);
+
+      // Calculate total weekly points for percentage calculation
+      const totalWeeklyPoints = cachedData.reduce(
+        (sum, user) => sum + user.weeklyPoints,
+        0
+      );
+
+      // Get referral data for users in the current page
+      const userAddresses = paginatedUsers.map((user) => user.address);
+      const referrals = await Referral.find({
+        referrerAddress: { $in: userAddresses },
+      });
+
+      // Create a map of referral data for quick lookup
+      const referralMap = new Map();
+      referrals.forEach((referral) => {
+        // Filter referred users to only include those who joined this week
+        const weeklyReferredUsers = referral.referredUsers.filter(
+          (referredUser) => new Date(referredUser.joinedAt) >= startOfWeek
+        );
+
+        // Calculate weekly referral points (only from users who joined this week)
+        const weeklyReferralPoints = weeklyReferredUsers.reduce(
+          (total, referredUser) => total + (referredUser.pointsEarned || 0),
+          0
+        );
+
+        referralMap.set(referral.referrerAddress, {
+          totalReferred: weeklyReferredUsers.length,
+          totalReferralPoints: weeklyReferralPoints,
+        });
+      });
+
+      // Add rank and referral data
+      const usersWithRank = paginatedUsers.map((user, index) => {
+        const referralData = referralMap.get(user.address) || {
+          totalReferred: 0,
+          totalReferralPoints: 0,
+        };
+
+        return {
+          ...user,
+          rank: skip + index + 1,
+          points: user.weeklyPoints,
+          totalReferred: referralData.totalReferred,
+          totalReferralPoints: referralData.totalReferralPoints,
+        };
+      });
+
+      return res.json({
+        users: usersWithRank,
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+          hasMore: skip + usersWithRank.length < total,
+        },
+        weekStart: startOfWeek,
+        weekEnd: new Date(startOfWeek.getTime() + 7 * 24 * 60 * 60 * 1000 - 1),
+        totalWeeklyPoints,
+      });
+    }
+
+    // Use MongoDB aggregation pipeline for better performance
+    const pipeline = [
+      // Unwind activitiesList to work with individual activities
+      { $unwind: "$activitiesList" },
+
+      // Filter activities from this week only, excluding "Account Connected"
+      {
+        $match: {
+          "activitiesList.date": { $gte: startOfWeek },
+          "activitiesList.name": { $ne: "Account Connected" },
+        },
+      },
+
+      // Group by user and calculate weekly stats
+      {
+        $group: {
+          _id: "$address",
+          address: { $first: "$address" },
+          weeklyPoints: { $sum: "$activitiesList.points" },
+          weeklyActivities: { $sum: 1 },
+          createdAt: { $first: "$createdAt" },
+          // Keep other user fields
+          nonce: { $first: "$nonce" },
+          points: { $first: "$points" },
+          lastSignIn: { $first: "$lastSignIn" },
+          streak: { $first: "$streak" },
+          isRewarded: { $first: "$isRewarded" },
+          discordUsername: { $first: "$discordUsername" },
+          updatedAt: { $first: "$updatedAt" },
+        },
+      },
+
+      // Filter out users with 0 weekly points
+      { $match: { weeklyPoints: { $gt: 0 } } },
+
+      // Sort by weekly points (descending), then by creation date
+      {
+        $sort: {
+          weeklyPoints: -1,
+          createdAt: 1,
+        },
+      },
+    ];
+
+    const users = await UserActivity.aggregate(pipeline);
+
+    // Cache the results
+    weeklyCache.data = users;
+    weeklyCache.timestamp = Date.now();
+    weeklyCache.weekStart = getWeeklyCacheKey();
+
+    if (!users || users.length === 0) {
+      return res.json({
+        users: [],
+        pagination: {
+          total: 0,
+          page,
+          limit,
+          totalPages: 0,
+          hasMore: false,
+        },
+        weekStart: startOfWeek,
+        weekEnd: new Date(startOfWeek.getTime() + 7 * 24 * 60 * 60 * 1000 - 1),
+        totalWeeklyPoints: 0,
+      });
+    }
+
+    const total = users.length;
+    const paginatedUsers = users.slice(skip, skip + limit);
+
+    // Calculate total weekly points for percentage calculation
+    const totalWeeklyPoints = users.reduce(
+      (sum, user) => sum + user.weeklyPoints,
+      0
+    );
+
+    // Get referral data for users in the current page
+    const userAddresses = paginatedUsers.map((user) => user.address);
+    const referrals = await Referral.find({
+      referrerAddress: { $in: userAddresses },
+    });
+
+    // Create a map of referral data for quick lookup
+    const referralMap = new Map();
+    referrals.forEach((referral) => {
+      // Filter referred users to only include those who joined this week
+      const weeklyReferredUsers = referral.referredUsers.filter(
+        (referredUser) => new Date(referredUser.joinedAt) >= startOfWeek
+      );
+
+      // Calculate weekly referral points (only from users who joined this week)
+      const weeklyReferralPoints = weeklyReferredUsers.reduce(
+        (total, referredUser) => total + (referredUser.pointsEarned || 0),
+        0
+      );
+
+      referralMap.set(referral.referrerAddress, {
+        totalReferred: weeklyReferredUsers.length,
+        totalReferralPoints: weeklyReferralPoints,
+      });
+    });
+
+    // Add rank and referral data
+    const usersWithRank = paginatedUsers.map((user, index) => {
+      const referralData = referralMap.get(user.address) || {
+        totalReferred: 0,
+        totalReferralPoints: 0,
+      };
+
+      return {
+        ...user,
+        rank: skip + index + 1,
+        points: user.weeklyPoints, // Use weekly points instead of total points
+        totalReferred: referralData.totalReferred,
+        totalReferralPoints: referralData.totalReferralPoints,
+      };
+    });
+
+    res.json({
+      users: usersWithRank,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        hasMore: skip + usersWithRank.length < total,
+      },
+      weekStart: startOfWeek,
+      weekEnd: new Date(startOfWeek.getTime() + 7 * 24 * 60 * 60 * 1000 - 1),
+      totalWeeklyPoints,
+    });
+  } catch (error) {
+    console.error("Error fetching weekly leaderboard:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.get("/me", async (req, res) => {
   try {
     const { address } = req.query;
@@ -414,6 +685,181 @@ router.get("/me", async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching user activity:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Get user's weekly leaderboard info
+router.get("/me/weekly", async (req, res) => {
+  try {
+    const { address } = req.query;
+    if (!address) {
+      return res.status(400).json({ error: "No address provided" });
+    }
+
+    // Calculate the start of the current week (Monday)
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    const dayOfWeek = now.getDay();
+    const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Sunday = 0, Monday = 1
+    startOfWeek.setDate(now.getDate() - daysToSubtract);
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    // Use aggregation pipeline to get user's weekly stats efficiently
+    const userWeeklyPipeline = [
+      { $match: { address: address.toLowerCase() } },
+      { $unwind: "$activitiesList" },
+      {
+        $match: {
+          "activitiesList.date": { $gte: startOfWeek },
+          "activitiesList.name": { $ne: "Account Connected" },
+        },
+      },
+      {
+        $group: {
+          _id: "$address",
+          weeklyPoints: { $sum: "$activitiesList.points" },
+          weeklyActivities: { $sum: 1 },
+          createdAt: { $first: "$createdAt" },
+        },
+      },
+    ];
+
+    const userWeeklyResult = await UserActivity.aggregate(userWeeklyPipeline);
+    const myWeeklyPoints =
+      userWeeklyResult.length > 0 ? userWeeklyResult[0].weeklyPoints : 0;
+    const myWeeklyActivities =
+      userWeeklyResult.length > 0 ? userWeeklyResult[0].weeklyActivities : 0;
+    const myCreatedAt =
+      userWeeklyResult.length > 0 ? userWeeklyResult[0].createdAt : new Date();
+
+    // Get user's rank using aggregation pipeline
+    const rankPipeline = [
+      { $unwind: "$activitiesList" },
+      {
+        $match: {
+          "activitiesList.date": { $gte: startOfWeek },
+          "activitiesList.name": { $ne: "Account Connected" },
+        },
+      },
+      {
+        $group: {
+          _id: "$address",
+          weeklyPoints: { $sum: "$activitiesList.points" },
+          createdAt: { $first: "$createdAt" },
+        },
+      },
+      { $match: { weeklyPoints: { $gt: 0 } } },
+      {
+        $sort: {
+          weeklyPoints: -1,
+          createdAt: 1,
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          users: { $push: { address: "$_id", weeklyPoints: "$weeklyPoints" } },
+        },
+      },
+      {
+        $project: {
+          rank: {
+            $add: [
+              1,
+              {
+                $indexOfArray: ["$users.address", address.toLowerCase()],
+              },
+            ],
+          },
+        },
+      },
+    ];
+
+    const rankResult = await UserActivity.aggregate(rankPipeline);
+    const myRank = rankResult.length > 0 ? rankResult[0].rank : null;
+
+    // Get referral data for this user (filtered by weekly period)
+    let totalReferred = 0;
+    let totalReferralPoints = 0;
+    const referral = await Referral.findOne({
+      referrerAddress: address.toLowerCase(),
+    });
+    if (referral) {
+      // Filter referred users to only include those who joined this week
+      const weeklyReferredUsers = referral.referredUsers.filter(
+        (referredUser) => new Date(referredUser.joinedAt) >= startOfWeek
+      );
+
+      // Calculate weekly referral points (only from users who joined this week)
+      const weeklyReferralPoints = weeklyReferredUsers.reduce(
+        (total, referredUser) => total + (referredUser.pointsEarned || 0),
+        0
+      );
+
+      totalReferred = weeklyReferredUsers.length;
+      totalReferralPoints = weeklyReferralPoints;
+    }
+
+    // Get referral trade bonuses from user's weekly activities
+    const referralBonusPipeline = [
+      { $match: { address: address.toLowerCase() } },
+      { $unwind: "$activitiesList" },
+      {
+        $match: {
+          "activitiesList.date": { $gte: startOfWeek },
+          "activitiesList.name": "Referral Trade Bonus",
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalBonus: { $sum: "$activitiesList.points" },
+        },
+      },
+    ];
+
+    const referralBonusResult = await UserActivity.aggregate(
+      referralBonusPipeline
+    );
+    const weeklyReferralTradeBonuses =
+      referralBonusResult.length > 0 ? referralBonusResult[0].totalBonus : 0;
+    totalReferralPoints += weeklyReferralTradeBonuses;
+
+    res.json({
+      address,
+      weeklyPoints: myWeeklyPoints,
+      weeklyActivities: myWeeklyActivities,
+      rank: myRank,
+      totalReferred,
+      totalReferralPoints,
+    });
+  } catch (error) {
+    console.error("Error fetching weekly user leaderboard info:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Performance monitoring endpoint
+router.get("/performance", async (req, res) => {
+  try {
+    const cacheStats = {
+      cacheHit: weeklyCache.data !== null,
+      cacheAge: weeklyCache.timestamp
+        ? Date.now() - weeklyCache.timestamp
+        : null,
+      cacheSize: weeklyCache.data ? weeklyCache.data.length : 0,
+      weekStart: weeklyCache.weekStart,
+      currentWeek: getWeeklyCacheKey(),
+      isValid: isCacheValid(),
+    };
+
+    res.json({
+      cache: cacheStats,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error("Error fetching performance stats:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });

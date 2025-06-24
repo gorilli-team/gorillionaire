@@ -65,4 +65,14 @@ userActivitySchema.pre("findOne", function () {
   this.sort({ "activitiesList.date": -1 });
 });
 
+// Add compound index for weekly leaderboard queries
+userActivitySchema.index({
+  "activitiesList.date": 1,
+  "activitiesList.name": 1,
+});
+userActivitySchema.index({
+  "activitiesList.date": 1,
+  "activitiesList.points": 1,
+});
+
 module.exports = mongoose.model("UserActivity", userActivitySchema);

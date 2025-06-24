@@ -1,19 +1,17 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import Sidebar from "@/app/components/sidebar";
 import Header from "@/app/components/header";
-import LeaderboardComponent from "@/app/components/leaderboard/index";
 import WeeklyLeaderboardComponent from "@/app/components/leaderboard/WeeklyLeaderboard";
 
-const LeaderboardPage = () => {
-  const [selectedPage, setSelectedPage] = useState("Leaderboard");
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"all-time" | "weekly">("weekly");
+const WeeklyLeaderboardPage = () => {
+  const [selectedPage, setSelectedPage] = React.useState("Leaderboard");
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
   return (
     <div className="flex h-screen bg-gray-100 text-gray-800 overflow-hidden">
-      {/* Mobile menu button - adjusted positioning */}
+      {/* Mobile menu button */}
       <button
         aria-label="hamburger menu"
         className="rounded-full lg:hidden fixed top-4 left-4 z-50 p-2 bg-gray-200"
@@ -38,7 +36,7 @@ const LeaderboardPage = () => {
         </svg>
       </button>
 
-      {/* Sidebar with adjusted width and positioning */}
+      {/* Sidebar */}
       <div
         className={`
           fixed lg:static
@@ -58,7 +56,7 @@ const LeaderboardPage = () => {
         />
       </div>
 
-      {/* Overlay for mobile - increased z-index */}
+      {/* Overlay for mobile */}
       {isMobileMenuOpen && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
@@ -66,46 +64,29 @@ const LeaderboardPage = () => {
         />
       )}
 
-      {/* Main content with adjusted width and positioning */}
+      {/* Main content */}
       <div className="lg:ml-0 flex-1 flex flex-col w-full overflow-hidden">
         <Header />
         <div className="flex-1 overflow-auto pb-20">
-          {/* Tab Navigation */}
-          <div className="w-full bg-white border-b border-gray-200 px-4 py-2">
-            <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg max-w-md mx-auto">
-              <button
-                onClick={() => setActiveTab("weekly")}
-                className={`flex-1 py-2 px-4 rounded-md text-md font-medium transition-colors ${
-                  activeTab === "weekly"
-                    ? "bg-white text-gray-900 shadow-sm"
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
-              >
-                🦍 This Week
-              </button>
-              <button
-                onClick={() => setActiveTab("all-time")}
-                className={`flex-1 py-2 px-4 rounded-md text-md font-medium transition-colors ${
-                  activeTab === "all-time"
-                    ? "bg-white text-gray-900 shadow-sm"
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
-              >
-                All-Time
-              </button>
+          <div className="max-w-6xl mx-auto px-4 py-8">
+            {/* Page Header */}
+            <div className="text-center mb-8">
+              <h1 className="text-4xl font-bold text-gray-900 mb-4">
+                🏆 Weekly Leaderboard
+              </h1>
+              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+                Current week competition rankings and winning chances for the 50
+                MON raffle.
+              </p>
             </div>
-          </div>
 
-          {/* Leaderboard Content */}
-          {activeTab === "all-time" ? (
-            <LeaderboardComponent />
-          ) : (
+            {/* Weekly Leaderboard Component */}
             <WeeklyLeaderboardComponent />
-          )}
+          </div>
         </div>
       </div>
     </div>
   );
 };
 
-export default LeaderboardPage;
+export default WeeklyLeaderboardPage;

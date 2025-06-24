@@ -17,7 +17,7 @@ export default function Sidebar({
   const address = user?.wallet?.address;
 
   const handleGorillionaireClick = () => {
-    window.location.reload();
+    router.push("/");
   };
 
   const handlePageChange = (page: string) => {

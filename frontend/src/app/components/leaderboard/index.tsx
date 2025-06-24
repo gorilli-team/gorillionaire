@@ -69,56 +69,128 @@ const LeaderboardComponent = () => {
       );
       const data = await response.json();
 
-      const nadProfiles = await nnsClient.getProfiles(
-        data.users?.map((u: Investor) => u.address)
+      // Validate that we have users data
+      if (
+        !data.users ||
+        !Array.isArray(data.users) ||
+        data.users.length === 0
+      ) {
+        setInvestors([]);
+        setInvestorCount(0);
+        return;
+      }
+
+      // Filter out any users without valid addresses
+      const validUsers = data.users.filter(
+        (user: Investor) =>
+          user &&
+          user.address &&
+          typeof user.address === "string" &&
+          user.address.trim() !== ""
       );
 
-      const processedInvestors =
-        data.users.map((u: Investor, i: number) => ({
-          ...u,
-          nadName: nadProfiles[i]?.primaryName,
-          nadAvatar: nadProfiles[i]?.avatar || `/avatar_${i % 6}.png`,
-        })) || [];
+      if (validUsers.length === 0) {
+        setInvestors([]);
+        setInvestorCount(0);
+        return;
+      }
 
-      setInvestors(processedInvestors);
-      setInvestorCount(data.pagination.total);
+      const userAddresses = validUsers.map((u: Investor) => u.address);
+
+      try {
+        const nadProfiles = await nnsClient.getProfiles(userAddresses);
+
+        const processedInvestors =
+          validUsers.map((u: Investor, i: number) => ({
+            ...u,
+            nadName: nadProfiles[i]?.primaryName,
+            nadAvatar: nadProfiles[i]?.avatar || `/avatar_${i % 6}.png`,
+          })) || [];
+
+        setInvestors(processedInvestors);
+        setInvestorCount(data.pagination.total);
+      } catch (nnsError) {
+        console.error("Error fetching NNS profiles:", nnsError);
+        // Fallback: use investors without NNS profiles
+        const processedInvestors = validUsers.map((u: Investor, i: number) => ({
+          ...u,
+          nadName: undefined,
+          nadAvatar: `/avatar_${i % 6}.png`,
+        }));
+
+        setInvestors(processedInvestors);
+        setInvestorCount(data.pagination.total);
+      }
     } catch (error) {
       console.error("Error fetching leaderboard:", error);
       setInvestors([]);
+      setInvestorCount(0);
     }
   };
 
   const fetchMe = useCallback(async () => {
     try {
       if (!address) return;
+
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/activity/track/me?address=${address}`
       );
       const data = await response.json();
 
-      // Get NNS profile for the current user
-      const nadProfile = await nnsClient.getProfiles([address]);
+      // Validate address before calling NNS
+      if (!address || typeof address !== "string" || address.trim() === "") {
+        console.error("Invalid address for NNS lookup:", address);
+        return;
+      }
 
-      // Create investor object from /me response
-      const myInvestorData: Investor = {
-        rank: data.userActivity?.rank || 0, // Access rank from userActivity object
-        address: address,
-        nadName: nadProfile[0]?.primaryName,
-        nadAvatar:
-          nadProfile[0]?.avatar || `/avatar_${data.userActivity?.rank % 6}.png`,
-        points: data.userActivity?.points || 0,
-        activitiesList: data.userActivity?.activitiesList || [],
-        pagination: data.userActivity?.pagination || {
-          total: 0,
-          page: 1,
-          limit: 10,
-          totalPages: 1,
-        },
-        totalReferred: data.userActivity?.totalReferred || 0,
-        totalReferralPoints: data.userActivity?.totalReferralPoints || 0,
-      };
+      try {
+        // Get NNS profile for the current user
+        const nadProfile = await nnsClient.getProfiles([address]);
 
-      setMyData(myInvestorData);
+        // Create investor object from /me response
+        const myInvestorData: Investor = {
+          rank: data.userActivity?.rank || 0, // Access rank from userActivity object
+          address: address,
+          nadName: nadProfile[0]?.primaryName,
+          nadAvatar:
+            nadProfile[0]?.avatar ||
+            `/avatar_${data.userActivity?.rank % 6}.png`,
+          points: data.userActivity?.points || 0,
+          activitiesList: data.userActivity?.activitiesList || [],
+          pagination: data.userActivity?.pagination || {
+            total: 0,
+            page: 1,
+            limit: 10,
+            totalPages: 1,
+          },
+          totalReferred: data.userActivity?.totalReferred || 0,
+          totalReferralPoints: data.userActivity?.totalReferralPoints || 0,
+        };
+
+        setMyData(myInvestorData);
+      } catch (nnsError) {
+        console.error("Error fetching NNS profile for user:", nnsError);
+
+        // Fallback: create investor data without NNS profile
+        const myInvestorData: Investor = {
+          rank: data.userActivity?.rank || 0,
+          address: address,
+          nadName: undefined,
+          nadAvatar: `/avatar_${data.userActivity?.rank % 6}.png`,
+          points: data.userActivity?.points || 0,
+          activitiesList: data.userActivity?.activitiesList || [],
+          pagination: data.userActivity?.pagination || {
+            total: 0,
+            page: 1,
+            limit: 10,
+            totalPages: 1,
+          },
+          totalReferred: data.userActivity?.totalReferred || 0,
+          totalReferralPoints: data.userActivity?.totalReferralPoints || 0,
+        };
+
+        setMyData(myInvestorData);
+      }
     } catch (error) {
       console.error("Error fetching user activity:", error);
     }
@@ -142,18 +214,6 @@ const LeaderboardComponent = () => {
   const totalInvestorPages = Math.ceil(investorCount / itemsPerPage);
   const currentInvestors = investors; // Use directly, no filtering
 
-  // Function to create empty rows to maintain height
-  const getEmptyRows = <T,>(items: T[], itemsPerPage: number): null[] => {
-    const currentItemCount = items.length;
-    if (currentItemCount < itemsPerPage) {
-      return Array(itemsPerPage - currentItemCount).fill(null);
-    }
-    return [];
-  };
-
-  // Empty rows for both tables
-  const emptyInvestorRows = getEmptyRows(currentInvestors, itemsPerPage);
-
   // Use myData instead of finding in investors list
   const myInvestor = myData;
   const pageInvestors = currentInvestors;
@@ -165,13 +225,13 @@ const LeaderboardComponent = () => {
   };
 
   return (
-    <div className="w-full bg-gray-100 px-2">
-      <div className="w-full mx-auto px-1 sm:px-4 md:px-6 pt-4">
-        <div className="bg-white rounded-lg shadow-sm p-1 sm:p-3 md:p-6 mt-4 flex flex-col h-[calc(100vh-120px)]">
+    <div className="w-full">
+      <div className="w-full mx-auto">
+        <div className="bg-white rounded-lg shadow-sm p-1 sm:p-3 md:p-6 flex flex-col">
           {/* Table with reduced padding on mobile */}
           <div className="overflow-x-auto -mx-1 sm:-mx-3 md:-mx-6">
             <div className="px-1 sm:px-3 md:px-6">
-              <div className="h-[calc(100vh-280px)] sm:h-[500px] md:h-[600px] lg:h-[680px] overflow-auto pb-20 sm:pb-0">
+              <div className="mb-6">
                 {/* Desktop/Tablet View */}
                 <table className="w-full border-collapse hidden sm:table">
                   <thead className="sticky top-0 bg-white z-10">
@@ -248,26 +308,27 @@ const LeaderboardComponent = () => {
                             </div>
                           </td>
                           <td className="py-4 h-16 text-center text-gray-700 pr-2">
-                            {myInvestor.totalReferred > 0 && (
+                            {(myInvestor.totalReferred &&
+                              myInvestor.totalReferred > 0) ||
+                            (myInvestor.totalReferralPoints &&
+                              myInvestor.totalReferralPoints > 0) ? (
                               <div className="flex items-center gap-2 mt-1">
-                                <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-green-50 text-green-700">
-                                  {myInvestor.totalReferred} referrals
-                                </span>
-                                {myInvestor.totalReferralPoints > 0 && (
-                                  <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
-                                    {myInvestor.totalReferralPoints} ref pts
-                                  </span>
-                                )}
+                                {myInvestor.totalReferred &&
+                                  myInvestor.totalReferred > 0 && (
+                                    <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-green-50 text-green-700">
+                                      {myInvestor.totalReferred} referrals
+                                    </span>
+                                  )}
+                                {myInvestor.totalReferralPoints &&
+                                  myInvestor.totalReferralPoints > 0 && (
+                                    <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
+                                      {myInvestor.totalReferralPoints} ref pts
+                                    </span>
+                                  )}
                               </div>
+                            ) : (
+                              <span className="text-gray-300">-</span>
                             )}
-                            {myInvestor.totalReferred === 0 &&
-                              myInvestor.totalReferralPoints > 0 && (
-                                <div className="flex items-center gap-2 mt-1">
-                                  <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
-                                    {myInvestor.totalReferralPoints} ref pts
-                                  </span>
-                                </div>
-                              )}
                           </td>
 
                           <td className="py-4 h-16 text-gray-700">
@@ -374,26 +435,27 @@ const LeaderboardComponent = () => {
                           </div>
                         </td>
                         <td className="py-4 h-16 text-center text-gray-700 pr-2">
-                          {investor.totalReferred > 0 && (
+                          {(investor.totalReferred &&
+                            investor.totalReferred > 0) ||
+                          (investor.totalReferralPoints &&
+                            investor.totalReferralPoints > 0) ? (
                             <div className="flex items-center gap-2 mt-1">
-                              <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-green-50 text-green-700">
-                                {investor.totalReferred} referrals
-                              </span>
-                              {investor.totalReferralPoints > 0 && (
-                                <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
-                                  {investor.totalReferralPoints} ref pts
-                                </span>
-                              )}
+                              {investor.totalReferred &&
+                                investor.totalReferred > 0 && (
+                                  <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-green-50 text-green-700">
+                                    {investor.totalReferred} referrals
+                                  </span>
+                                )}
+                              {investor.totalReferralPoints &&
+                                investor.totalReferralPoints > 0 && (
+                                  <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
+                                    {investor.totalReferralPoints} ref pts
+                                  </span>
+                                )}
                             </div>
+                          ) : (
+                            <span className="text-gray-300">-</span>
                           )}
-                          {investor.totalReferred === 0 &&
-                            investor.totalReferralPoints > 0 && (
-                              <div className="flex items-center gap-2 mt-1">
-                                <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
-                                  {investor.totalReferralPoints} ref pts
-                                </span>
-                              </div>
-                            )}
                         </td>
                         <td className="py-4 h-16 text-gray-700">
                           {investor.activitiesList &&
@@ -425,21 +487,6 @@ const LeaderboardComponent = () => {
                               </div>
                             )}
                         </td>
-                      </tr>
-                    ))}
-                    {/* Empty rows to maintain fixed height when fewer items */}
-                    {emptyInvestorRows.map((_, index) => (
-                      <tr
-                        key={`empty-${index}`}
-                        className="border-b border-gray-100"
-                      >
-                        <td className="h-16"></td>
-                        <td className="h-16"></td>
-                        <td className="h-16"></td>
-                        <td className="h-16"></td>
-                        <td className="h-16"></td>
-                        <td className="h-16"></td>
-                        <td className="h-16"></td>
                       </tr>
                     ))}
                   </tbody>
@@ -499,26 +546,27 @@ const LeaderboardComponent = () => {
                               <span className="text-[10px] text-gray-500">
                                 {myInvestor.pagination.total} activities
                               </span>
-                              {myInvestor.totalReferred > 0 && (
+                              {(myInvestor.totalReferred &&
+                                myInvestor.totalReferred > 0) ||
+                              (myInvestor.totalReferralPoints &&
+                                myInvestor.totalReferralPoints > 0) ? (
                                 <div className="flex items-center gap-2 mt-1">
-                                  <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-green-50 text-green-700">
-                                    {myInvestor.totalReferred} referrals
-                                  </span>
-                                  {myInvestor.totalReferralPoints > 0 && (
-                                    <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
-                                      {myInvestor.totalReferralPoints} ref pts
-                                    </span>
-                                  )}
+                                  {myInvestor.totalReferred &&
+                                    myInvestor.totalReferred > 0 && (
+                                      <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-green-50 text-green-700">
+                                        {myInvestor.totalReferred} referrals
+                                      </span>
+                                    )}
+                                  {myInvestor.totalReferralPoints &&
+                                    myInvestor.totalReferralPoints > 0 && (
+                                      <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
+                                        {myInvestor.totalReferralPoints} ref pts
+                                      </span>
+                                    )}
                                 </div>
+                              ) : (
+                                <span className="text-gray-300">-</span>
                               )}
-                              {myInvestor.totalReferred === 0 &&
-                                myInvestor.totalReferralPoints > 0 && (
-                                  <div className="flex items-center gap-2 mt-1">
-                                    <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
-                                      {myInvestor.totalReferralPoints} ref pts
-                                    </span>
-                                  </div>
-                                )}
                             </div>
                           </div>
                           <div className="flex flex-col items-end">
@@ -604,26 +652,27 @@ const LeaderboardComponent = () => {
                             <span className="text-[10px] text-gray-500">
                               {investor.activitiesList.length} activities
                             </span>
-                            {investor.totalReferred > 0 && (
+                            {(investor.totalReferred &&
+                              investor.totalReferred > 0) ||
+                            (investor.totalReferralPoints &&
+                              investor.totalReferralPoints > 0) ? (
                               <div className="flex items-center gap-2 mt-1">
-                                <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-green-50 text-green-700">
-                                  {investor.totalReferred} referrals
-                                </span>
-                                {investor.totalReferralPoints > 0 && (
-                                  <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
-                                    {investor.totalReferralPoints} ref pts
-                                  </span>
-                                )}
+                                {investor.totalReferred &&
+                                  investor.totalReferred > 0 && (
+                                    <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-green-50 text-green-700">
+                                      {investor.totalReferred} referrals
+                                    </span>
+                                  )}
+                                {investor.totalReferralPoints &&
+                                  investor.totalReferralPoints > 0 && (
+                                    <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
+                                      {investor.totalReferralPoints} ref pts
+                                    </span>
+                                  )}
                               </div>
+                            ) : (
+                              <span className="text-gray-300">-</span>
                             )}
-                            {investor.totalReferred === 0 &&
-                              investor.totalReferralPoints > 0 && (
-                                <div className="flex items-center gap-2 mt-1">
-                                  <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
-                                    {investor.totalReferralPoints} ref pts
-                                  </span>
-                                </div>
-                              )}
                           </div>
                         </div>
                         <div className="flex flex-col items-end">
@@ -668,12 +717,11 @@ const LeaderboardComponent = () => {
                   ))}
 
                   {/* Empty state for mobile if needed */}
-                  {emptyInvestorRows.length > 0 &&
-                    currentInvestors.length === 0 && (
-                      <div className="text-center text-gray-500 text-sm py-8">
-                        No investors to display
-                      </div>
-                    )}
+                  {currentInvestors.length === 0 && (
+                    <div className="text-center text-gray-500 text-sm py-8">
+                      No investors to display
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
