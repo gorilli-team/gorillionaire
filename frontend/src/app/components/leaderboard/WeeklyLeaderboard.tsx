@@ -16,6 +16,8 @@ interface Investor {
   nadName?: string;
   nadAvatar?: string;
   points: number;
+  weeklyPoints?: number;
+  weeklyActivities?: number;
   activitiesList: Activity[];
   pagination: {
     total: number;
@@ -49,23 +51,27 @@ const shortenAddress = (address: string): string => {
   )}`;
 };
 
-const LeaderboardComponent = () => {
+const WeeklyLeaderboardComponent = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [investors, setInvestors] = useState<Investor[]>([]);
   const [investorCount, setInvestorCount] = useState(0);
   const [myData, setMyData] = useState<Investor | null>(null);
+  const [weekInfo, setWeekInfo] = useState<{
+    weekStart: Date;
+    weekEnd: Date;
+  } | null>(null);
 
   const { address } = useAccount();
 
   const onPageChange = (page: number) => {
     setCurrentPage(page);
-    fetchLeaderboard(page);
+    fetchWeeklyLeaderboard(page);
   };
 
-  const fetchLeaderboard = async (currentPage: number) => {
+  const fetchWeeklyLeaderboard = async (currentPage: number) => {
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/activity/track/leaderboard?page=${currentPage}`
+        `${process.env.NEXT_PUBLIC_API_URL}/activity/track/leaderboard/weekly?page=${currentPage}`
       );
       const data = await response.json();
 
@@ -109,6 +115,10 @@ const LeaderboardComponent = () => {
 
         setInvestors(processedInvestors);
         setInvestorCount(data.pagination.total);
+        setWeekInfo({
+          weekStart: new Date(data.weekStart),
+          weekEnd: new Date(data.weekEnd),
+        });
       } catch (nnsError) {
         console.error("Error fetching NNS profiles:", nnsError);
         // Fallback: use investors without NNS profiles
@@ -120,9 +130,13 @@ const LeaderboardComponent = () => {
 
         setInvestors(processedInvestors);
         setInvestorCount(data.pagination.total);
+        setWeekInfo({
+          weekStart: new Date(data.weekStart),
+          weekEnd: new Date(data.weekEnd),
+        });
       }
     } catch (error) {
-      console.error("Error fetching leaderboard:", error);
+      console.error("Error fetching weekly leaderboard:", error);
       setInvestors([]);
       setInvestorCount(0);
     }
@@ -131,6 +145,14 @@ const LeaderboardComponent = () => {
   const fetchMe = useCallback(async () => {
     try {
       if (!address) return;
+
+      // Calculate the start of the current week (Monday)
+      const now = new Date();
+      const startOfWeek = new Date(now);
+      const dayOfWeek = now.getDay();
+      const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+      startOfWeek.setDate(now.getDate() - daysToSubtract);
+      startOfWeek.setHours(0, 0, 0, 0);
 
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/activity/track/me?address=${address}`
@@ -147,16 +169,33 @@ const LeaderboardComponent = () => {
         // Get NNS profile for the current user
         const nadProfile = await nnsClient.getProfiles([address]);
 
+        // Filter activities from this week only
+        const weeklyActivities =
+          data.userActivity?.activitiesList?.filter(
+            (activity: Activity) =>
+              new Date(activity.date) >= startOfWeek &&
+              activity.name !== "Account Connected"
+          ) || [];
+
+        // Calculate total weekly points
+        const weeklyPoints = weeklyActivities.reduce(
+          (total: number, activity: Activity) =>
+            total + (parseInt(activity.points) || 0),
+          0
+        );
+
         // Create investor object from /me response
         const myInvestorData: Investor = {
-          rank: data.userActivity?.rank || 0, // Access rank from userActivity object
+          rank: data.userActivity?.rank || 0,
           address: address,
           nadName: nadProfile[0]?.primaryName,
           nadAvatar:
             nadProfile[0]?.avatar ||
             `/avatar_${data.userActivity?.rank % 6}.png`,
-          points: data.userActivity?.points || 0,
-          activitiesList: data.userActivity?.activitiesList || [],
+          points: weeklyPoints, // Use weekly points
+          weeklyPoints: weeklyPoints,
+          weeklyActivities: weeklyActivities.length,
+          activitiesList: weeklyActivities,
           pagination: data.userActivity?.pagination || {
             total: 0,
             page: 1,
@@ -172,13 +211,28 @@ const LeaderboardComponent = () => {
         console.error("Error fetching NNS profile for user:", nnsError);
 
         // Fallback: create investor data without NNS profile
+        const weeklyActivities =
+          data.userActivity?.activitiesList?.filter(
+            (activity: Activity) =>
+              new Date(activity.date) >= startOfWeek &&
+              activity.name !== "Account Connected"
+          ) || [];
+
+        const weeklyPoints = weeklyActivities.reduce(
+          (total: number, activity: Activity) =>
+            total + (parseInt(activity.points) || 0),
+          0
+        );
+
         const myInvestorData: Investor = {
           rank: data.userActivity?.rank || 0,
           address: address,
           nadName: undefined,
           nadAvatar: `/avatar_${data.userActivity?.rank % 6}.png`,
-          points: data.userActivity?.points || 0,
-          activitiesList: data.userActivity?.activitiesList || [],
+          points: weeklyPoints,
+          weeklyPoints: weeklyPoints,
+          weeklyActivities: weeklyActivities.length,
+          activitiesList: weeklyActivities,
           pagination: data.userActivity?.pagination || {
             total: 0,
             page: 1,
@@ -197,11 +251,11 @@ const LeaderboardComponent = () => {
   }, [address]);
 
   useEffect(() => {
-    fetchLeaderboard(currentPage);
+    fetchWeeklyLeaderboard(currentPage);
     fetchMe();
 
     const interval = setInterval(() => {
-      fetchLeaderboard(currentPage);
+      fetchWeeklyLeaderboard(currentPage);
       fetchMe();
     }, 30000);
 
@@ -209,10 +263,10 @@ const LeaderboardComponent = () => {
     return () => clearInterval(interval);
   }, [address, currentPage, fetchMe]);
 
-  // Pagination logic for investors - no slicing since the server already returns paginated data
+  // Pagination logic for investors
   const itemsPerPage = 10;
   const totalInvestorPages = Math.ceil(investorCount / itemsPerPage);
-  const currentInvestors = investors; // Use directly, no filtering
+  const currentInvestors = investors;
 
   // Function to create empty rows to maintain height
   const getEmptyRows = <T,>(items: T[], itemsPerPage: number): null[] => {
@@ -236,14 +290,38 @@ const LeaderboardComponent = () => {
     return address.toLowerCase() === investorAddress.toLowerCase();
   };
 
+  // Format week range
+  const formatWeekRange = () => {
+    if (!weekInfo) return "";
+    const start = weekInfo.weekStart.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+    const end = weekInfo.weekEnd.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+    return `${start} - ${end}`;
+  };
+
   return (
     <div className="w-full bg-gray-100 px-2">
       <div className="w-full mx-auto px-1 sm:px-4 md:px-6 pt-4">
         <div className="bg-white rounded-lg shadow-sm p-1 sm:p-3 md:p-6 mt-4 flex flex-col h-[calc(100vh-120px)]">
+          {/* Weekly Header */}
+          <div className="mb-4 px-1 sm:px-0">
+            <h2 className="text-xl font-bold text-gray-800 mb-2">
+              Weekly Leaderboard
+            </h2>
+            <p className="text-sm text-gray-600">
+              This week: {formatWeekRange()}
+            </p>
+          </div>
+
           {/* Table with reduced padding on mobile */}
           <div className="overflow-x-auto -mx-1 sm:-mx-3 md:-mx-6">
             <div className="px-1 sm:px-3 md:px-6">
-              <div className="h-[calc(100vh-280px)] sm:h-[500px] md:h-[600px] lg:h-[680px] overflow-auto pb-20 sm:pb-0">
+              <div className="h-[calc(100vh-320px)] sm:h-[500px] md:h-[600px] lg:h-[680px] overflow-auto pb-20 sm:pb-0">
                 {/* Desktop/Tablet View */}
                 <table className="w-full border-collapse hidden sm:table">
                   <thead className="sticky top-0 bg-white z-10">
@@ -251,9 +329,9 @@ const LeaderboardComponent = () => {
                       <th className="pb-2 pr-2 font-medium">RANK</th>
                       <th className="pb-2 pr-2 font-medium">INVESTOR</th>
                       <th className="pb-2 pr-2 font-medium text-center">
-                        ACTIVITIES
+                        WEEKLY ACTIVITIES
                       </th>
-                      <th className="pb-2 pr-2 font-medium">POINTS</th>
+                      <th className="pb-2 pr-2 font-medium">WEEKLY POINTS</th>
                       <th className="pb-2 pr-2 font-medium text-center">
                         REFERRALS
                       </th>
@@ -261,7 +339,7 @@ const LeaderboardComponent = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {myInvestor && (
+                    {myInvestor && myInvestor.points > 0 && (
                       <>
                         <tr className="bg-violet-100">
                           <td className="py-4 h-16 text-gray-700 pr-2 pl-4">
@@ -308,7 +386,7 @@ const LeaderboardComponent = () => {
                           </td>
                           <td className="py-4 h-16 text-center text-gray-700 pr-2">
                             <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium rounded-full bg-blue-50 text-blue-700">
-                              {myInvestor.pagination.total}
+                              {myInvestor.weeklyActivities || 0}
                             </span>
                           </td>
                           <td className="py-4 h-16 text-gray-700 pr-2 font-bold">
@@ -341,10 +419,9 @@ const LeaderboardComponent = () => {
                                 </div>
                               )}
                           </td>
-
                           <td className="py-4 h-16 text-gray-700">
-                            {myInvestor.pagination &&
-                              myInvestor.pagination.total > 0 && (
+                            {myInvestor.activitiesList &&
+                              myInvestor.activitiesList.length > 0 && (
                                 <div className="flex flex-col">
                                   <span className="text-sm font-medium">
                                     {myInvestor.activitiesList[0].name}
@@ -368,12 +445,11 @@ const LeaderboardComponent = () => {
                       </>
                     )}
                     {pageInvestors.map((investor) => (
-                      //log investor
                       <tr
                         key={investor.address}
                         className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${
                           isCurrentUserAddress(investor.address)
-                            ? "bg-violet-200"
+                            ? "bg-violet-100"
                             : ""
                         }`}
                       >
@@ -403,18 +479,6 @@ const LeaderboardComponent = () => {
                                   width={32}
                                   height={32}
                                   className="w-full h-full object-cover"
-                                  onError={(e) => {
-                                    e.currentTarget.style.display = "none";
-                                    e.currentTarget.parentElement!.innerHTML = `
-                                      <Image
-                                        src="/avatar_${investor.rank % 6}.png"
-                                        alt="User Avatar"
-                                        width={32}
-                                        height={32}
-                                        className="w-full h-full object-cover"
-                                      />
-                                    `;
-                                  }}
                                 />
                               ) : (
                                 <Image
@@ -426,15 +490,14 @@ const LeaderboardComponent = () => {
                                 />
                               )}
                             </div>
-                            <span className="text-gray-700 font-bold truncate max-w-[10px] md:max-w-full">
-                              {investor?.nadName ||
-                                shortenAddress(investor.address)}
+                            <span className="text-gray-700 font-bold truncate max-w-[200px] md:max-w-full">
+                              {investor?.nadName || investor.address}
                             </span>
                           </Link>
                         </td>
                         <td className="py-4 h-16 text-center text-gray-700 pr-2">
                           <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium rounded-full bg-blue-50 text-blue-700">
-                            {investor.activitiesList.length}
+                            {investor.weeklyActivities || 0}
                           </span>
                         </td>
                         <td className="py-4 h-16 text-gray-700 pr-2 font-bold">
@@ -519,7 +582,7 @@ const LeaderboardComponent = () => {
 
                 {/* Mobile View */}
                 <div className="sm:hidden space-y-3">
-                  {myInvestor && (
+                  {myInvestor && myInvestor.points > 0 && (
                     <>
                       <div
                         className={`border rounded-lg px-4 py-3 bg-white hover:border-gray-300 transition-colors ${
@@ -569,7 +632,8 @@ const LeaderboardComponent = () => {
                                   shortenAddress(myInvestor.address)}
                               </Link>
                               <span className="text-[10px] text-gray-500">
-                                {myInvestor.pagination.total} activities
+                                {myInvestor.weeklyActivities || 0} weekly
+                                activities
                               </span>
                               {myInvestor.totalReferred > 0 && (
                                 <div className="flex items-center gap-2 mt-1">
@@ -674,7 +738,7 @@ const LeaderboardComponent = () => {
                                 shortenAddress(investor.address)}
                             </Link>
                             <span className="text-[10px] text-gray-500">
-                              {investor.activitiesList.length} activities
+                              {investor.weeklyActivities || 0} weekly activities
                             </span>
                             {investor.totalReferred > 0 && (
                               <div className="flex items-center gap-2 mt-1">
@@ -743,7 +807,7 @@ const LeaderboardComponent = () => {
                   {emptyInvestorRows.length > 0 &&
                     currentInvestors.length === 0 && (
                       <div className="text-center text-gray-500 text-sm py-8">
-                        No investors to display
+                        No weekly activity to display
                       </div>
                     )}
                 </div>
@@ -788,4 +852,4 @@ const LeaderboardComponent = () => {
   );
 };
 
-export default LeaderboardComponent;
+export default WeeklyLeaderboardComponent;

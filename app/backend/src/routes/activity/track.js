@@ -326,6 +326,109 @@ router.get("/leaderboard", async (req, res) => {
   }
 });
 
+router.get("/leaderboard/weekly", async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    // Calculate the start of the current week (Monday)
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    const dayOfWeek = now.getDay();
+    const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Sunday = 0, Monday = 1
+    startOfWeek.setDate(now.getDate() - daysToSubtract);
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    // Get all users and calculate their weekly points
+    const allUsers = await UserActivity.find();
+    const usersWithWeeklyPoints = [];
+
+    for (const user of allUsers) {
+      // Filter activities from this week only, excluding "Account Connected"
+      const weeklyActivities = user.activitiesList.filter(
+        (activity) =>
+          new Date(activity.date) >= startOfWeek &&
+          activity.name !== "Account Connected"
+      );
+
+      // Calculate total weekly points
+      const weeklyPoints = weeklyActivities.reduce(
+        (total, activity) => total + (activity.points || 0),
+        0
+      );
+
+      if (weeklyPoints > 0) {
+        usersWithWeeklyPoints.push({
+          ...user.toObject(),
+          weeklyPoints,
+          weeklyActivities: weeklyActivities.length,
+        });
+      }
+    }
+
+    // Sort by weekly points (descending)
+    usersWithWeeklyPoints.sort((a, b) => {
+      if (b.weeklyPoints !== a.weeklyPoints) {
+        return b.weeklyPoints - a.weeklyPoints;
+      }
+      // If points are equal, sort by creation date (earlier first)
+      return new Date(a.createdAt) - new Date(b.createdAt);
+    });
+
+    // Apply pagination
+    const total = usersWithWeeklyPoints.length;
+    const paginatedUsers = usersWithWeeklyPoints.slice(skip, skip + limit);
+
+    // Get referral data for users in the current page
+    const userAddresses = paginatedUsers.map((user) => user.address);
+    const referrals = await Referral.find({
+      referrerAddress: { $in: userAddresses },
+    });
+
+    // Create a map of referral data for quick lookup
+    const referralMap = new Map();
+    referrals.forEach((referral) => {
+      referralMap.set(referral.referrerAddress, {
+        totalReferred: referral.referredUsers.length,
+        totalReferralPoints: referral.totalPointsEarned,
+      });
+    });
+
+    // Add rank and referral data
+    const usersWithRank = paginatedUsers.map((user, index) => {
+      const referralData = referralMap.get(user.address) || {
+        totalReferred: 0,
+        totalReferralPoints: 0,
+      };
+
+      return {
+        ...user,
+        rank: skip + index + 1,
+        points: user.weeklyPoints, // Use weekly points instead of total points
+        totalReferred: referralData.totalReferred,
+        totalReferralPoints: referralData.totalReferralPoints,
+      };
+    });
+
+    res.json({
+      users: usersWithRank,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        hasMore: skip + paginatedUsers.length < total,
+      },
+      weekStart: startOfWeek,
+      weekEnd: new Date(startOfWeek.getTime() + 7 * 24 * 60 * 60 * 1000 - 1),
+    });
+  } catch (error) {
+    console.error("Error fetching weekly leaderboard:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.get("/me", async (req, res) => {
   try {
     const { address } = req.query;
