@@ -300,10 +300,18 @@ const WeeklyLeaderboardComponent = () => {
                 </h2>
               </div>
               <div className="flex items-center justify-between">
-                <p className="text-sm text-violet-700">
-                  This week:{" "}
-                  <span className="font-semibold">{formatWeekRange()}</span>
-                </p>
+                <div className="flex items-center gap-4">
+                  <p className="text-sm text-violet-700">
+                    This week:{" "}
+                    <span className="font-semibold">{formatWeekRange()}</span>
+                  </p>
+                  <p className="text-sm text-violet-700">
+                    Total points:{" "}
+                    <span className="font-semibold text-violet-800">
+                      {totalWeeklyPoints.toLocaleString()}
+                    </span>
+                  </p>
+                </div>
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
                   <span className="text-xs font-semibold text-amber-700">
