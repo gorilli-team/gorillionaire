@@ -246,20 +246,7 @@ const WeeklyLeaderboardComponent = () => {
   }, [address, currentPage, fetchMe]);
 
   // Pagination logic for investors
-  const itemsPerPage = 10;
   const currentInvestors = investors;
-
-  // Function to create empty rows to maintain height
-  const getEmptyRows = <T,>(items: T[], itemsPerPage: number): null[] => {
-    const currentItemCount = items.length;
-    if (currentItemCount < itemsPerPage) {
-      return Array(itemsPerPage - currentItemCount).fill(null);
-    }
-    return [];
-  };
-
-  // Empty rows for both tables
-  const emptyInvestorRows = getEmptyRows(currentInvestors, itemsPerPage);
 
   // Use myData instead of finding in investors list
   const myInvestor = myData;
@@ -288,7 +275,7 @@ const WeeklyLeaderboardComponent = () => {
   return (
     <div className="w-full">
       <div className="w-full mx-auto">
-        <div className="bg-white rounded-lg shadow-sm p-1 sm:p-3 md:p-6 flex flex-col h-[calc(100vh-120px)]">
+        <div className="bg-white rounded-lg shadow-sm p-1 sm:p-3 md:p-6 flex flex-col">
           {/* Weekly Header */}
           <div className="mb-3 px-1 sm:px-0">
             <div className="bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-200 rounded-lg p-3 mb-3">
@@ -622,7 +609,7 @@ const WeeklyLeaderboardComponent = () => {
                 </div>
               )}
 
-              <div className="h-[calc(100vh-320px)] sm:h-[500px] md:h-[600px] lg:h-[680px] overflow-auto pb-20 sm:pb-0">
+              <div className="mb-6">
                 {/* Desktop/Tablet View */}
                 <table className="w-full border-collapse hidden sm:table">
                   <thead className="sticky top-0 bg-white z-10">
@@ -759,21 +746,6 @@ const WeeklyLeaderboardComponent = () => {
                             <span className="text-sm text-gray-400">-</span>
                           )}
                         </td>
-                      </tr>
-                    ))}
-                    {/* Empty rows to maintain fixed height when fewer items */}
-                    {emptyInvestorRows.map((_, index) => (
-                      <tr
-                        key={`empty-${index}`}
-                        className="border-b border-gray-100"
-                      >
-                        <td className="h-16"></td>
-                        <td className="h-16"></td>
-                        <td className="h-16"></td>
-                        <td className="h-16"></td>
-                        <td className="h-16"></td>
-                        <td className="h-16"></td>
-                        <td className="h-16"></td>
                       </tr>
                     ))}
                   </tbody>
