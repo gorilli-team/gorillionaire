@@ -21,7 +21,7 @@ export default function ReferralBanner() {
           </span>
         </div>
         <a
-          href="/leaderboard"
+          href="/competition"
           rel="noopener noreferrer"
           className="bg-white text-violet-600 px-4 py-1.5 rounded-md font-bold text-sm hover:bg-gray-100 transition-colors duration-200 shadow-lg flex items-center gap-2"
         >

@@ -41,14 +41,14 @@ export default function WeeklyRaffleAnnouncement({
 
         {showCTA && (
           <Link
-            href="/leaderboard"
+            href="/competition"
             className={`px-4 py-2 rounded-md font-semibold text-sm transition-colors duration-200 ${
               variant === "banner"
                 ? "bg-white text-violet-600 hover:bg-gray-100"
                 : "bg-violet-600 text-white hover:bg-violet-700"
             }`}
           >
-            View Leaderboard
+            Learn More
           </Link>
         )}
       </div>
