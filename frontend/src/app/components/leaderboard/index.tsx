@@ -239,11 +239,11 @@ const LeaderboardComponent = () => {
   return (
     <div className="w-full">
       <div className="w-full mx-auto">
-        <div className="bg-white rounded-lg shadow-sm p-1 sm:p-3 md:p-6 flex flex-col h-[calc(100vh-120px)]">
+        <div className="bg-white rounded-lg shadow-sm p-1 sm:p-3 md:p-6 flex flex-col">
           {/* Table with reduced padding on mobile */}
           <div className="overflow-x-auto -mx-1 sm:-mx-3 md:-mx-6">
             <div className="px-1 sm:px-3 md:px-6">
-              <div className="h-[calc(100vh-280px)] sm:h-[500px] md:h-[600px] lg:h-[680px] overflow-auto pb-20 sm:pb-0">
+              <div className="mb-6">
                 {/* Desktop/Tablet View */}
                 <table className="w-full border-collapse hidden sm:table">
                   <thead className="sticky top-0 bg-white z-10">

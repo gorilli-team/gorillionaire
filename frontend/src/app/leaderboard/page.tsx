@@ -9,7 +9,7 @@ import WeeklyLeaderboardComponent from "@/app/components/leaderboard/WeeklyLeade
 const LeaderboardPage = () => {
   const [selectedPage, setSelectedPage] = useState("Leaderboard");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"all-time" | "weekly">("all-time");
+  const [activeTab, setActiveTab] = useState<"all-time" | "weekly">("weekly");
 
   return (
     <div className="flex h-screen bg-gray-100 text-gray-800 overflow-hidden">
@@ -74,16 +74,6 @@ const LeaderboardPage = () => {
           <div className="w-full bg-white border-b border-gray-200 px-4 py-2">
             <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg max-w-md mx-auto">
               <button
-                onClick={() => setActiveTab("all-time")}
-                className={`flex-1 py-2 px-4 rounded-md text-md font-medium transition-colors ${
-                  activeTab === "all-time"
-                    ? "bg-white text-gray-900 shadow-sm"
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
-              >
-                All-Time
-              </button>
-              <button
                 onClick={() => setActiveTab("weekly")}
                 className={`flex-1 py-2 px-4 rounded-md text-md font-medium transition-colors ${
                   activeTab === "weekly"
@@ -92,6 +82,16 @@ const LeaderboardPage = () => {
                 }`}
               >
                 🦍 This Week
+              </button>
+              <button
+                onClick={() => setActiveTab("all-time")}
+                className={`flex-1 py-2 px-4 rounded-md text-md font-medium transition-colors ${
+                  activeTab === "all-time"
+                    ? "bg-white text-gray-900 shadow-sm"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                All-Time
               </button>
             </div>
           </div>
