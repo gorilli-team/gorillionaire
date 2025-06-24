@@ -105,7 +105,7 @@ const CompetitionPage = () => {
                           Total Prize Pool
                         </span>
                         <span className="font-bold text-violet-600">
-                          50 MON
+                          250 MON
                         </span>
                       </div>
                     </div>
@@ -125,7 +125,7 @@ const CompetitionPage = () => {
                           Prize per Winner
                         </span>
                         <span className="font-bold text-green-600">
-                          10 MON each
+                          50 MON each
                         </span>
                       </div>
                     </div>
@@ -191,151 +191,6 @@ const CompetitionPage = () => {
               </div>
             </div>
 
-            {/* Point Earning Activities */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
-                🎯 How to Earn Points
-              </h2>
-
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {/* Trading */}
-                <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-6 border border-green-200">
-                  <div className="text-center mb-4">
-                    <span className="text-4xl">📈</span>
-                    <h3 className="text-lg font-semibold text-green-800 mt-2">
-                      Trading
-                    </h3>
-                  </div>
-                  <ul className="space-y-2 text-sm text-green-700">
-                    <li className="flex items-center gap-2">
-                      <span className="text-green-500">✓</span>
-                      <span>Buy and sell tokens</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span className="text-green-500">✓</span>
-                      <span>Higher volume = more points</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span className="text-green-500">✓</span>
-                      <span>Points based on trade value</span>
-                    </li>
-                  </ul>
-                </div>
-
-                {/* Referrals */}
-                <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg p-6 border border-blue-200">
-                  <div className="text-center mb-4">
-                    <span className="text-4xl">👥</span>
-                    <h3 className="text-lg font-semibold text-blue-800 mt-2">
-                      Referrals
-                    </h3>
-                  </div>
-                  <ul className="space-y-2 text-sm text-blue-700">
-                    <li className="flex items-center gap-2">
-                      <span className="text-blue-500">✓</span>
-                      <span>Invite friends to join</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span className="text-blue-500">✓</span>
-                      <span>Earn bonus points per referral</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span className="text-blue-500">✓</span>
-                      <span>Get referral rewards</span>
-                    </li>
-                  </ul>
-                </div>
-
-                {/* Daily Activities */}
-                <div className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-lg p-6 border border-purple-200">
-                  <div className="text-center mb-4">
-                    <span className="text-4xl">📅</span>
-                    <h3 className="text-lg font-semibold text-purple-800 mt-2">
-                      Daily Activities
-                    </h3>
-                  </div>
-                  <ul className="space-y-2 text-sm text-purple-700">
-                    <li className="flex items-center gap-2">
-                      <span className="text-purple-500">✓</span>
-                      <span>Complete quests</span>
-                    </li>
-                  </ul>
-                </div>
-
-                {/* Quests */}
-                <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-lg p-6 border border-amber-200">
-                  <div className="text-center mb-4">
-                    <span className="text-4xl">🎮</span>
-                    <h3 className="text-lg font-semibold text-amber-800 mt-2">
-                      Quests
-                    </h3>
-                  </div>
-                  <ul className="space-y-2 text-sm text-amber-700">
-                    <li className="flex items-center gap-2">
-                      <span className="text-amber-500">✓</span>
-                      <span>Complete trading challenges</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span className="text-amber-500">✓</span>
-                      <span>Social media tasks</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span className="text-amber-500">✓</span>
-                      <span>Community engagement</span>
-                    </li>
-                  </ul>
-                </div>
-
-                {/* Events */}
-                <div className="bg-gradient-to-br from-pink-50 to-rose-50 rounded-lg p-6 border border-pink-200">
-                  <div className="text-center mb-4">
-                    <span className="text-4xl">🎪</span>
-                    <h3 className="text-lg font-semibold text-pink-800 mt-2">
-                      Events
-                    </h3>
-                  </div>
-                  <ul className="space-y-2 text-sm text-pink-700">
-                    <li className="flex items-center gap-2">
-                      <span className="text-pink-500">✓</span>
-                      <span>Special trading events</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span className="text-pink-500">✓</span>
-                      <span>Community challenges</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span className="text-pink-500">✓</span>
-                      <span>Bonus point opportunities</span>
-                    </li>
-                  </ul>
-                </div>
-
-                {/* Bonuses */}
-                <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-lg p-6 border border-indigo-200">
-                  <div className="text-center mb-4">
-                    <span className="text-4xl">🎁</span>
-                    <h3 className="text-lg font-semibold text-indigo-800 mt-2">
-                      Bonuses
-                    </h3>
-                  </div>
-                  <ul className="space-y-2 text-sm text-indigo-700">
-                    <li className="flex items-center gap-2">
-                      <span className="text-indigo-500">✓</span>
-                      <span>Referral bonuses</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span className="text-indigo-500">✓</span>
-                      <span>Streak rewards</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span className="text-indigo-500">✓</span>
-                      <span>Special achievements</span>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-
             {/* Important Notes */}
             <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl border border-amber-200 p-6 mb-8">
               <h3 className="text-xl font-bold text-amber-800 mb-4 flex items-center gap-2">
@@ -388,7 +243,7 @@ const CompetitionPage = () => {
                     <span>→</span>
                   </Link>
                   <Link
-                    href="/tokens"
+                    href="/"
                     className="bg-violet-700 text-white px-8 py-3 rounded-lg font-bold text-lg hover:bg-violet-800 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
                   >
                     <span>💎</span>
