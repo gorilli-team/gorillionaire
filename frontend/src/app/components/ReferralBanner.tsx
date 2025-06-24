@@ -5,10 +5,10 @@ import { useAccount } from "wagmi";
 export default function ReferralBanner() {
   const { isConnected } = useAccount();
 
-  // For debugging, let's show the banner always for now
-  // if (!isConnected) {
-  //   return null;
-  // }
+  //For debugging, let's show the banner always for now
+  if (!isConnected) {
+    return null;
+  }
 
   return (
     <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 text-center font-medium relative overflow-hidden">

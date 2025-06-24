@@ -51,8 +51,6 @@ const shortenAddress = (address: string): string => {
 
 const LeaderboardComponent = () => {
   const [currentPage, setCurrentPage] = useState(1);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filteredInvestors, setFilteredInvestors] = useState<Investor[]>([]);
   const [investors, setInvestors] = useState<Investor[]>([]);
   const [investorCount, setInvestorCount] = useState(0);
   const [myData, setMyData] = useState<Investor | null>(null);
@@ -139,29 +137,10 @@ const LeaderboardComponent = () => {
     return () => clearInterval(interval);
   }, [address, currentPage, fetchMe]);
 
-  // Effect to update filteredInvestors when investors change
-  useEffect(() => {
-    if (searchTerm.trim() === "") {
-      setFilteredInvestors(investors);
-    } else {
-      const filtered = investors.filter((investor) =>
-        investor.address.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      setFilteredInvestors(filtered);
-    }
-  }, [investors, searchTerm]);
-
-  // Separate effect to reset to page 1 when search term changes
-  useEffect(() => {
-    if (searchTerm.trim() !== "") {
-      setCurrentPage(1);
-    }
-  }, [searchTerm]);
-
   // Pagination logic for investors - no slicing since the server already returns paginated data
   const itemsPerPage = 10;
   const totalInvestorPages = Math.ceil(investorCount / itemsPerPage);
-  const currentInvestors = filteredInvestors; // Use directly, no slicing
+  const currentInvestors = investors; // Use directly, no filtering
 
   // Function to create empty rows to maintain height
   const getEmptyRows = <T,>(items: T[], itemsPerPage: number): null[] => {
@@ -189,35 +168,6 @@ const LeaderboardComponent = () => {
     <div className="w-full bg-gray-100 px-2">
       <div className="w-full mx-auto px-1 sm:px-4 md:px-6 pt-4">
         <div className="bg-white rounded-lg shadow-sm p-1 sm:p-3 md:p-6 mt-4 flex flex-col h-[calc(100vh-120px)]">
-          {/* Search */}
-          <div className="mb-3 sm:mb-6 px-1 sm:px-0">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search"
-                className="w-full px-4 py-2 border border-gray-200 rounded-md pl-10 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-              <div className="absolute left-3 top-3 text-gray-400">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                  />
-                </svg>
-              </div>
-            </div>
-          </div>
-
           {/* Table with reduced padding on mobile */}
           <div className="overflow-x-auto -mx-1 sm:-mx-3 md:-mx-6">
             <div className="px-1 sm:px-3 md:px-6">
@@ -298,23 +248,26 @@ const LeaderboardComponent = () => {
                             </div>
                           </td>
                           <td className="py-4 h-16 text-center text-gray-700 pr-2">
-                            {(myInvestor.totalReferred &&
-                              myInvestor.totalReferred > 0) ||
-                            (myInvestor.totalReferralPoints &&
-                              myInvestor.totalReferralPoints > 0) ? (
-                              <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium rounded-full bg-green-50 text-green-700">
-                                {myInvestor.totalReferred || 0}
-                                {myInvestor.totalReferralPoints &&
-                                  myInvestor.totalReferralPoints > 0 && (
-                                    <>
-                                      {" "}
-                                      (Points: {myInvestor.totalReferralPoints})
-                                    </>
-                                  )}
-                              </span>
-                            ) : (
-                              <span className="text-gray-400 text-xs">-</span>
+                            {myInvestor.totalReferred > 0 && (
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-green-50 text-green-700">
+                                  {myInvestor.totalReferred} referrals
+                                </span>
+                                {myInvestor.totalReferralPoints > 0 && (
+                                  <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
+                                    {myInvestor.totalReferralPoints} ref pts
+                                  </span>
+                                )}
+                              </div>
                             )}
+                            {myInvestor.totalReferred === 0 &&
+                              myInvestor.totalReferralPoints > 0 && (
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
+                                    {myInvestor.totalReferralPoints} ref pts
+                                  </span>
+                                </div>
+                              )}
                           </td>
 
                           <td className="py-4 h-16 text-gray-700">
@@ -421,20 +374,26 @@ const LeaderboardComponent = () => {
                           </div>
                         </td>
                         <td className="py-4 h-16 text-center text-gray-700 pr-2">
-                          {(investor.totalReferred &&
-                            investor.totalReferred > 0) ||
-                          (investor.totalReferralPoints &&
-                            investor.totalReferralPoints > 0) ? (
-                            <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium rounded-full bg-green-50 text-green-700">
-                              {investor.totalReferred || 0}
-                              {investor.totalReferralPoints &&
-                                investor.totalReferralPoints > 0 && (
-                                  <> (Points: {investor.totalReferralPoints})</>
-                                )}
-                            </span>
-                          ) : (
-                            <span className="text-gray-400 text-xs">-</span>
+                          {investor.totalReferred > 0 && (
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-green-50 text-green-700">
+                                {investor.totalReferred} referrals
+                              </span>
+                              {investor.totalReferralPoints > 0 && (
+                                <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
+                                  {investor.totalReferralPoints} ref pts
+                                </span>
+                              )}
+                            </div>
                           )}
+                          {investor.totalReferred === 0 &&
+                            investor.totalReferralPoints > 0 && (
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
+                                  {investor.totalReferralPoints} ref pts
+                                </span>
+                              </div>
+                            )}
                         </td>
                         <td className="py-4 h-16 text-gray-700">
                           {investor.activitiesList &&
@@ -540,25 +499,26 @@ const LeaderboardComponent = () => {
                               <span className="text-[10px] text-gray-500">
                                 {myInvestor.pagination.total} activities
                               </span>
-                              {((myInvestor.totalReferred &&
-                                myInvestor.totalReferred > 0) ||
-                                (myInvestor.totalReferralPoints &&
-                                  myInvestor.totalReferralPoints > 0)) && (
+                              {myInvestor.totalReferred > 0 && (
                                 <div className="flex items-center gap-2 mt-1">
-                                  {myInvestor.totalReferred &&
-                                    myInvestor.totalReferred > 0 && (
-                                      <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-green-50 text-green-700">
-                                        {myInvestor.totalReferred} referrals
-                                      </span>
-                                    )}
-                                  {myInvestor.totalReferralPoints &&
-                                    myInvestor.totalReferralPoints > 0 && (
-                                      <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
-                                        {myInvestor.totalReferralPoints} ref pts
-                                      </span>
-                                    )}
+                                  <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-green-50 text-green-700">
+                                    {myInvestor.totalReferred} referrals
+                                  </span>
+                                  {myInvestor.totalReferralPoints > 0 && (
+                                    <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
+                                      {myInvestor.totalReferralPoints} ref pts
+                                    </span>
+                                  )}
                                 </div>
                               )}
+                              {myInvestor.totalReferred === 0 &&
+                                myInvestor.totalReferralPoints > 0 && (
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
+                                      {myInvestor.totalReferralPoints} ref pts
+                                    </span>
+                                  </div>
+                                )}
                             </div>
                           </div>
                           <div className="flex flex-col items-end">
@@ -644,25 +604,26 @@ const LeaderboardComponent = () => {
                             <span className="text-[10px] text-gray-500">
                               {investor.activitiesList.length} activities
                             </span>
-                            {((investor.totalReferred &&
-                              investor.totalReferred > 0) ||
-                              (investor.totalReferralPoints &&
-                                investor.totalReferralPoints > 0)) && (
+                            {investor.totalReferred > 0 && (
                               <div className="flex items-center gap-2 mt-1">
-                                {investor.totalReferred &&
-                                  investor.totalReferred > 0 && (
-                                    <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-green-50 text-green-700">
-                                      {investor.totalReferred} referrals
-                                    </span>
-                                  )}
-                                {investor.totalReferralPoints &&
-                                  investor.totalReferralPoints > 0 && (
-                                    <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
-                                      {investor.totalReferralPoints} ref pts
-                                    </span>
-                                  )}
+                                <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-green-50 text-green-700">
+                                  {investor.totalReferred} referrals
+                                </span>
+                                {investor.totalReferralPoints > 0 && (
+                                  <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
+                                    {investor.totalReferralPoints} ref pts
+                                  </span>
+                                )}
                               </div>
                             )}
+                            {investor.totalReferred === 0 &&
+                              investor.totalReferralPoints > 0 && (
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
+                                    {investor.totalReferralPoints} ref pts
+                                  </span>
+                                </div>
+                              )}
                           </div>
                         </div>
                         <div className="flex flex-col items-end">
