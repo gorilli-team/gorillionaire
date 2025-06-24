@@ -24,8 +24,6 @@ export default function Sidebar({
     setSelectedPage(page);
     if (page === "Profile") {
       router.push(`/users/${address}`);
-    } else if (page === "Weekly Leaderboard") {
-      router.push(`/leaderboard/weekly`);
     } else {
       router.push(`/${page.toLowerCase()}`);
     }
@@ -91,17 +89,6 @@ export default function Sidebar({
             >
               <i className="fa-solid fa-star pr-2"></i>
               <span>Leaderboard</span>
-            </button>
-          </li>
-          <li>
-            <button
-              className={`w-full text-left px-3 py-2 rounded-lg hover:bg-gray-200 ${
-                selectedPage === "Weekly Leaderboard" ? "bg-gray-200" : ""
-              }`}
-              onClick={() => handlePageChange("Weekly Leaderboard")}
-            >
-              <i className="fa-solid fa-calendar-week pr-2"></i>
-              <span>Weekly Leaderboard</span>
             </button>
           </li>
           <li>

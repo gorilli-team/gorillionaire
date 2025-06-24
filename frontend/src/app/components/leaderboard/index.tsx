@@ -237,9 +237,9 @@ const LeaderboardComponent = () => {
   };
 
   return (
-    <div className="w-full bg-gray-100 px-2">
-      <div className="w-full mx-auto px-1 sm:px-4 md:px-6 pt-4">
-        <div className="bg-white rounded-lg shadow-sm p-1 sm:p-3 md:p-6 mt-4 flex flex-col h-[calc(100vh-120px)]">
+    <div className="w-full">
+      <div className="w-full mx-auto">
+        <div className="bg-white rounded-lg shadow-sm p-1 sm:p-3 md:p-6 flex flex-col h-[calc(100vh-120px)]">
           {/* Table with reduced padding on mobile */}
           <div className="overflow-x-auto -mx-1 sm:-mx-3 md:-mx-6">
             <div className="px-1 sm:px-3 md:px-6">
@@ -320,26 +320,27 @@ const LeaderboardComponent = () => {
                             </div>
                           </td>
                           <td className="py-4 h-16 text-center text-gray-700 pr-2">
-                            {myInvestor.totalReferred > 0 && (
+                            {(myInvestor.totalReferred &&
+                              myInvestor.totalReferred > 0) ||
+                            (myInvestor.totalReferralPoints &&
+                              myInvestor.totalReferralPoints > 0) ? (
                               <div className="flex items-center gap-2 mt-1">
-                                <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-green-50 text-green-700">
-                                  {myInvestor.totalReferred} referrals
-                                </span>
-                                {myInvestor.totalReferralPoints > 0 && (
-                                  <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
-                                    {myInvestor.totalReferralPoints} ref pts
-                                  </span>
-                                )}
+                                {myInvestor.totalReferred &&
+                                  myInvestor.totalReferred > 0 && (
+                                    <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-green-50 text-green-700">
+                                      {myInvestor.totalReferred} referrals
+                                    </span>
+                                  )}
+                                {myInvestor.totalReferralPoints &&
+                                  myInvestor.totalReferralPoints > 0 && (
+                                    <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
+                                      {myInvestor.totalReferralPoints} ref pts
+                                    </span>
+                                  )}
                               </div>
+                            ) : (
+                              <span className="text-gray-300">-</span>
                             )}
-                            {myInvestor.totalReferred === 0 &&
-                              myInvestor.totalReferralPoints > 0 && (
-                                <div className="flex items-center gap-2 mt-1">
-                                  <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
-                                    {myInvestor.totalReferralPoints} ref pts
-                                  </span>
-                                </div>
-                              )}
                           </td>
 
                           <td className="py-4 h-16 text-gray-700">
@@ -446,26 +447,27 @@ const LeaderboardComponent = () => {
                           </div>
                         </td>
                         <td className="py-4 h-16 text-center text-gray-700 pr-2">
-                          {investor.totalReferred > 0 && (
+                          {(investor.totalReferred &&
+                            investor.totalReferred > 0) ||
+                          (investor.totalReferralPoints &&
+                            investor.totalReferralPoints > 0) ? (
                             <div className="flex items-center gap-2 mt-1">
-                              <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-green-50 text-green-700">
-                                {investor.totalReferred} referrals
-                              </span>
-                              {investor.totalReferralPoints > 0 && (
-                                <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
-                                  {investor.totalReferralPoints} ref pts
-                                </span>
-                              )}
+                              {investor.totalReferred &&
+                                investor.totalReferred > 0 && (
+                                  <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-green-50 text-green-700">
+                                    {investor.totalReferred} referrals
+                                  </span>
+                                )}
+                              {investor.totalReferralPoints &&
+                                investor.totalReferralPoints > 0 && (
+                                  <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
+                                    {investor.totalReferralPoints} ref pts
+                                  </span>
+                                )}
                             </div>
+                          ) : (
+                            <span className="text-gray-300">-</span>
                           )}
-                          {investor.totalReferred === 0 &&
-                            investor.totalReferralPoints > 0 && (
-                              <div className="flex items-center gap-2 mt-1">
-                                <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
-                                  {investor.totalReferralPoints} ref pts
-                                </span>
-                              </div>
-                            )}
                         </td>
                         <td className="py-4 h-16 text-gray-700">
                           {investor.activitiesList &&
@@ -571,26 +573,27 @@ const LeaderboardComponent = () => {
                               <span className="text-[10px] text-gray-500">
                                 {myInvestor.pagination.total} activities
                               </span>
-                              {myInvestor.totalReferred > 0 && (
+                              {(myInvestor.totalReferred &&
+                                myInvestor.totalReferred > 0) ||
+                              (myInvestor.totalReferralPoints &&
+                                myInvestor.totalReferralPoints > 0) ? (
                                 <div className="flex items-center gap-2 mt-1">
-                                  <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-green-50 text-green-700">
-                                    {myInvestor.totalReferred} referrals
-                                  </span>
-                                  {myInvestor.totalReferralPoints > 0 && (
-                                    <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
-                                      {myInvestor.totalReferralPoints} ref pts
-                                    </span>
-                                  )}
+                                  {myInvestor.totalReferred &&
+                                    myInvestor.totalReferred > 0 && (
+                                      <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-green-50 text-green-700">
+                                        {myInvestor.totalReferred} referrals
+                                      </span>
+                                    )}
+                                  {myInvestor.totalReferralPoints &&
+                                    myInvestor.totalReferralPoints > 0 && (
+                                      <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
+                                        {myInvestor.totalReferralPoints} ref pts
+                                      </span>
+                                    )}
                                 </div>
+                              ) : (
+                                <span className="text-gray-300">-</span>
                               )}
-                              {myInvestor.totalReferred === 0 &&
-                                myInvestor.totalReferralPoints > 0 && (
-                                  <div className="flex items-center gap-2 mt-1">
-                                    <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
-                                      {myInvestor.totalReferralPoints} ref pts
-                                    </span>
-                                  </div>
-                                )}
                             </div>
                           </div>
                           <div className="flex flex-col items-end">
@@ -676,26 +679,27 @@ const LeaderboardComponent = () => {
                             <span className="text-[10px] text-gray-500">
                               {investor.activitiesList.length} activities
                             </span>
-                            {investor.totalReferred > 0 && (
+                            {(investor.totalReferred &&
+                              investor.totalReferred > 0) ||
+                            (investor.totalReferralPoints &&
+                              investor.totalReferralPoints > 0) ? (
                               <div className="flex items-center gap-2 mt-1">
-                                <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-green-50 text-green-700">
-                                  {investor.totalReferred} referrals
-                                </span>
-                                {investor.totalReferralPoints > 0 && (
-                                  <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
-                                    {investor.totalReferralPoints} ref pts
-                                  </span>
-                                )}
+                                {investor.totalReferred &&
+                                  investor.totalReferred > 0 && (
+                                    <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-green-50 text-green-700">
+                                      {investor.totalReferred} referrals
+                                    </span>
+                                  )}
+                                {investor.totalReferralPoints &&
+                                  investor.totalReferralPoints > 0 && (
+                                    <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
+                                      {investor.totalReferralPoints} ref pts
+                                    </span>
+                                  )}
                               </div>
+                            ) : (
+                              <span className="text-gray-300">-</span>
                             )}
-                            {investor.totalReferred === 0 &&
-                              investor.totalReferralPoints > 0 && (
-                                <div className="flex items-center gap-2 mt-1">
-                                  <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
-                                    {investor.totalReferralPoints} ref pts
-                                  </span>
-                                </div>
-                              )}
                           </div>
                         </div>
                         <div className="flex flex-col items-end">
