@@ -4,10 +4,12 @@ import React, { useState } from "react";
 import Sidebar from "@/app/components/sidebar";
 import Header from "@/app/components/header";
 import LeaderboardComponent from "@/app/components/leaderboard/index";
+import WeeklyLeaderboardComponent from "@/app/components/leaderboard/WeeklyLeaderboard";
 
 const LeaderboardPage = () => {
   const [selectedPage, setSelectedPage] = useState("Leaderboard");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"all-time" | "weekly">("all-time");
 
   return (
     <div className="flex h-screen bg-gray-100 text-gray-800 overflow-hidden">
@@ -68,7 +70,38 @@ const LeaderboardPage = () => {
       <div className="lg:ml-0 flex-1 flex flex-col w-full overflow-hidden">
         <Header />
         <div className="flex-1 overflow-auto pb-20">
-          <LeaderboardComponent />
+          {/* Tab Navigation */}
+          <div className="w-full bg-white border-b border-gray-200 px-4 py-2">
+            <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg max-w-md mx-auto">
+              <button
+                onClick={() => setActiveTab("all-time")}
+                className={`flex-1 py-2 px-4 rounded-md text-md font-medium transition-colors ${
+                  activeTab === "all-time"
+                    ? "bg-white text-gray-900 shadow-sm"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                All-Time
+              </button>
+              <button
+                onClick={() => setActiveTab("weekly")}
+                className={`flex-1 py-2 px-4 rounded-md text-md font-medium transition-colors ${
+                  activeTab === "weekly"
+                    ? "bg-white text-gray-900 shadow-sm"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                🦍 This Week
+              </button>
+            </div>
+          </div>
+
+          {/* Leaderboard Content */}
+          {activeTab === "all-time" ? (
+            <LeaderboardComponent />
+          ) : (
+            <WeeklyLeaderboardComponent />
+          )}
         </div>
       </div>
     </div>

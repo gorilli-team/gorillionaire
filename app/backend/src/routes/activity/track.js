@@ -380,6 +380,12 @@ router.get("/leaderboard/weekly", async (req, res) => {
     const total = usersWithWeeklyPoints.length;
     const paginatedUsers = usersWithWeeklyPoints.slice(skip, skip + limit);
 
+    // Calculate total weekly points for all users (for percentage calculation)
+    const totalWeeklyPoints = usersWithWeeklyPoints.reduce(
+      (sum, user) => sum + user.weeklyPoints,
+      0
+    );
+
     // Get referral data for users in the current page
     const userAddresses = paginatedUsers.map((user) => user.address);
     const referrals = await Referral.find({
@@ -389,9 +395,20 @@ router.get("/leaderboard/weekly", async (req, res) => {
     // Create a map of referral data for quick lookup
     const referralMap = new Map();
     referrals.forEach((referral) => {
+      // Filter referred users to only include those who joined this week
+      const weeklyReferredUsers = referral.referredUsers.filter(
+        (referredUser) => new Date(referredUser.joinedAt) >= startOfWeek
+      );
+
+      // Calculate weekly referral points (only from users who joined this week)
+      const weeklyReferralPoints = weeklyReferredUsers.reduce(
+        (total, referredUser) => total + (referredUser.pointsEarned || 0),
+        0
+      );
+
       referralMap.set(referral.referrerAddress, {
-        totalReferred: referral.referredUsers.length,
-        totalReferralPoints: referral.totalPointsEarned,
+        totalReferred: weeklyReferredUsers.length,
+        totalReferralPoints: weeklyReferralPoints,
       });
     });
 
@@ -402,12 +419,24 @@ router.get("/leaderboard/weekly", async (req, res) => {
         totalReferralPoints: 0,
       };
 
+      // Also check for referral trade bonuses in the user's weekly activities
+      const weeklyActivities = user.activitiesList.filter(
+        (activity) =>
+          new Date(activity.date) >= startOfWeek &&
+          activity.name !== "Account Connected"
+      );
+
+      const weeklyReferralTradeBonuses = weeklyActivities
+        .filter((activity) => activity.name === "Referral Trade Bonus")
+        .reduce((total, activity) => total + (activity.points || 0), 0);
+
       return {
         ...user,
         rank: skip + index + 1,
         points: user.weeklyPoints, // Use weekly points instead of total points
         totalReferred: referralData.totalReferred,
-        totalReferralPoints: referralData.totalReferralPoints,
+        totalReferralPoints:
+          referralData.totalReferralPoints + weeklyReferralTradeBonuses,
       };
     });
 
@@ -422,6 +451,7 @@ router.get("/leaderboard/weekly", async (req, res) => {
       },
       weekStart: startOfWeek,
       weekEnd: new Date(startOfWeek.getTime() + 7 * 24 * 60 * 60 * 1000 - 1),
+      totalWeeklyPoints, // Add total weekly points for percentage calculation
     });
   } catch (error) {
     console.error("Error fetching weekly leaderboard:", error);
@@ -517,6 +547,129 @@ router.get("/me", async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching user activity:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Get user's weekly leaderboard info
+router.get("/me/weekly", async (req, res) => {
+  try {
+    const { address } = req.query;
+    if (!address) {
+      return res.status(400).json({ error: "No address provided" });
+    }
+
+    // Calculate the start of the current week (Monday)
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    const dayOfWeek = now.getDay();
+    const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Sunday = 0, Monday = 1
+    startOfWeek.setDate(now.getDate() - daysToSubtract);
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    // Get all users and calculate their weekly points
+    const allUsers = await UserActivity.find();
+    const usersWithWeeklyPoints = [];
+    let myUser = null;
+    let myWeeklyPoints = 0;
+    let myWeeklyActivities = 0;
+
+    for (const user of allUsers) {
+      // Filter activities from this week only, excluding "Account Connected"
+      const weeklyActivities = user.activitiesList.filter(
+        (activity) =>
+          new Date(activity.date) >= startOfWeek &&
+          activity.name !== "Account Connected"
+      );
+
+      // Calculate total weekly points
+      const weeklyPoints = weeklyActivities.reduce(
+        (total, activity) => total + (activity.points || 0),
+        0
+      );
+
+      if (weeklyPoints > 0) {
+        usersWithWeeklyPoints.push({
+          ...user.toObject(),
+          weeklyPoints,
+          weeklyActivities: weeklyActivities.length,
+        });
+      }
+
+      if (user.address.toLowerCase() === address.toLowerCase()) {
+        myUser = user;
+        myWeeklyPoints = weeklyPoints;
+        myWeeklyActivities = weeklyActivities.length;
+      }
+    }
+
+    // Sort by weekly points (descending)
+    usersWithWeeklyPoints.sort((a, b) => {
+      if (b.weeklyPoints !== a.weeklyPoints) {
+        return b.weeklyPoints - a.weeklyPoints;
+      }
+      // If points are equal, sort by creation date (earlier first)
+      return new Date(a.createdAt) - new Date(b.createdAt);
+    });
+
+    // Find my rank in the sorted list
+    let myRank = null;
+    for (let i = 0; i < usersWithWeeklyPoints.length; i++) {
+      if (
+        usersWithWeeklyPoints[i].address.toLowerCase() === address.toLowerCase()
+      ) {
+        myRank = i + 1;
+        break;
+      }
+    }
+
+    // Get referral data for this user (filtered by weekly period)
+    let totalReferred = 0;
+    let totalReferralPoints = 0;
+    const referral = await Referral.findOne({
+      referrerAddress: address.toLowerCase(),
+    });
+    if (referral) {
+      // Filter referred users to only include those who joined this week
+      const weeklyReferredUsers = referral.referredUsers.filter(
+        (referredUser) => new Date(referredUser.joinedAt) >= startOfWeek
+      );
+
+      // Calculate weekly referral points (only from users who joined this week)
+      const weeklyReferralPoints = weeklyReferredUsers.reduce(
+        (total, referredUser) => total + (referredUser.pointsEarned || 0),
+        0
+      );
+
+      totalReferred = weeklyReferredUsers.length;
+      totalReferralPoints = weeklyReferralPoints;
+    }
+
+    // Also check for referral trade bonuses in the user's weekly activities
+    if (myUser) {
+      const weeklyActivities = myUser.activitiesList.filter(
+        (activity) =>
+          new Date(activity.date) >= startOfWeek &&
+          activity.name !== "Account Connected"
+      );
+
+      const weeklyReferralTradeBonuses = weeklyActivities
+        .filter((activity) => activity.name === "Referral Trade Bonus")
+        .reduce((total, activity) => total + (activity.points || 0), 0);
+
+      totalReferralPoints += weeklyReferralTradeBonuses;
+    }
+
+    res.json({
+      address,
+      weeklyPoints: myWeeklyPoints,
+      weeklyActivities: myWeeklyActivities,
+      rank: myRank,
+      totalReferred,
+      totalReferralPoints,
+    });
+  } catch (error) {
+    console.error("Error fetching weekly user leaderboard info:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });

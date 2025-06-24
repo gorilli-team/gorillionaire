@@ -4,7 +4,6 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Pagination } from "flowbite-react";
 import { useAccount } from "wagmi";
 import Image from "next/image";
-import { getTimeAgo } from "@/app/utils/time";
 import { nnsClient } from "@/app/providers";
 import Link from "next/link";
 import MobilePagination from "@/app/components/ui/MobilePagination";
@@ -60,6 +59,8 @@ const WeeklyLeaderboardComponent = () => {
     weekStart: Date;
     weekEnd: Date;
   } | null>(null);
+  const [hasReferrals, setHasReferrals] = useState(false);
+  const [totalWeeklyPoints, setTotalWeeklyPoints] = useState(0);
 
   const { address } = useAccount();
 
@@ -119,6 +120,17 @@ const WeeklyLeaderboardComponent = () => {
           weekStart: new Date(data.weekStart),
           weekEnd: new Date(data.weekEnd),
         });
+
+        // Use total weekly points from API response (all users, not just current page)
+        setTotalWeeklyPoints(data.totalWeeklyPoints || 0);
+
+        // Check if any users have referrals
+        const hasAnyReferrals = processedInvestors.some(
+          (investor: Investor) =>
+            (investor.totalReferred && investor.totalReferred > 0) ||
+            (investor.totalReferralPoints && investor.totalReferralPoints > 0)
+        );
+        setHasReferrals(hasAnyReferrals);
       } catch (nnsError) {
         console.error("Error fetching NNS profiles:", nnsError);
         // Fallback: use investors without NNS profiles
@@ -155,7 +167,7 @@ const WeeklyLeaderboardComponent = () => {
       startOfWeek.setHours(0, 0, 0, 0);
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/activity/track/me?address=${address}`
+        `${process.env.NEXT_PUBLIC_API_URL}/activity/track/me/weekly?address=${address}`
       );
       const data = await response.json();
 
@@ -169,41 +181,24 @@ const WeeklyLeaderboardComponent = () => {
         // Get NNS profile for the current user
         const nadProfile = await nnsClient.getProfiles([address]);
 
-        // Filter activities from this week only
-        const weeklyActivities =
-          data.userActivity?.activitiesList?.filter(
-            (activity: Activity) =>
-              new Date(activity.date) >= startOfWeek &&
-              activity.name !== "Account Connected"
-          ) || [];
-
-        // Calculate total weekly points
-        const weeklyPoints = weeklyActivities.reduce(
-          (total: number, activity: Activity) =>
-            total + (parseInt(activity.points) || 0),
-          0
-        );
-
-        // Create investor object from /me response
+        // Create investor object from /me/weekly response
         const myInvestorData: Investor = {
-          rank: data.userActivity?.rank || 0,
+          rank: data.rank || 0,
           address: address,
           nadName: nadProfile[0]?.primaryName,
-          nadAvatar:
-            nadProfile[0]?.avatar ||
-            `/avatar_${data.userActivity?.rank % 6}.png`,
-          points: weeklyPoints, // Use weekly points
-          weeklyPoints: weeklyPoints,
-          weeklyActivities: weeklyActivities.length,
-          activitiesList: weeklyActivities,
-          pagination: data.userActivity?.pagination || {
+          nadAvatar: nadProfile[0]?.avatar || `/avatar_${data.rank % 6}.png`,
+          points: data.weeklyPoints || 0, // Use weekly points from API
+          weeklyPoints: data.weeklyPoints || 0,
+          weeklyActivities: data.weeklyActivities || 0,
+          activitiesList: [], // Not needed for weekly view
+          pagination: {
             total: 0,
             page: 1,
             limit: 10,
             totalPages: 1,
           },
-          totalReferred: data.userActivity?.totalReferred || 0,
-          totalReferralPoints: data.userActivity?.totalReferralPoints || 0,
+          totalReferred: data.totalReferred || 0,
+          totalReferralPoints: data.totalReferralPoints || 0,
         };
 
         setMyData(myInvestorData);
@@ -211,36 +206,23 @@ const WeeklyLeaderboardComponent = () => {
         console.error("Error fetching NNS profile for user:", nnsError);
 
         // Fallback: create investor data without NNS profile
-        const weeklyActivities =
-          data.userActivity?.activitiesList?.filter(
-            (activity: Activity) =>
-              new Date(activity.date) >= startOfWeek &&
-              activity.name !== "Account Connected"
-          ) || [];
-
-        const weeklyPoints = weeklyActivities.reduce(
-          (total: number, activity: Activity) =>
-            total + (parseInt(activity.points) || 0),
-          0
-        );
-
         const myInvestorData: Investor = {
-          rank: data.userActivity?.rank || 0,
+          rank: data.rank || 0,
           address: address,
           nadName: undefined,
-          nadAvatar: `/avatar_${data.userActivity?.rank % 6}.png`,
-          points: weeklyPoints,
-          weeklyPoints: weeklyPoints,
-          weeklyActivities: weeklyActivities.length,
-          activitiesList: weeklyActivities,
-          pagination: data.userActivity?.pagination || {
+          nadAvatar: `/avatar_${data.rank % 6}.png`,
+          points: data.weeklyPoints || 0,
+          weeklyPoints: data.weeklyPoints || 0,
+          weeklyActivities: data.weeklyActivities || 0,
+          activitiesList: [],
+          pagination: {
             total: 0,
             page: 1,
             limit: 10,
             totalPages: 1,
           },
-          totalReferred: data.userActivity?.totalReferred || 0,
-          totalReferralPoints: data.userActivity?.totalReferralPoints || 0,
+          totalReferred: data.totalReferred || 0,
+          totalReferralPoints: data.totalReferralPoints || 0,
         };
 
         setMyData(myInvestorData);
@@ -265,7 +247,6 @@ const WeeklyLeaderboardComponent = () => {
 
   // Pagination logic for investors
   const itemsPerPage = 10;
-  const totalInvestorPages = Math.ceil(investorCount / itemsPerPage);
   const currentInvestors = investors;
 
   // Function to create empty rows to maintain height
@@ -305,22 +286,342 @@ const WeeklyLeaderboardComponent = () => {
   };
 
   return (
-    <div className="w-full bg-gray-100 px-2">
-      <div className="w-full mx-auto px-1 sm:px-4 md:px-6 pt-4">
-        <div className="bg-white rounded-lg shadow-sm p-1 sm:p-3 md:p-6 mt-4 flex flex-col h-[calc(100vh-120px)]">
+    <div className="w-full">
+      <div className="w-full mx-auto">
+        <div className="bg-white rounded-lg shadow-sm p-1 sm:p-3 md:p-6 flex flex-col h-[calc(100vh-120px)]">
           {/* Weekly Header */}
-          <div className="mb-4 px-1 sm:px-0">
-            <h2 className="text-xl font-bold text-gray-800 mb-2">
-              Weekly Leaderboard
-            </h2>
-            <p className="text-sm text-gray-600">
-              This week: {formatWeekRange()}
-            </p>
+          <div className="mb-3 px-1 sm:px-0">
+            <div className="bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-200 rounded-lg p-3 mb-3">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-6 h-6 bg-violet-100 rounded-full flex items-center justify-center">
+                  <svg
+                    className="w-3 h-3 text-violet-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"
+                    />
+                  </svg>
+                </div>
+                <h2 className="text-lg font-bold text-violet-800">
+                  Weekly Leaderboard
+                </h2>
+              </div>
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-violet-700">
+                  This week:{" "}
+                  <span className="font-semibold">{formatWeekRange()}</span>
+                </p>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
+                  <span className="text-xs font-semibold text-amber-700">
+                    🎉 50 MON RAFFLE
+                  </span>
+                </div>
+              </div>
+              <div className="bg-white rounded-md p-2 border border-violet-100 mt-2">
+                <p className="text-xs text-gray-700">
+                  We will raffle{" "}
+                  <span className="font-bold text-violet-600">50 MON</span> to{" "}
+                  <span className="font-bold text-violet-600">5 winners</span>{" "}
+                  this week, based on percentage chance.
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  💡 Points and referrals shown are for this week only
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Table with reduced padding on mobile */}
           <div className="overflow-x-auto -mx-1 sm:-mx-3 md:-mx-6">
             <div className="px-1 sm:px-3 md:px-6">
+              {/* This Week Section - Show current user first */}
+              {myInvestor && myInvestor.points > 0 && (
+                <div className="mb-4">
+                  <div className="bg-gradient-to-r from-violet-100 to-purple-100 border-2 border-violet-300 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-5 h-5 bg-violet-200 rounded-full flex items-center justify-center">
+                        <svg
+                          className="w-3 h-3 text-violet-700"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                          />
+                        </svg>
+                      </div>
+                      <h3 className="text-lg font-bold text-violet-800">
+                        This Week
+                      </h3>
+                      <span className="text-sm text-violet-600 font-medium">
+                        (Your Progress)
+                      </span>
+                    </div>
+
+                    {/* Desktop/Tablet View for This Week */}
+                    <div className="hidden sm:block">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="text-left text-sm text-violet-600 border-b border-violet-200">
+                            <th className="pb-2 pr-2 font-medium">RANK</th>
+                            <th className="pb-2 pr-2 font-medium">INVESTOR</th>
+                            <th className="pb-2 pr-2 font-medium text-center">
+                              WEEKLY ACTIVITIES
+                            </th>
+                            <th className="pb-2 pr-2 font-medium">
+                              WEEKLY POINTS
+                            </th>
+                            {hasReferrals && (
+                              <th className="pb-2 pr-2 font-medium text-center">
+                                WEEKLY REFERRALS
+                              </th>
+                            )}
+                            <th className="pb-2 font-medium">
+                              WINNING CHANCES
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr className="bg-white rounded-lg">
+                            <td className="py-3 h-14 text-violet-700 pr-2 pl-4">
+                              <div className="flex items-center">
+                                {myInvestor.rank <= 3 ? (
+                                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full mr-2 bg-amber-100 text-amber-800 font-bold">
+                                    {myInvestor.rank}
+                                  </span>
+                                ) : (
+                                  <span className="font-bold">
+                                    {myInvestor.rank}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-3 h-14 pr-2">
+                              <Link
+                                href={`/users/${myInvestor.address}`}
+                                className="flex items-center hover:opacity-80 transition-opacity"
+                              >
+                                <div className="w-8 h-8 rounded-full flex items-center justify-center mr-2 overflow-hidden border-2 border-violet-200">
+                                  {myInvestor.nadAvatar &&
+                                  myInvestor.nadAvatar !== "" &&
+                                  isValidUrl(myInvestor.nadAvatar) ? (
+                                    <Image
+                                      src={myInvestor.nadAvatar}
+                                      alt="User Avatar"
+                                      width={32}
+                                      height={32}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  ) : (
+                                    <Image
+                                      src={`/avatar_${myInvestor.rank % 6}.png`}
+                                      alt="User Avatar"
+                                      width={32}
+                                      height={32}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  )}
+                                </div>
+                                <span className="text-violet-800 font-bold truncate max-w-[200px] md:max-w-full">
+                                  {myInvestor?.nadName || myInvestor.address}
+                                </span>
+                              </Link>
+                            </td>
+                            <td className="py-3 h-14 text-center text-violet-700 pr-2">
+                              <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium rounded-full bg-blue-50 text-blue-700">
+                                {myInvestor.weeklyActivities || 0}
+                              </span>
+                            </td>
+                            <td className="py-3 h-14 text-violet-700 pr-2 font-bold">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-lg">
+                                  {myInvestor.points}
+                                </span>
+                                <span className="inline-flex items-center justify-center px-2 py-0.5 text-[10px] font-medium rounded-full bg-violet-50 border border-violet-200 text-violet-700">
+                                  Level {getLevelInfo(myInvestor.points).level}
+                                </span>
+                              </div>
+                            </td>
+                            {hasReferrals && (
+                              <td className="py-3 h-14 text-center text-violet-700 pr-2">
+                                {(myInvestor.totalReferred &&
+                                  myInvestor.totalReferred > 0) ||
+                                (myInvestor.totalReferralPoints &&
+                                  myInvestor.totalReferralPoints > 0) ? (
+                                  <>
+                                    {myInvestor.totalReferred &&
+                                      myInvestor.totalReferred > 0 && (
+                                        <div className="flex items-center gap-2 mt-1">
+                                          <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-green-50 text-green-700">
+                                            {myInvestor.totalReferred} referrals
+                                          </span>
+                                          {myInvestor.totalReferralPoints &&
+                                            myInvestor.totalReferralPoints >
+                                              0 && (
+                                              <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
+                                                {myInvestor.totalReferralPoints}{" "}
+                                                ref pts
+                                              </span>
+                                            )}
+                                        </div>
+                                      )}
+                                    {myInvestor.totalReferred === 0 &&
+                                      myInvestor.totalReferralPoints &&
+                                      myInvestor.totalReferralPoints > 0 && (
+                                        <div className="flex items-center gap-2 mt-1">
+                                          <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
+                                            {myInvestor.totalReferralPoints} ref
+                                            pts
+                                          </span>
+                                        </div>
+                                      )}
+                                  </>
+                                ) : (
+                                  <span className="text-gray-400 text-xs">
+                                    -
+                                  </span>
+                                )}
+                              </td>
+                            )}
+                            <td className="py-3 h-14 text-violet-700">
+                              {totalWeeklyPoints > 0 ? (
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-bold text-violet-800">
+                                    {(
+                                      (myInvestor.points / totalWeeklyPoints) *
+                                      100
+                                    ).toFixed(1)}
+                                    %
+                                  </span>
+                                  <span className="text-xs text-violet-600">
+                                    of total points
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-sm text-gray-400">-</span>
+                              )}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Mobile View for This Week */}
+                    <div className="sm:hidden">
+                      <div className="bg-white rounded-lg p-3 border border-violet-200">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            {myInvestor.rank <= 3 ? (
+                              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-100 text-amber-800 font-bold text-sm">
+                                {myInvestor.rank}
+                              </span>
+                            ) : (
+                              <span className="text-violet-700 font-bold text-sm">
+                                {myInvestor.rank}
+                              </span>
+                            )}
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden border-2 border-violet-200">
+                              {myInvestor.nadAvatar &&
+                              myInvestor.nadAvatar !== "" &&
+                              isValidUrl(myInvestor.nadAvatar) ? (
+                                <Image
+                                  src={myInvestor.nadAvatar}
+                                  alt="User Avatar"
+                                  width={32}
+                                  height={32}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <Image
+                                  src={`/avatar_${myInvestor.rank % 6}.png`}
+                                  alt="User Avatar"
+                                  width={32}
+                                  height={32}
+                                  className="w-full h-full object-cover"
+                                />
+                              )}
+                            </div>
+                            <div className="flex flex-col">
+                              <Link
+                                href={`/users/${myInvestor.address}`}
+                                className="text-violet-800 font-semibold text-sm hover:underline"
+                              >
+                                {myInvestor?.nadName ||
+                                  shortenAddress(myInvestor.address)}
+                              </Link>
+                              <span className="text-[10px] text-violet-600">
+                                {myInvestor.weeklyActivities || 0} weekly
+                                activities
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-violet-700 font-bold text-lg">
+                                {myInvestor.points} pts
+                              </span>
+                              <span className="inline-flex items-center justify-center px-2 py-0.5 text-[10px] font-medium rounded-full bg-violet-50 border border-violet-200 text-violet-700">
+                                Level {getLevelInfo(myInvestor.points).level}
+                              </span>
+                            </div>
+                            {totalWeeklyPoints > 0 && (
+                              <span className="text-[10px] text-violet-600 text-right mt-0.5">
+                                <span className="font-bold text-violet-800">
+                                  {(
+                                    (myInvestor.points / totalWeeklyPoints) *
+                                    100
+                                  ).toFixed(1)}
+                                  %
+                                </span>
+                                <span className="ml-1">of total points</span>
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {hasReferrals && (
+                          <>
+                            {(myInvestor.totalReferred &&
+                              myInvestor.totalReferred > 0) ||
+                            (myInvestor.totalReferralPoints &&
+                              myInvestor.totalReferralPoints > 0) ? (
+                              <div className="flex items-center gap-2 mt-2">
+                                {myInvestor.totalReferred &&
+                                  myInvestor.totalReferred > 0 && (
+                                    <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-green-50 text-green-700">
+                                      {myInvestor.totalReferred} referrals
+                                    </span>
+                                  )}
+                                {myInvestor.totalReferralPoints &&
+                                  myInvestor.totalReferralPoints > 0 && (
+                                    <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
+                                      {myInvestor.totalReferralPoints} ref pts
+                                    </span>
+                                  )}
+                              </div>
+                            ) : (
+                              <span className="text-gray-400 text-xs">
+                                No referrals this week
+                              </span>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="h-[calc(100vh-320px)] sm:h-[500px] md:h-[600px] lg:h-[680px] overflow-auto pb-20 sm:pb-0">
                 {/* Desktop/Tablet View */}
                 <table className="w-full border-collapse hidden sm:table">
@@ -332,118 +633,15 @@ const WeeklyLeaderboardComponent = () => {
                         WEEKLY ACTIVITIES
                       </th>
                       <th className="pb-2 pr-2 font-medium">WEEKLY POINTS</th>
-                      <th className="pb-2 pr-2 font-medium text-center">
-                        REFERRALS
-                      </th>
-                      <th className="pb-2 font-medium">LATEST ACTION</th>
+                      {hasReferrals && (
+                        <th className="pb-2 pr-2 font-medium text-center">
+                          WEEKLY REFERRALS
+                        </th>
+                      )}
+                      <th className="pb-2 font-medium">WINNING CHANCES</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {myInvestor && myInvestor.points > 0 && (
-                      <>
-                        <tr className="bg-violet-100">
-                          <td className="py-4 h-16 text-gray-700 pr-2 pl-4">
-                            <div className="flex items-center">
-                              {myInvestor.rank <= 3 ? (
-                                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full mr-2 bg-amber-100 text-amber-800 font-bold">
-                                  {myInvestor.rank}
-                                </span>
-                              ) : (
-                                <span>{myInvestor.rank}</span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="py-4 h-16 pr-2">
-                            <Link
-                              href={`/users/${myInvestor.address}`}
-                              className="flex items-center hover:opacity-80 transition-opacity"
-                            >
-                              <div className="w-8 h-8 rounded-full flex items-center justify-center mr-2 overflow-hidden">
-                                {myInvestor.nadAvatar &&
-                                myInvestor.nadAvatar !== "" &&
-                                isValidUrl(myInvestor.nadAvatar) ? (
-                                  <Image
-                                    src={myInvestor.nadAvatar}
-                                    alt="User Avatar"
-                                    width={32}
-                                    height={32}
-                                    className="w-full h-full object-cover"
-                                  />
-                                ) : (
-                                  <Image
-                                    src={`/avatar_${myInvestor.rank % 6}.png`}
-                                    alt="User Avatar"
-                                    width={32}
-                                    height={32}
-                                    className="w-full h-full object-cover"
-                                  />
-                                )}
-                              </div>
-                              <span className="text-gray-700 font-bold truncate max-w-[200px] md:max-w-full">
-                                {myInvestor?.nadName || myInvestor.address}
-                              </span>
-                            </Link>
-                          </td>
-                          <td className="py-4 h-16 text-center text-gray-700 pr-2">
-                            <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium rounded-full bg-blue-50 text-blue-700">
-                              {myInvestor.weeklyActivities || 0}
-                            </span>
-                          </td>
-                          <td className="py-4 h-16 text-gray-700 pr-2 font-bold">
-                            <div className="flex items-center gap-1.5">
-                              <span>{myInvestor.points}</span>
-                              <span className="inline-flex items-center justify-center px-2 py-0.5 text-[10px] font-medium rounded-full bg-white border border-violet-200 text-violet-700">
-                                Level {getLevelInfo(myInvestor.points).level}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="py-4 h-16 text-center text-gray-700 pr-2">
-                            {myInvestor.totalReferred > 0 && (
-                              <div className="flex items-center gap-2 mt-1">
-                                <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-green-50 text-green-700">
-                                  {myInvestor.totalReferred} referrals
-                                </span>
-                                {myInvestor.totalReferralPoints > 0 && (
-                                  <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
-                                    {myInvestor.totalReferralPoints} ref pts
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                            {myInvestor.totalReferred === 0 &&
-                              myInvestor.totalReferralPoints > 0 && (
-                                <div className="flex items-center gap-2 mt-1">
-                                  <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
-                                    {myInvestor.totalReferralPoints} ref pts
-                                  </span>
-                                </div>
-                              )}
-                          </td>
-                          <td className="py-4 h-16 text-gray-700">
-                            {myInvestor.activitiesList &&
-                              myInvestor.activitiesList.length > 0 && (
-                                <div className="flex flex-col">
-                                  <span className="text-sm font-medium">
-                                    {myInvestor.activitiesList[0].name}
-                                    <span className="ml-2 text-xs font-normal text-blue-600">
-                                      +{myInvestor.activitiesList[0].points}
-                                      pts
-                                    </span>
-                                  </span>
-                                  <span className="text-xs text-gray-500">
-                                    {getTimeAgo(
-                                      myInvestor.activitiesList[0].date
-                                    )}
-                                  </span>
-                                </div>
-                              )}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td colSpan={7} style={{ height: 16 }}></td>
-                        </tr>
-                      </>
-                    )}
                     {pageInvestors.map((investor) => (
                       <tr
                         key={investor.address}
@@ -508,57 +706,58 @@ const WeeklyLeaderboardComponent = () => {
                             </span>
                           </div>
                         </td>
-                        <td className="py-4 h-16 text-center text-gray-700 pr-2">
-                          {investor.totalReferred > 0 && (
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-green-50 text-green-700">
-                                {investor.totalReferred} referrals
-                              </span>
-                              {investor.totalReferralPoints > 0 && (
-                                <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
-                                  {investor.totalReferralPoints} ref pts
-                                </span>
-                              )}
-                            </div>
-                          )}
-                          {investor.totalReferred === 0 &&
-                            investor.totalReferralPoints > 0 && (
-                              <div className="flex items-center gap-2 mt-1">
-                                <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
-                                  {investor.totalReferralPoints} ref pts
-                                </span>
-                              </div>
-                            )}
-                        </td>
-                        <td className="py-4 h-16 text-gray-700">
-                          {investor.activitiesList &&
-                            investor.activitiesList.length > 0 && (
-                              <div className="flex flex-col">
-                                <span className="text-sm font-medium">
-                                  {
-                                    investor.activitiesList[
-                                      investor.activitiesList.length - 1
-                                    ].name
-                                  }
-                                  <span className="ml-2 text-xs font-normal text-blue-600">
-                                    +
-                                    {
-                                      investor.activitiesList[
-                                        investor.activitiesList.length - 1
-                                      ].points
-                                    }
-                                    pts
-                                  </span>
-                                </span>
-                                <span className="text-xs text-gray-500">
-                                  {getTimeAgo(
-                                    investor.activitiesList[
-                                      investor.activitiesList.length - 1
-                                    ].date
+                        {hasReferrals && (
+                          <td className="py-4 h-16 text-center text-gray-700 pr-2">
+                            {(investor.totalReferred &&
+                              investor.totalReferred > 0) ||
+                            (investor.totalReferralPoints &&
+                              investor.totalReferralPoints > 0) ? (
+                              <>
+                                {investor.totalReferred &&
+                                  investor.totalReferred > 0 && (
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-green-50 text-green-700">
+                                        {investor.totalReferred} referrals
+                                      </span>
+                                      {investor.totalReferralPoints &&
+                                        investor.totalReferralPoints > 0 && (
+                                          <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
+                                            {investor.totalReferralPoints} ref
+                                            pts
+                                          </span>
+                                        )}
+                                    </div>
                                   )}
-                                </span>
-                              </div>
-                            )}
+                                {investor.totalReferred === 0 &&
+                                  investor.totalReferralPoints &&
+                                  investor.totalReferralPoints > 0 && (
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
+                                        {investor.totalReferralPoints} ref pts
+                                      </span>
+                                    </div>
+                                  )}
+                              </>
+                            ) : null}
+                          </td>
+                        )}
+                        <td className="py-4 h-16 text-gray-700">
+                          {totalWeeklyPoints > 0 ? (
+                            <div className="flex flex-col">
+                              <span className="text-sm font-medium">
+                                {(
+                                  (investor.points / totalWeeklyPoints) *
+                                  100
+                                ).toFixed(1)}
+                                %
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                of total points
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-sm text-gray-400">-</span>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -582,120 +781,17 @@ const WeeklyLeaderboardComponent = () => {
 
                 {/* Mobile View */}
                 <div className="sm:hidden space-y-3">
-                  {myInvestor && myInvestor.points > 0 && (
-                    <>
-                      <div
-                        className={`border rounded-lg px-4 py-3 bg-white hover:border-gray-300 transition-colors ${
-                          isCurrentUserAddress(myInvestor.address)
-                            ? "bg-violet-100 border-violet-300"
-                            : ""
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            {myInvestor.rank <= 3 ? (
-                              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-100 text-amber-800 font-bold text-sm">
-                                {myInvestor.rank}
-                              </span>
-                            ) : (
-                              <span className="text-gray-700 font-medium text-sm">
-                                {myInvestor.rank}
-                              </span>
-                            )}
-                            <div className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden border border-gray-100">
-                              {myInvestor.nadAvatar &&
-                              myInvestor.nadAvatar !== "" &&
-                              isValidUrl(myInvestor.nadAvatar) ? (
-                                <Image
-                                  src={myInvestor.nadAvatar}
-                                  alt="User Avatar"
-                                  width={32}
-                                  height={32}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <Image
-                                  src={`/avatar_${myInvestor.rank % 6}.png`}
-                                  alt="User Avatar"
-                                  width={32}
-                                  height={32}
-                                  className="w-full h-full object-cover"
-                                />
-                              )}
-                            </div>
-                            <div className="flex flex-col">
-                              <Link
-                                href={`/users/${myInvestor.address}`}
-                                className="text-gray-800 font-semibold text-sm hover:underline"
-                              >
-                                {myInvestor?.nadName ||
-                                  shortenAddress(myInvestor.address)}
-                              </Link>
-                              <span className="text-[10px] text-gray-500">
-                                {myInvestor.weeklyActivities || 0} weekly
-                                activities
-                              </span>
-                              {myInvestor.totalReferred > 0 && (
-                                <div className="flex items-center gap-2 mt-1">
-                                  <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-green-50 text-green-700">
-                                    {myInvestor.totalReferred} referrals
-                                  </span>
-                                  {myInvestor.totalReferralPoints > 0 && (
-                                    <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
-                                      {myInvestor.totalReferralPoints} ref pts
-                                    </span>
-                                  )}
-                                </div>
-                              )}
-                              {myInvestor.totalReferred === 0 &&
-                                myInvestor.totalReferralPoints > 0 && (
-                                  <div className="flex items-center gap-2 mt-1">
-                                    <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
-                                      {myInvestor.totalReferralPoints} ref pts
-                                    </span>
-                                  </div>
-                                )}
-                            </div>
-                          </div>
-                          <div className="flex flex-col items-end">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-violet-700 font-bold text-sm">
-                                {myInvestor.points} pts
-                              </span>
-                              <span className="inline-flex items-center justify-center px-2 py-0.5 text-[10px] font-medium rounded-full bg-white border border-violet-200 text-violet-700">
-                                Level {getLevelInfo(myInvestor.points).level}
-                              </span>
-                            </div>
-                            {myInvestor.activitiesList &&
-                              myInvestor.activitiesList.length > 0 && (
-                                <span className="text-[10px] text-gray-500 text-right mt-0.5">
-                                  <span className="font-medium text-gray-700">
-                                    {myInvestor.activitiesList[0].name}
-                                  </span>
-                                  <span className="ml-1 text-blue-600 font-medium">
-                                    +{myInvestor.activitiesList[0].points}
-                                  </span>
-                                  <span className="ml-1">
-                                    {getTimeAgo(
-                                      myInvestor.activitiesList[0].date
-                                    )}
-                                  </span>
-                                </span>
-                              )}
-                          </div>
-                        </div>
-                      </div>
-                      <div style={{ height: 8 }}></div>
-                    </>
-                  )}
                   {pageInvestors.map((investor) => (
                     <div
                       key={investor.address}
-                      className={`border rounded-lg px-4 py-3 bg-white hover:border-gray-300 transition-colors ${
-                        isCurrentUserAddress(investor.address)
-                          ? "bg-violet-100 border-violet-300"
-                          : ""
-                      }`}
+                      className={`
+                        border rounded-lg px-4 py-3 bg-white hover:border-gray-300 transition-colors
+                        ${
+                          isCurrentUserAddress(investor.address)
+                            ? "bg-violet-100 border-violet-300"
+                            : ""
+                        }
+                      `}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -740,26 +836,43 @@ const WeeklyLeaderboardComponent = () => {
                             <span className="text-[10px] text-gray-500">
                               {investor.weeklyActivities || 0} weekly activities
                             </span>
-                            {investor.totalReferred > 0 && (
-                              <div className="flex items-center gap-2 mt-1">
-                                <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-green-50 text-green-700">
-                                  {investor.totalReferred} referrals
-                                </span>
-                                {investor.totalReferralPoints > 0 && (
-                                  <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
-                                    {investor.totalReferralPoints} ref pts
-                                  </span>
-                                )}
-                              </div>
+                            {hasReferrals && (
+                              <>
+                                {(investor.totalReferred &&
+                                  investor.totalReferred > 0) ||
+                                (investor.totalReferralPoints &&
+                                  investor.totalReferralPoints > 0) ? (
+                                  <>
+                                    {investor.totalReferred &&
+                                      investor.totalReferred > 0 && (
+                                        <div className="flex items-center gap-2 mt-1">
+                                          <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-green-50 text-green-700">
+                                            {investor.totalReferred} referrals
+                                          </span>
+                                          {investor.totalReferralPoints &&
+                                            investor.totalReferralPoints >
+                                              0 && (
+                                              <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
+                                                {investor.totalReferralPoints}{" "}
+                                                ref pts
+                                              </span>
+                                            )}
+                                        </div>
+                                      )}
+                                    {investor.totalReferred === 0 &&
+                                      investor.totalReferralPoints &&
+                                      investor.totalReferralPoints > 0 && (
+                                        <div className="flex items-center gap-2 mt-1">
+                                          <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
+                                            {investor.totalReferralPoints} ref
+                                            pts
+                                          </span>
+                                        </div>
+                                      )}
+                                  </>
+                                ) : null}
+                              </>
                             )}
-                            {investor.totalReferred === 0 &&
-                              investor.totalReferralPoints > 0 && (
-                                <div className="flex items-center gap-2 mt-1">
-                                  <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
-                                    {investor.totalReferralPoints} ref pts
-                                  </span>
-                                </div>
-                              )}
                           </div>
                         </div>
                         <div className="flex flex-col items-end">
@@ -771,81 +884,45 @@ const WeeklyLeaderboardComponent = () => {
                               Level {getLevelInfo(investor.points).level}
                             </span>
                           </div>
-                          {investor.activitiesList &&
-                            investor.activitiesList.length > 0 && (
-                              <span className="text-[10px] text-gray-500 text-right mt-0.5">
-                                <span className="font-medium text-gray-700">
-                                  {
-                                    investor.activitiesList[
-                                      investor.activitiesList.length - 1
-                                    ].name
-                                  }
-                                </span>
-                                <span className="ml-1 text-blue-600 font-medium">
-                                  +
-                                  {
-                                    investor.activitiesList[
-                                      investor.activitiesList.length - 1
-                                    ].points
-                                  }
-                                </span>
-                                <span className="ml-1">
-                                  {getTimeAgo(
-                                    investor.activitiesList[
-                                      investor.activitiesList.length - 1
-                                    ].date
-                                  )}
-                                </span>
+                          {totalWeeklyPoints > 0 && (
+                            <span className="text-[10px] text-gray-500 text-right mt-0.5">
+                              <span className="font-medium text-gray-700">
+                                {(
+                                  (investor.points / totalWeeklyPoints) *
+                                  100
+                                ).toFixed(1)}
+                                %
                               </span>
-                            )}
+                              <span className="ml-1">of total points</span>
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
                   ))}
-
-                  {/* Empty state for mobile if needed */}
-                  {emptyInvestorRows.length > 0 &&
-                    currentInvestors.length === 0 && (
-                      <div className="text-center text-gray-500 text-sm py-8">
-                        No weekly activity to display
-                      </div>
-                    )}
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="mt-2 flex flex-col items-center w-full gap-1 flex-1">
-            <span className="text-xs text-gray-500 text-center w-full">
-              Showing{" "}
-              {investors.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}-
-              {Math.min(currentPage * itemsPerPage, investorCount)} of{" "}
-              {investorCount}
-            </span>
-            <div className="w-full overflow-x-auto">
-              <div className="flex justify-center min-w-[320px]">
-                <div className="hidden sm:block">
-                  <Pagination
-                    currentPage={currentPage}
-                    totalPages={totalInvestorPages > 0 ? totalInvestorPages : 1}
-                    onPageChange={onPageChange}
-                    showIcons={true}
-                  />
-                </div>
-              </div>
-            </div>
-            <hr className="w-full border-t border-gray-200 mt-2" />
+          {/* Pagination */}
+          <div className="mt-4 flex justify-center">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={Math.ceil(investorCount / 10)}
+              onPageChange={onPageChange}
+              showIcons
+            />
           </div>
-        </div>
-      </div>
-      {/* Mobile pagination fixed at bottom */}
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-40">
-        <div className="w-full">
-          <MobilePagination
-            currentPage={currentPage}
-            totalPages={totalInvestorPages > 0 ? totalInvestorPages : 1}
-            onPageChange={onPageChange}
-          />
+
+          {/* Mobile Pagination */}
+          <div className="sm:hidden mt-4">
+            <MobilePagination
+              currentPage={currentPage}
+              totalPages={Math.ceil(investorCount / 10)}
+              onPageChange={onPageChange}
+            />
+          </div>
         </div>
       </div>
     </div>
