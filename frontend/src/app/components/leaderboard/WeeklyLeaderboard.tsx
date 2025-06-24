@@ -322,7 +322,8 @@ const WeeklyLeaderboardComponent = () => {
               <div className="bg-white rounded-md p-2 border border-violet-100 mt-2">
                 <p className="text-xs text-gray-700">
                   We will raffle{" "}
-                  <span className="font-bold text-violet-600">50 MON</span> to{" "}
+                  <span className="font-bold text-violet-600">50 MON each</span>{" "}
+                  to{" "}
                   <span className="font-bold text-violet-600">5 winners</span>{" "}
                   this week, based on percentage chance.
                 </p>
