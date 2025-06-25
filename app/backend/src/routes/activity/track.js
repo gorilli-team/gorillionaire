@@ -12,6 +12,7 @@ const {
   manualArchive,
   archiveSpecificWeek,
 } = require("../../cron/weeklyLeaderboard");
+const ActivityService = require("../../services/ActivityService");
 
 // Simple in-memory cache for weekly leaderboard
 const weeklyCache = {
@@ -204,6 +205,7 @@ router.post("/trade-points", async (req, res) => {
     }
 
     //add the txHash to the userActivity.activitiesList
+<<<<<<< HEAD
     let points = Math.ceil(intent.usdValue);
 
     // Check if user has been referred and is within 7 days of being referred
@@ -235,6 +237,25 @@ router.post("/trade-points", async (req, res) => {
       }
     }
 
+=======
+    const points = Math.ceil(intent.usdValue);
+
+    // Use ActivityService to add activity
+    await ActivityService.addActivity(address, {
+      name: "Trade",
+      points: points,
+      date: new Date(),
+      intentId: intentId,
+      signalId: signalId,
+      txHash: txHash,
+    });
+
+    // Update points in UserActivity (this is still needed for backward compatibility)
+    const totalPoints = userActivity.points + points;
+    userActivity.points += points;
+
+    // Also add to activitiesList for backward compatibility
+>>>>>>> df4f525 (backend: update activities scripts)
     userActivity.activitiesList.push({
       name: is2xXpActive ? "Trade (2x XP)" : "Trade",
       points: points,
@@ -243,6 +264,7 @@ router.post("/trade-points", async (req, res) => {
       signalId: signalId,
       txHash: txHash,
     });
+<<<<<<< HEAD
     const totalPoints = userActivity.points + points;
     userActivity.points += points;
 
@@ -315,6 +337,8 @@ router.post("/trade-points", async (req, res) => {
         userActivity.streak = 1;
       }
     }
+=======
+>>>>>>> df4f525 (backend: update activities scripts)
 
     await userActivity.save();
 
@@ -345,6 +369,18 @@ router.post("/trade-points", async (req, res) => {
 
       if (referrerActivity) {
         referrerActivity.points += referralBonus;
+
+        // Use ActivityService to add referral activity
+        await ActivityService.addActivity(referral.referrerAddress, {
+          name: "Referral Trade Bonus",
+          points: referralBonus,
+          date: new Date(),
+          referralId: referral._id,
+          referredUserAddress: address.toLowerCase(),
+          originalTradePoints: points,
+        });
+
+        // Also add to activitiesList for backward compatibility
         referrerActivity.activitiesList.push({
           name: "Referral Trade Bonus",
           points: referralBonus,
@@ -353,6 +389,7 @@ router.post("/trade-points", async (req, res) => {
           referredUserAddress: address.toLowerCase(),
           originalTradePoints: points,
         });
+
         await referrerActivity.save();
 
         // Invalidate weekly cache since referral activity was added
