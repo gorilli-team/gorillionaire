@@ -779,14 +779,19 @@ const UserProfilePage = () => {
                       </div>
 
                       <div>
-                        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">
-                          {userProfile.nadName ||
-                            formatAddress(userProfile.address)}
+                        <h1
+                          className="text-xl sm:text-2xl font-bold text-gray-900 mb-1 break-all"
+                          title={userProfile.address}
+                        >
+                          {userProfile.nadName || userProfile.address}
                         </h1>
 
                         {userProfile.nadName && (
-                          <p className="text-gray-500 text-sm font-mono mb-2">
-                            {formatAddress(userProfile.address)}
+                          <p
+                            className="text-gray-500 text-sm font-mono mb-2 break-all"
+                            title={userProfile.address}
+                          >
+                            {userProfile.address}
                           </p>
                         )}
 
