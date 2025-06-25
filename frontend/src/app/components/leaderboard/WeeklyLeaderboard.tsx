@@ -9,7 +9,7 @@ import Link from "next/link";
 import MobilePagination from "@/app/components/ui/MobilePagination";
 import { getLevelInfo } from "@/app/utils/xp";
 
-interface Investor {
+interface Trader {
   rank: number;
   address: string;
   nadName?: string;
@@ -50,18 +50,21 @@ const isValidUrl = (urlString: string): boolean => {
   }
 };
 
-const shortenAddress = (address: string): string => {
+// New function for more compact address display
+const displayAddress = (address: string, nadName?: string): string => {
+  if (nadName) return nadName;
   if (!address) return "";
-  return `${address.substring(0, 6)}...${address.substring(
-    address.length - 4
+  // For addresses without NNS names, use a more compact format
+  return `${address.substring(0, 4)}...${address.substring(
+    address.length - 3
   )}`;
 };
 
 const WeeklyLeaderboardComponent = () => {
   const [currentPage, setCurrentPage] = useState(1);
-  const [investors, setInvestors] = useState<Investor[]>([]);
-  const [investorCount, setInvestorCount] = useState(0);
-  const [myData, setMyData] = useState<Investor | null>(null);
+  const [traders, setTraders] = useState<Trader[]>([]);
+  const [traderCount, setTraderCount] = useState(0);
+  const [myData, setMyData] = useState<Trader | null>(null);
   const [weekInfo, setWeekInfo] = useState<{
     weekStart: Date;
     weekEnd: Date;
@@ -126,14 +129,14 @@ const WeeklyLeaderboardComponent = () => {
         !Array.isArray(data.users) ||
         data.users.length === 0
       ) {
-        setInvestors([]);
-        setInvestorCount(0);
+        setTraders([]);
+        setTraderCount(0);
         return;
       }
 
       // Filter out any users without valid addresses
       const validUsers = data.users.filter(
-        (user: Investor) =>
+        (user: Trader) =>
           user &&
           user.address &&
           typeof user.address === "string" &&
@@ -141,25 +144,25 @@ const WeeklyLeaderboardComponent = () => {
       );
 
       if (validUsers.length === 0) {
-        setInvestors([]);
-        setInvestorCount(0);
+        setTraders([]);
+        setTraderCount(0);
         return;
       }
 
-      const userAddresses = validUsers.map((u: Investor) => u.address);
+      const userAddresses = validUsers.map((u: Trader) => u.address);
 
       try {
         const nadProfiles = await nnsClient.getProfiles(userAddresses);
 
-        const processedInvestors =
-          validUsers.map((u: Investor, i: number) => ({
+        const processedTraders =
+          validUsers.map((u: Trader, i: number) => ({
             ...u,
             nadName: nadProfiles[i]?.primaryName,
             nadAvatar: nadProfiles[i]?.avatar || `/avatar_${i % 6}.png`,
           })) || [];
 
-        setInvestors(processedInvestors);
-        setInvestorCount(data.pagination.total);
+        setTraders(processedTraders);
+        setTraderCount(data.pagination.total);
         setWeekInfo({
           weekStart: new Date(data.weekStart),
           weekEnd: new Date(data.weekEnd),
@@ -169,23 +172,23 @@ const WeeklyLeaderboardComponent = () => {
         setTotalWeeklyPoints(data.totalWeeklyPoints || 0);
 
         // Check if any users have referrals
-        const hasAnyReferrals = processedInvestors.some(
-          (investor: Investor) =>
-            (investor.totalReferred && investor.totalReferred > 0) ||
-            (investor.totalReferralPoints && investor.totalReferralPoints > 0)
+        const hasAnyReferrals = processedTraders.some(
+          (trader: Trader) =>
+            (trader.totalReferred && trader.totalReferred > 0) ||
+            (trader.totalReferralPoints && trader.totalReferralPoints > 0)
         );
         setHasReferrals(hasAnyReferrals);
       } catch (nnsError) {
         console.error("Error fetching NNS profiles:", nnsError);
-        // Fallback: use investors without NNS profiles
-        const processedInvestors = validUsers.map((u: Investor, i: number) => ({
+        // Fallback: use traders without NNS profiles
+        const processedTraders = validUsers.map((u: Trader, i: number) => ({
           ...u,
           nadName: undefined,
           nadAvatar: `/avatar_${i % 6}.png`,
         }));
 
-        setInvestors(processedInvestors);
-        setInvestorCount(data.pagination.total);
+        setTraders(processedTraders);
+        setTraderCount(data.pagination.total);
         setWeekInfo({
           weekStart: new Date(data.weekStart),
           weekEnd: new Date(data.weekEnd),
@@ -193,8 +196,8 @@ const WeeklyLeaderboardComponent = () => {
       }
     } catch (error) {
       console.error("Error fetching weekly leaderboard:", error);
-      setInvestors([]);
-      setInvestorCount(0);
+      setTraders([]);
+      setTraderCount(0);
     }
   };
 
@@ -225,8 +228,8 @@ const WeeklyLeaderboardComponent = () => {
         // Get NNS profile for the current user
         const nadProfile = await nnsClient.getProfiles([address]);
 
-        // Create investor object from /me/weekly response
-        const myInvestorData: Investor = {
+        // Create trader object from /me/weekly response
+        const myTraderData: Trader = {
           rank: data.rank || 0,
           address: address,
           nadName: nadProfile[0]?.primaryName,
@@ -245,12 +248,12 @@ const WeeklyLeaderboardComponent = () => {
           totalReferralPoints: data.totalReferralPoints || 0,
         };
 
-        setMyData(myInvestorData);
+        setMyData(myTraderData);
       } catch (nnsError) {
         console.error("Error fetching NNS profile for user:", nnsError);
 
-        // Fallback: create investor data without NNS profile
-        const myInvestorData: Investor = {
+        // Fallback: create trader data without NNS profile
+        const myTraderData: Trader = {
           rank: data.rank || 0,
           address: address,
           nadName: undefined,
@@ -269,7 +272,7 @@ const WeeklyLeaderboardComponent = () => {
           totalReferralPoints: data.totalReferralPoints || 0,
         };
 
-        setMyData(myInvestorData);
+        setMyData(myTraderData);
       }
     } catch (error) {
       console.error("Error fetching user activity:", error);
@@ -289,17 +292,17 @@ const WeeklyLeaderboardComponent = () => {
     return () => clearInterval(interval);
   }, [address, currentPage, fetchMe]);
 
-  // Pagination logic for investors
-  const currentInvestors = investors;
+  // Pagination logic for traders
+  const currentTraders = traders;
 
-  // Use myData instead of finding in investors list
-  const myInvestor = myData;
-  const pageInvestors = currentInvestors;
+  // Use myData instead of finding in traders list
+  const myTrader = myData;
+  const pageTraders = currentTraders;
 
-  // Function to check if the current wallet address matches an investor
-  const isCurrentUserAddress = (investorAddress: string): boolean => {
+  // Function to check if the current wallet address matches a trader
+  const isCurrentUserAddress = (traderAddress: string): boolean => {
     if (!address) return false;
-    return address.toLowerCase() === investorAddress.toLowerCase();
+    return address.toLowerCase() === traderAddress.toLowerCase();
   };
 
   // Format week range
@@ -396,7 +399,7 @@ const WeeklyLeaderboardComponent = () => {
           <div className="overflow-x-auto -mx-1 sm:-mx-3 md:-mx-6">
             <div className="px-1 sm:px-3 md:px-6">
               {/* This Week Section - Show current user first */}
-              {myInvestor && myInvestor.points > 0 && (
+              {myTrader && myTrader.points > 0 && (
                 <div className="mb-4">
                   <div className="bg-gradient-to-r from-violet-100 to-purple-100 border-2 border-violet-300 rounded-lg p-4">
                     <div className="flex items-center gap-2 mb-3">
@@ -429,7 +432,7 @@ const WeeklyLeaderboardComponent = () => {
                         <thead>
                           <tr className="text-left text-sm text-violet-600 border-b border-violet-200">
                             <th className="pb-2 pr-2 font-medium">RANK</th>
-                            <th className="pb-2 pr-2 font-medium">INVESTOR</th>
+                            <th className="pb-2 pr-2 font-medium">TRADER</th>
                             <th className="pb-2 pr-2 font-medium text-center">
                               WEEKLY ACTIVITIES
                             </th>
@@ -450,28 +453,28 @@ const WeeklyLeaderboardComponent = () => {
                           <tr className="bg-white rounded-lg">
                             <td className="py-3 h-14 text-violet-700 pr-2 pl-4">
                               <div className="flex items-center">
-                                {myInvestor.rank <= 3 ? (
+                                {myTrader.rank <= 3 ? (
                                   <span className="inline-flex items-center justify-center w-6 h-6 rounded-full mr-2 bg-amber-100 text-amber-800 font-bold">
-                                    {myInvestor.rank}
+                                    {myTrader.rank}
                                   </span>
                                 ) : (
                                   <span className="font-bold">
-                                    {myInvestor.rank}
+                                    {myTrader.rank}
                                   </span>
                                 )}
                               </div>
                             </td>
                             <td className="py-3 h-14 pr-2">
                               <Link
-                                href={`/users/${myInvestor.address}`}
+                                href={`/users/${myTrader.address}`}
                                 className="flex items-center hover:opacity-80 transition-opacity"
                               >
                                 <div className="w-8 h-8 rounded-full flex items-center justify-center mr-2 overflow-hidden border-2 border-violet-200">
-                                  {myInvestor.nadAvatar &&
-                                  myInvestor.nadAvatar !== "" &&
-                                  isValidUrl(myInvestor.nadAvatar) ? (
+                                  {myTrader.nadAvatar &&
+                                  myTrader.nadAvatar !== "" &&
+                                  isValidUrl(myTrader.nadAvatar) ? (
                                     <Image
-                                      src={myInvestor.nadAvatar}
+                                      src={myTrader.nadAvatar}
                                       alt="User Avatar"
                                       width={32}
                                       height={32}
@@ -479,7 +482,7 @@ const WeeklyLeaderboardComponent = () => {
                                     />
                                   ) : (
                                     <Image
-                                      src={`/avatar_${myInvestor.rank % 6}.png`}
+                                      src={`/avatar_${myTrader.rank % 6}.png`}
                                       alt="User Avatar"
                                       width={32}
                                       height={32}
@@ -487,55 +490,58 @@ const WeeklyLeaderboardComponent = () => {
                                     />
                                   )}
                                 </div>
-                                <span className="text-violet-800 font-bold truncate max-w-[200px] md:max-w-full">
-                                  {myInvestor?.nadName || myInvestor.address}
+                                <span className="text-violet-800 font-bold truncate max-w-[120px] md:max-w-[150px]">
+                                  {displayAddress(
+                                    myTrader.address,
+                                    myTrader.nadName
+                                  )}
                                 </span>
                               </Link>
                             </td>
                             <td className="py-3 h-14 text-center text-violet-700 pr-2">
                               <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium rounded-full bg-blue-50 text-blue-700">
-                                {myInvestor.weeklyActivities || 0}
+                                {myTrader.weeklyActivities || 0}
                               </span>
                             </td>
                             <td className="py-3 h-14 text-violet-700 pr-2 font-bold">
                               <div className="flex items-center gap-1.5">
                                 <span className="text-lg">
-                                  {myInvestor.points}
+                                  {myTrader.points}
                                 </span>
                                 <span className="inline-flex items-center justify-center px-2 py-0.5 text-[10px] font-medium rounded-full bg-violet-50 border border-violet-200 text-violet-700">
-                                  Level {getLevelInfo(myInvestor.points).level}
+                                  Level {getLevelInfo(myTrader.points).level}
                                 </span>
                               </div>
                             </td>
                             {hasReferrals && (
                               <td className="py-3 h-14 text-center text-violet-700 pr-2">
-                                {(myInvestor.totalReferred &&
-                                  myInvestor.totalReferred > 0) ||
-                                (myInvestor.totalReferralPoints &&
-                                  myInvestor.totalReferralPoints > 0) ? (
+                                {(myTrader.totalReferred &&
+                                  myTrader.totalReferred > 0) ||
+                                (myTrader.totalReferralPoints &&
+                                  myTrader.totalReferralPoints > 0) ? (
                                   <>
-                                    {myInvestor.totalReferred &&
-                                      myInvestor.totalReferred > 0 && (
+                                    {myTrader.totalReferred &&
+                                      myTrader.totalReferred > 0 && (
                                         <div className="flex items-center gap-2 mt-1">
                                           <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-green-50 text-green-700">
-                                            {myInvestor.totalReferred} referrals
+                                            {myTrader.totalReferred} referrals
                                           </span>
-                                          {myInvestor.totalReferralPoints &&
-                                            myInvestor.totalReferralPoints >
+                                          {myTrader.totalReferralPoints &&
+                                            myTrader.totalReferralPoints >
                                               0 && (
                                               <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
-                                                {myInvestor.totalReferralPoints}{" "}
+                                                {myTrader.totalReferralPoints}{" "}
                                                 ref pts
                                               </span>
                                             )}
                                         </div>
                                       )}
-                                    {myInvestor.totalReferred === 0 &&
-                                      myInvestor.totalReferralPoints &&
-                                      myInvestor.totalReferralPoints > 0 && (
+                                    {myTrader.totalReferred === 0 &&
+                                      myTrader.totalReferralPoints &&
+                                      myTrader.totalReferralPoints > 0 && (
                                         <div className="flex items-center gap-2 mt-1">
                                           <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
-                                            {myInvestor.totalReferralPoints} ref
+                                            {myTrader.totalReferralPoints} ref
                                             pts
                                           </span>
                                         </div>
@@ -553,7 +559,7 @@ const WeeklyLeaderboardComponent = () => {
                                 <div className="flex flex-col">
                                   <span className="text-sm font-bold text-violet-800">
                                     {(
-                                      (myInvestor.points / totalWeeklyPoints) *
+                                      (myTrader.points / totalWeeklyPoints) *
                                       100
                                     ).toFixed(1)}
                                     %
@@ -576,21 +582,21 @@ const WeeklyLeaderboardComponent = () => {
                       <div className="bg-white rounded-lg p-3 border border-violet-200">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
-                            {myInvestor.rank <= 3 ? (
+                            {myTrader.rank <= 3 ? (
                               <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-100 text-amber-800 font-bold text-sm">
-                                {myInvestor.rank}
+                                {myTrader.rank}
                               </span>
                             ) : (
                               <span className="text-violet-700 font-bold text-sm">
-                                {myInvestor.rank}
+                                {myTrader.rank}
                               </span>
                             )}
                             <div className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden border-2 border-violet-200">
-                              {myInvestor.nadAvatar &&
-                              myInvestor.nadAvatar !== "" &&
-                              isValidUrl(myInvestor.nadAvatar) ? (
+                              {myTrader.nadAvatar &&
+                              myTrader.nadAvatar !== "" &&
+                              isValidUrl(myTrader.nadAvatar) ? (
                                 <Image
-                                  src={myInvestor.nadAvatar}
+                                  src={myTrader.nadAvatar}
                                   alt="User Avatar"
                                   width={32}
                                   height={32}
@@ -598,7 +604,7 @@ const WeeklyLeaderboardComponent = () => {
                                 />
                               ) : (
                                 <Image
-                                  src={`/avatar_${myInvestor.rank % 6}.png`}
+                                  src={`/avatar_${myTrader.rank % 6}.png`}
                                   alt="User Avatar"
                                   width={32}
                                   height={32}
@@ -608,14 +614,16 @@ const WeeklyLeaderboardComponent = () => {
                             </div>
                             <div className="flex flex-col">
                               <Link
-                                href={`/users/${myInvestor.address}`}
-                                className="text-violet-800 font-semibold text-sm hover:underline"
+                                href={`/users/${myTrader.address}`}
+                                className="text-violet-800 font-semibold text-sm hover:underline truncate max-w-[120px] md:max-w-[150px]"
                               >
-                                {myInvestor?.nadName ||
-                                  shortenAddress(myInvestor.address)}
+                                {displayAddress(
+                                  myTrader.address,
+                                  myTrader.nadName
+                                )}
                               </Link>
                               <span className="text-[10px] text-violet-600">
-                                {myInvestor.weeklyActivities || 0} weekly
+                                {myTrader.weeklyActivities || 0} weekly
                                 activities
                               </span>
                             </div>
@@ -623,17 +631,17 @@ const WeeklyLeaderboardComponent = () => {
                           <div className="flex flex-col items-end">
                             <div className="flex items-center gap-1.5">
                               <span className="text-violet-700 font-bold text-lg">
-                                {myInvestor.points} pts
+                                {myTrader.points} pts
                               </span>
                               <span className="inline-flex items-center justify-center px-2 py-0.5 text-[10px] font-medium rounded-full bg-violet-50 border border-violet-200 text-violet-700">
-                                Level {getLevelInfo(myInvestor.points).level}
+                                Level {getLevelInfo(myTrader.points).level}
                               </span>
                             </div>
                             {totalWeeklyPoints > 0 && (
                               <span className="text-[10px] text-violet-600 text-right mt-0.5">
                                 <span className="font-bold text-violet-800">
                                   {(
-                                    (myInvestor.points / totalWeeklyPoints) *
+                                    (myTrader.points / totalWeeklyPoints) *
                                     100
                                   ).toFixed(1)}
                                   %
@@ -645,21 +653,21 @@ const WeeklyLeaderboardComponent = () => {
                         </div>
                         {hasReferrals && (
                           <>
-                            {(myInvestor.totalReferred &&
-                              myInvestor.totalReferred > 0) ||
-                            (myInvestor.totalReferralPoints &&
-                              myInvestor.totalReferralPoints > 0) ? (
+                            {(myTrader.totalReferred &&
+                              myTrader.totalReferred > 0) ||
+                            (myTrader.totalReferralPoints &&
+                              myTrader.totalReferralPoints > 0) ? (
                               <div className="flex items-center gap-2 mt-2">
-                                {myInvestor.totalReferred &&
-                                  myInvestor.totalReferred > 0 && (
+                                {myTrader.totalReferred &&
+                                  myTrader.totalReferred > 0 && (
                                     <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-green-50 text-green-700">
-                                      {myInvestor.totalReferred} referrals
+                                      {myTrader.totalReferred} referrals
                                     </span>
                                   )}
-                                {myInvestor.totalReferralPoints &&
-                                  myInvestor.totalReferralPoints > 0 && (
+                                {myTrader.totalReferralPoints &&
+                                  myTrader.totalReferralPoints > 0 && (
                                     <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
-                                      {myInvestor.totalReferralPoints} ref pts
+                                      {myTrader.totalReferralPoints} ref pts
                                     </span>
                                   )}
                               </div>
@@ -682,7 +690,7 @@ const WeeklyLeaderboardComponent = () => {
                   <thead className="sticky top-0 bg-white z-10">
                     <tr className="text-left text-sm text-gray-500 border-b">
                       <th className="pb-2 pr-2 font-medium">RANK</th>
-                      <th className="pb-2 pr-2 font-medium">INVESTOR</th>
+                      <th className="pb-2 pr-2 font-medium">TRADER</th>
                       <th className="pb-2 pr-2 font-medium text-center">
                         WEEKLY ACTIVITIES
                       </th>
@@ -696,37 +704,37 @@ const WeeklyLeaderboardComponent = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {pageInvestors.map((investor) => (
+                    {pageTraders.map((trader) => (
                       <tr
-                        key={investor.address}
+                        key={trader.address}
                         className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${
-                          isCurrentUserAddress(investor.address)
+                          isCurrentUserAddress(trader.address)
                             ? "bg-violet-100"
                             : ""
                         }`}
                       >
                         <td className="py-4 h-16 text-gray-700 pr-2 pl-4">
                           <div className="flex items-center">
-                            {investor.rank <= 3 ? (
+                            {trader.rank <= 3 ? (
                               <span className="inline-flex items-center justify-center w-6 h-6 rounded-full mr-2 bg-amber-100 text-amber-800 font-bold">
-                                {investor.rank}
+                                {trader.rank}
                               </span>
                             ) : (
-                              <span>{investor.rank}</span>
+                              <span>{trader.rank}</span>
                             )}
                           </div>
                         </td>
                         <td className="py-4 h-16 pr-2">
                           <Link
-                            href={`/users/${investor.address}`}
+                            href={`/users/${trader.address}`}
                             className="flex items-center hover:opacity-80 transition-opacity"
                           >
                             <div className="w-8 h-8 rounded-full flex items-center justify-center mr-2 overflow-hidden">
-                              {investor.nadAvatar &&
-                              investor.nadAvatar !== "" &&
-                              isValidUrl(investor.nadAvatar) ? (
+                              {trader.nadAvatar &&
+                              trader.nadAvatar !== "" &&
+                              isValidUrl(trader.nadAvatar) ? (
                                 <Image
-                                  src={investor.nadAvatar}
+                                  src={trader.nadAvatar}
                                   alt="User Avatar"
                                   width={32}
                                   height={32}
@@ -734,7 +742,7 @@ const WeeklyLeaderboardComponent = () => {
                                 />
                               ) : (
                                 <Image
-                                  src={`/avatar_${investor.rank % 6}.png`}
+                                  src={`/avatar_${trader.rank % 6}.png`}
                                   alt="User Avatar"
                                   width={32}
                                   height={32}
@@ -742,52 +750,51 @@ const WeeklyLeaderboardComponent = () => {
                                 />
                               )}
                             </div>
-                            <span className="text-gray-700 font-bold truncate max-w-[200px] md:max-w-full">
-                              {investor?.nadName || investor.address}
+                            <span className="text-gray-700 font-bold truncate max-w-[120px] md:max-w-[150px]">
+                              {displayAddress(trader.address, trader.nadName)}
                             </span>
                           </Link>
                         </td>
                         <td className="py-4 h-16 text-center text-gray-700 pr-2">
                           <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium rounded-full bg-blue-50 text-blue-700">
-                            {investor.weeklyActivities || 0}
+                            {trader.weeklyActivities || 0}
                           </span>
                         </td>
                         <td className="py-4 h-16 text-gray-700 pr-2 font-bold">
                           <div className="flex items-center gap-1.5">
-                            <span>{investor.points}</span>
+                            <span>{trader.points}</span>
                             <span className="inline-flex items-center justify-center px-2 py-0.5 text-[10px] font-medium rounded-full bg-white border border-violet-200 text-violet-700">
-                              Level {getLevelInfo(investor.points).level}
+                              Level {getLevelInfo(trader.points).level}
                             </span>
                           </div>
                         </td>
                         {hasReferrals && (
                           <td className="py-4 h-16 text-center text-gray-700 pr-2">
-                            {(investor.totalReferred &&
-                              investor.totalReferred > 0) ||
-                            (investor.totalReferralPoints &&
-                              investor.totalReferralPoints > 0) ? (
+                            {(trader.totalReferred &&
+                              trader.totalReferred > 0) ||
+                            (trader.totalReferralPoints &&
+                              trader.totalReferralPoints > 0) ? (
                               <>
-                                {investor.totalReferred &&
-                                  investor.totalReferred > 0 && (
+                                {trader.totalReferred &&
+                                  trader.totalReferred > 0 && (
                                     <div className="flex items-center gap-2 mt-1">
                                       <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-green-50 text-green-700">
-                                        {investor.totalReferred} referrals
+                                        {trader.totalReferred} referrals
                                       </span>
-                                      {investor.totalReferralPoints &&
-                                        investor.totalReferralPoints > 0 && (
+                                      {trader.totalReferralPoints &&
+                                        trader.totalReferralPoints > 0 && (
                                           <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
-                                            {investor.totalReferralPoints} ref
-                                            pts
+                                            {trader.totalReferralPoints} ref pts
                                           </span>
                                         )}
                                     </div>
                                   )}
-                                {investor.totalReferred === 0 &&
-                                  investor.totalReferralPoints &&
-                                  investor.totalReferralPoints > 0 && (
+                                {trader.totalReferred === 0 &&
+                                  trader.totalReferralPoints &&
+                                  trader.totalReferralPoints > 0 && (
                                     <div className="flex items-center gap-2 mt-1">
                                       <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
-                                        {investor.totalReferralPoints} ref pts
+                                        {trader.totalReferralPoints} ref pts
                                       </span>
                                     </div>
                                   )}
@@ -800,7 +807,7 @@ const WeeklyLeaderboardComponent = () => {
                             <div className="flex flex-col">
                               <span className="text-sm font-medium">
                                 {(
-                                  (investor.points / totalWeeklyPoints) *
+                                  (trader.points / totalWeeklyPoints) *
                                   100
                                 ).toFixed(1)}
                                 %
@@ -820,13 +827,13 @@ const WeeklyLeaderboardComponent = () => {
 
                 {/* Mobile View */}
                 <div className="sm:hidden space-y-3">
-                  {pageInvestors.map((investor) => (
+                  {pageTraders.map((trader) => (
                     <div
-                      key={investor.address}
+                      key={trader.address}
                       className={`
                         border rounded-lg px-4 py-3 bg-white hover:border-gray-300 transition-colors
                         ${
-                          isCurrentUserAddress(investor.address)
+                          isCurrentUserAddress(trader.address)
                             ? "bg-violet-100 border-violet-300"
                             : ""
                         }
@@ -834,21 +841,21 @@ const WeeklyLeaderboardComponent = () => {
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          {investor.rank <= 3 ? (
+                          {trader.rank <= 3 ? (
                             <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-100 text-amber-800 font-bold text-sm">
-                              {investor.rank}
+                              {trader.rank}
                             </span>
                           ) : (
                             <span className="text-gray-700 font-medium text-sm">
-                              {investor.rank}
+                              {trader.rank}
                             </span>
                           )}
                           <div className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden border border-gray-100">
-                            {investor.nadAvatar &&
-                            investor.nadAvatar !== "" &&
-                            isValidUrl(investor.nadAvatar) ? (
+                            {trader.nadAvatar &&
+                            trader.nadAvatar !== "" &&
+                            isValidUrl(trader.nadAvatar) ? (
                               <Image
-                                src={investor.nadAvatar}
+                                src={trader.nadAvatar}
                                 alt="User Avatar"
                                 width={32}
                                 height={32}
@@ -856,7 +863,7 @@ const WeeklyLeaderboardComponent = () => {
                               />
                             ) : (
                               <Image
-                                src={`/avatar_${investor.rank % 6}.png`}
+                                src={`/avatar_${trader.rank % 6}.png`}
                                 alt="User Avatar"
                                 width={32}
                                 height={32}
@@ -866,45 +873,42 @@ const WeeklyLeaderboardComponent = () => {
                           </div>
                           <div className="flex flex-col">
                             <Link
-                              href={`/users/${investor.address}`}
-                              className="text-gray-800 font-semibold text-sm hover:underline"
+                              href={`/users/${trader.address}`}
+                              className="text-gray-800 font-semibold text-sm hover:underline truncate max-w-[120px] md:max-w-[150px]"
                             >
-                              {investor?.nadName ||
-                                shortenAddress(investor.address)}
+                              {displayAddress(trader.address, trader.nadName)}
                             </Link>
                             <span className="text-[10px] text-gray-500">
-                              {investor.weeklyActivities || 0} weekly activities
+                              {trader.weeklyActivities || 0} weekly activities
                             </span>
                             {hasReferrals && (
                               <>
-                                {(investor.totalReferred &&
-                                  investor.totalReferred > 0) ||
-                                (investor.totalReferralPoints &&
-                                  investor.totalReferralPoints > 0) ? (
+                                {(trader.totalReferred &&
+                                  trader.totalReferred > 0) ||
+                                (trader.totalReferralPoints &&
+                                  trader.totalReferralPoints > 0) ? (
                                   <>
-                                    {investor.totalReferred &&
-                                      investor.totalReferred > 0 && (
+                                    {trader.totalReferred &&
+                                      trader.totalReferred > 0 && (
                                         <div className="flex items-center gap-2 mt-1">
                                           <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-green-50 text-green-700">
-                                            {investor.totalReferred} referrals
+                                            {trader.totalReferred} referrals
                                           </span>
-                                          {investor.totalReferralPoints &&
-                                            investor.totalReferralPoints >
-                                              0 && (
+                                          {trader.totalReferralPoints &&
+                                            trader.totalReferralPoints > 0 && (
                                               <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
-                                                {investor.totalReferralPoints}{" "}
-                                                ref pts
+                                                {trader.totalReferralPoints} ref
+                                                pts
                                               </span>
                                             )}
                                         </div>
                                       )}
-                                    {investor.totalReferred === 0 &&
-                                      investor.totalReferralPoints &&
-                                      investor.totalReferralPoints > 0 && (
+                                    {trader.totalReferred === 0 &&
+                                      trader.totalReferralPoints &&
+                                      trader.totalReferralPoints > 0 && (
                                         <div className="flex items-center gap-2 mt-1">
                                           <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
-                                            {investor.totalReferralPoints} ref
-                                            pts
+                                            {trader.totalReferralPoints} ref pts
                                           </span>
                                         </div>
                                       )}
@@ -917,17 +921,17 @@ const WeeklyLeaderboardComponent = () => {
                         <div className="flex flex-col items-end">
                           <div className="flex items-center gap-1.5">
                             <span className="text-violet-700 font-bold text-sm">
-                              {investor.points} pts
+                              {trader.points} pts
                             </span>
                             <span className="inline-flex items-center justify-center px-2 py-0.5 text-[10px] font-medium rounded-full bg-white border border-violet-200 text-violet-700">
-                              Level {getLevelInfo(investor.points).level}
+                              Level {getLevelInfo(trader.points).level}
                             </span>
                           </div>
                           {totalWeeklyPoints > 0 && (
                             <span className="text-[10px] text-gray-500 text-right mt-0.5">
                               <span className="font-medium text-gray-700">
                                 {(
-                                  (investor.points / totalWeeklyPoints) *
+                                  (trader.points / totalWeeklyPoints) *
                                   100
                                 ).toFixed(1)}
                                 %
@@ -948,7 +952,7 @@ const WeeklyLeaderboardComponent = () => {
           <div className="mt-4 flex justify-center">
             <Pagination
               currentPage={currentPage}
-              totalPages={Math.ceil(investorCount / 10)}
+              totalPages={Math.ceil(traderCount / 10)}
               onPageChange={onPageChange}
               showIcons
             />
@@ -958,7 +962,7 @@ const WeeklyLeaderboardComponent = () => {
           <div className="sm:hidden mt-4">
             <MobilePagination
               currentPage={currentPage}
-              totalPages={Math.ceil(investorCount / 10)}
+              totalPages={Math.ceil(traderCount / 10)}
               onPageChange={onPageChange}
             />
           </div>
