@@ -10,7 +10,7 @@ import Link from "next/link";
 import MobilePagination from "@/app/components/ui/MobilePagination";
 import { getLevelInfo } from "@/app/utils/xp";
 
-interface Investor {
+interface Trader {
   rank: number;
   address: string;
   nadName?: string;
@@ -42,18 +42,21 @@ const isValidUrl = (urlString: string): boolean => {
   }
 };
 
-const shortenAddress = (address: string): string => {
+// New function for more compact address display
+const displayAddress = (address: string, nadName?: string): string => {
+  if (nadName) return nadName;
   if (!address) return "";
-  return `${address.substring(0, 6)}...${address.substring(
-    address.length - 4
+  // For addresses without NNS names, use a more compact format
+  return `${address.substring(0, 4)}...${address.substring(
+    address.length - 3
   )}`;
 };
 
 const LeaderboardComponent = () => {
   const [currentPage, setCurrentPage] = useState(1);
-  const [investors, setInvestors] = useState<Investor[]>([]);
-  const [investorCount, setInvestorCount] = useState(0);
-  const [myData, setMyData] = useState<Investor | null>(null);
+  const [traders, setTraders] = useState<Trader[]>([]);
+  const [traderCount, setTraderCount] = useState(0);
+  const [myData, setMyData] = useState<Trader | null>(null);
 
   const { address } = useAccount();
 
@@ -75,14 +78,14 @@ const LeaderboardComponent = () => {
         !Array.isArray(data.users) ||
         data.users.length === 0
       ) {
-        setInvestors([]);
-        setInvestorCount(0);
+        setTraders([]);
+        setTraderCount(0);
         return;
       }
 
       // Filter out any users without valid addresses
       const validUsers = data.users.filter(
-        (user: Investor) =>
+        (user: Trader) =>
           user &&
           user.address &&
           typeof user.address === "string" &&
@@ -90,41 +93,41 @@ const LeaderboardComponent = () => {
       );
 
       if (validUsers.length === 0) {
-        setInvestors([]);
-        setInvestorCount(0);
+        setTraders([]);
+        setTraderCount(0);
         return;
       }
 
-      const userAddresses = validUsers.map((u: Investor) => u.address);
+      const userAddresses = validUsers.map((u: Trader) => u.address);
 
       try {
         const nadProfiles = await nnsClient.getProfiles(userAddresses);
 
-        const processedInvestors =
-          validUsers.map((u: Investor, i: number) => ({
+        const processedTraders =
+          validUsers.map((u: Trader, i: number) => ({
             ...u,
             nadName: nadProfiles[i]?.primaryName,
             nadAvatar: nadProfiles[i]?.avatar || `/avatar_${i % 6}.png`,
           })) || [];
 
-        setInvestors(processedInvestors);
-        setInvestorCount(data.pagination.total);
+        setTraders(processedTraders);
+        setTraderCount(data.pagination.total);
       } catch (nnsError) {
         console.error("Error fetching NNS profiles:", nnsError);
-        // Fallback: use investors without NNS profiles
-        const processedInvestors = validUsers.map((u: Investor, i: number) => ({
+        // Fallback: use traders without NNS profiles
+        const processedTraders = validUsers.map((u: Trader) => ({
           ...u,
           nadName: undefined,
-          nadAvatar: `/avatar_${i % 6}.png`,
+          nadAvatar: `/avatar_${u.rank % 6}.png`,
         }));
 
-        setInvestors(processedInvestors);
-        setInvestorCount(data.pagination.total);
+        setTraders(processedTraders);
+        setTraderCount(data.pagination.total);
       }
     } catch (error) {
       console.error("Error fetching leaderboard:", error);
-      setInvestors([]);
-      setInvestorCount(0);
+      setTraders([]);
+      setTraderCount(0);
     }
   };
 
@@ -147,8 +150,8 @@ const LeaderboardComponent = () => {
         // Get NNS profile for the current user
         const nadProfile = await nnsClient.getProfiles([address]);
 
-        // Create investor object from /me response
-        const myInvestorData: Investor = {
+        // Create trader object from /me response
+        const myTraderData: Trader = {
           rank: data.userActivity?.rank || 0, // Access rank from userActivity object
           address: address,
           nadName: nadProfile[0]?.primaryName,
@@ -167,12 +170,12 @@ const LeaderboardComponent = () => {
           totalReferralPoints: data.userActivity?.totalReferralPoints || 0,
         };
 
-        setMyData(myInvestorData);
+        setMyData(myTraderData);
       } catch (nnsError) {
         console.error("Error fetching NNS profile for user:", nnsError);
 
-        // Fallback: create investor data without NNS profile
-        const myInvestorData: Investor = {
+        // Fallback: create trader data without NNS profile
+        const myTraderData: Trader = {
           rank: data.userActivity?.rank || 0,
           address: address,
           nadName: undefined,
@@ -189,7 +192,7 @@ const LeaderboardComponent = () => {
           totalReferralPoints: data.userActivity?.totalReferralPoints || 0,
         };
 
-        setMyData(myInvestorData);
+        setMyData(myTraderData);
       }
     } catch (error) {
       console.error("Error fetching user activity:", error);
@@ -209,19 +212,19 @@ const LeaderboardComponent = () => {
     return () => clearInterval(interval);
   }, [address, currentPage, fetchMe]);
 
-  // Pagination logic for investors - no slicing since the server already returns paginated data
+  // Pagination logic for traders - no slicing since the server already returns paginated data
   const itemsPerPage = 10;
-  const totalInvestorPages = Math.ceil(investorCount / itemsPerPage);
-  const currentInvestors = investors; // Use directly, no filtering
+  const totalTraderPages = Math.ceil(traderCount / itemsPerPage);
+  const currentTraders = traders; // Use directly, no filtering
 
-  // Use myData instead of finding in investors list
-  const myInvestor = myData;
-  const pageInvestors = currentInvestors;
+  // Use myData instead of finding in traders list
+  const myTrader = myData;
+  const pageTraders = currentTraders;
 
-  // Function to check if the current wallet address matches an investor
-  const isCurrentUserAddress = (investorAddress: string): boolean => {
+  // Function to check if the current wallet address matches a trader
+  const isCurrentUserAddress = (traderAddress: string): boolean => {
     if (!address) return false;
-    return address.toLowerCase() === investorAddress.toLowerCase();
+    return address.toLowerCase() === traderAddress.toLowerCase();
   };
 
   return (
@@ -237,7 +240,7 @@ const LeaderboardComponent = () => {
                   <thead className="sticky top-0 bg-white z-10">
                     <tr className="text-left text-sm text-gray-500 border-b">
                       <th className="pb-2 pr-2 font-medium">RANK</th>
-                      <th className="pb-2 pr-2 font-medium">INVESTOR</th>
+                      <th className="pb-2 pr-2 font-medium">TRADER</th>
                       <th className="pb-2 pr-2 font-medium text-center">
                         ACTIVITIES
                       </th>
@@ -249,31 +252,31 @@ const LeaderboardComponent = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {myInvestor && (
+                    {myTrader && (
                       <>
                         <tr className="bg-violet-100">
                           <td className="py-4 h-16 text-gray-700 pr-2 pl-4">
                             <div className="flex items-center">
-                              {myInvestor.rank <= 3 ? (
+                              {myTrader.rank <= 3 ? (
                                 <span className="inline-flex items-center justify-center w-6 h-6 rounded-full mr-2 bg-amber-100 text-amber-800 font-bold">
-                                  {myInvestor.rank}
+                                  {myTrader.rank}
                                 </span>
                               ) : (
-                                <span>{myInvestor.rank}</span>
+                                <span>{myTrader.rank}</span>
                               )}
                             </div>
                           </td>
                           <td className="py-4 h-16 pr-2">
                             <Link
-                              href={`/users/${myInvestor.address}`}
+                              href={`/users/${myTrader.address}`}
                               className="flex items-center hover:opacity-80 transition-opacity"
                             >
                               <div className="w-8 h-8 rounded-full flex items-center justify-center mr-2 overflow-hidden">
-                                {myInvestor.nadAvatar &&
-                                myInvestor.nadAvatar !== "" &&
-                                isValidUrl(myInvestor.nadAvatar) ? (
+                                {myTrader.nadAvatar &&
+                                myTrader.nadAvatar !== "" &&
+                                isValidUrl(myTrader.nadAvatar) ? (
                                   <Image
-                                    src={myInvestor.nadAvatar}
+                                    src={myTrader.nadAvatar}
                                     alt="User Avatar"
                                     width={32}
                                     height={32}
@@ -281,7 +284,7 @@ const LeaderboardComponent = () => {
                                   />
                                 ) : (
                                   <Image
-                                    src={`/avatar_${myInvestor.rank % 6}.png`}
+                                    src={`/avatar_${myTrader.rank % 6}.png`}
                                     alt="User Avatar"
                                     width={32}
                                     height={32}
@@ -289,40 +292,43 @@ const LeaderboardComponent = () => {
                                   />
                                 )}
                               </div>
-                              <span className="text-gray-700 font-bold truncate max-w-[200px] md:max-w-full">
-                                {myInvestor?.nadName || myInvestor.address}
+                              <span className="text-gray-700 font-bold truncate max-w-[120px] md:max-w-[150px]">
+                                {displayAddress(
+                                  myTrader.address,
+                                  myTrader.nadName
+                                )}
                               </span>
                             </Link>
                           </td>
                           <td className="py-4 h-16 text-center text-gray-700 pr-2">
                             <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium rounded-full bg-blue-50 text-blue-700">
-                              {myInvestor.pagination.total}
+                              {myTrader.pagination.total}
                             </span>
                           </td>
                           <td className="py-4 h-16 text-gray-700 pr-2 font-bold">
                             <div className="flex items-center gap-1.5">
-                              <span>{myInvestor.points}</span>
+                              <span>{myTrader.points}</span>
                               <span className="inline-flex items-center justify-center px-2 py-0.5 text-[10px] font-medium rounded-full bg-white border border-violet-200 text-violet-700">
-                                Level {getLevelInfo(myInvestor.points).level}
+                                Level {getLevelInfo(myTrader.points).level}
                               </span>
                             </div>
                           </td>
                           <td className="py-4 h-16 text-center text-gray-700 pr-2">
-                            {(myInvestor.totalReferred &&
-                              myInvestor.totalReferred > 0) ||
-                            (myInvestor.totalReferralPoints &&
-                              myInvestor.totalReferralPoints > 0) ? (
+                            {(myTrader.totalReferred &&
+                              myTrader.totalReferred > 0) ||
+                            (myTrader.totalReferralPoints &&
+                              myTrader.totalReferralPoints > 0) ? (
                               <div className="flex items-center gap-2 mt-1">
-                                {myInvestor.totalReferred &&
-                                  myInvestor.totalReferred > 0 && (
+                                {myTrader.totalReferred &&
+                                  myTrader.totalReferred > 0 && (
                                     <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-green-50 text-green-700">
-                                      {myInvestor.totalReferred} referrals
+                                      {myTrader.totalReferred} referrals
                                     </span>
                                   )}
-                                {myInvestor.totalReferralPoints &&
-                                  myInvestor.totalReferralPoints > 0 && (
+                                {myTrader.totalReferralPoints &&
+                                  myTrader.totalReferralPoints > 0 && (
                                     <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
-                                      {myInvestor.totalReferralPoints} ref pts
+                                      {myTrader.totalReferralPoints} ref pts
                                     </span>
                                   )}
                               </div>
@@ -332,19 +338,19 @@ const LeaderboardComponent = () => {
                           </td>
 
                           <td className="py-4 h-16 text-gray-700">
-                            {myInvestor.pagination &&
-                              myInvestor.pagination.total > 0 && (
+                            {myTrader.pagination &&
+                              myTrader.pagination.total > 0 && (
                                 <div className="flex flex-col">
                                   <span className="text-sm font-medium">
-                                    {myInvestor.activitiesList[0].name}
+                                    {myTrader.activitiesList[0].name}
                                     <span className="ml-2 text-xs font-normal text-blue-600">
-                                      +{myInvestor.activitiesList[0].points}
+                                      +{myTrader.activitiesList[0].points}
                                       pts
                                     </span>
                                   </span>
                                   <span className="text-xs text-gray-500">
                                     {getTimeAgo(
-                                      myInvestor.activitiesList[0].date
+                                      myTrader.activitiesList[0].date
                                     )}
                                   </span>
                                 </div>
@@ -356,38 +362,38 @@ const LeaderboardComponent = () => {
                         </tr>
                       </>
                     )}
-                    {pageInvestors.map((investor) => (
-                      //log investor
+                    {pageTraders.map((trader) => (
+                      //log trader
                       <tr
-                        key={investor.address}
+                        key={trader.address}
                         className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${
-                          isCurrentUserAddress(investor.address)
+                          isCurrentUserAddress(trader.address)
                             ? "bg-violet-200"
                             : ""
                         }`}
                       >
                         <td className="py-4 h-16 text-gray-700 pr-2 pl-4">
                           <div className="flex items-center">
-                            {investor.rank <= 3 ? (
+                            {trader.rank <= 3 ? (
                               <span className="inline-flex items-center justify-center w-6 h-6 rounded-full mr-2 bg-amber-100 text-amber-800 font-bold">
-                                {investor.rank}
+                                {trader.rank}
                               </span>
                             ) : (
-                              <span>{investor.rank}</span>
+                              <span>{trader.rank}</span>
                             )}
                           </div>
                         </td>
                         <td className="py-4 h-16 pr-2">
                           <Link
-                            href={`/users/${investor.address}`}
+                            href={`/users/${trader.address}`}
                             className="flex items-center hover:opacity-80 transition-opacity"
                           >
                             <div className="w-8 h-8 rounded-full flex items-center justify-center mr-2 overflow-hidden">
-                              {investor.nadAvatar &&
-                              investor.nadAvatar !== "" &&
-                              isValidUrl(investor.nadAvatar) ? (
+                              {trader.nadAvatar &&
+                              trader.nadAvatar !== "" &&
+                              isValidUrl(trader.nadAvatar) ? (
                                 <Image
-                                  src={investor.nadAvatar}
+                                  src={trader.nadAvatar}
                                   alt="User Avatar"
                                   width={32}
                                   height={32}
@@ -396,7 +402,7 @@ const LeaderboardComponent = () => {
                                     e.currentTarget.style.display = "none";
                                     e.currentTarget.parentElement!.innerHTML = `
                                       <Image
-                                        src="/avatar_${investor.rank % 6}.png"
+                                        src="/avatar_${trader.rank % 6}.png"
                                         alt="User Avatar"
                                         width={32}
                                         height={32}
@@ -407,7 +413,7 @@ const LeaderboardComponent = () => {
                                 />
                               ) : (
                                 <Image
-                                  src={`/avatar_${investor.rank % 6}.png`}
+                                  src={`/avatar_${trader.rank % 6}.png`}
                                   alt="User Avatar"
                                   width={32}
                                   height={32}
@@ -415,41 +421,39 @@ const LeaderboardComponent = () => {
                                 />
                               )}
                             </div>
-                            <span className="text-gray-700 font-bold truncate max-w-[10px] md:max-w-full">
-                              {investor?.nadName ||
-                                shortenAddress(investor.address)}
+                            <span className="text-gray-700 font-bold truncate max-w-[120px] md:max-w-[150px]">
+                              {displayAddress(trader.address, trader.nadName)}
                             </span>
                           </Link>
                         </td>
                         <td className="py-4 h-16 text-center text-gray-700 pr-2">
                           <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium rounded-full bg-blue-50 text-blue-700">
-                            {investor.activitiesList.length}
+                            {trader.activitiesList.length}
                           </span>
                         </td>
                         <td className="py-4 h-16 text-gray-700 pr-2 font-bold">
                           <div className="flex items-center gap-1.5">
-                            <span>{investor.points}</span>
+                            <span>{trader.points}</span>
                             <span className="inline-flex items-center justify-center px-2 py-0.5 text-[10px] font-medium rounded-full bg-white border border-violet-200 text-violet-700">
-                              Level {getLevelInfo(investor.points).level}
+                              Level {getLevelInfo(trader.points).level}
                             </span>
                           </div>
                         </td>
                         <td className="py-4 h-16 text-center text-gray-700 pr-2">
-                          {(investor.totalReferred &&
-                            investor.totalReferred > 0) ||
-                          (investor.totalReferralPoints &&
-                            investor.totalReferralPoints > 0) ? (
+                          {(trader.totalReferred && trader.totalReferred > 0) ||
+                          (trader.totalReferralPoints &&
+                            trader.totalReferralPoints > 0) ? (
                             <div className="flex items-center gap-2 mt-1">
-                              {investor.totalReferred &&
-                                investor.totalReferred > 0 && (
+                              {trader.totalReferred &&
+                                trader.totalReferred > 0 && (
                                   <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-green-50 text-green-700">
-                                    {investor.totalReferred} referrals
+                                    {trader.totalReferred} referrals
                                   </span>
                                 )}
-                              {investor.totalReferralPoints &&
-                                investor.totalReferralPoints > 0 && (
+                              {trader.totalReferralPoints &&
+                                trader.totalReferralPoints > 0 && (
                                   <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
-                                    {investor.totalReferralPoints} ref pts
+                                    {trader.totalReferralPoints} ref pts
                                   </span>
                                 )}
                             </div>
@@ -458,20 +462,20 @@ const LeaderboardComponent = () => {
                           )}
                         </td>
                         <td className="py-4 h-16 text-gray-700">
-                          {investor.activitiesList &&
-                            investor.activitiesList.length > 0 && (
+                          {trader.activitiesList &&
+                            trader.activitiesList.length > 0 && (
                               <div className="flex flex-col">
                                 <span className="text-sm font-medium">
                                   {
-                                    investor.activitiesList[
-                                      investor.activitiesList.length - 1
+                                    trader.activitiesList[
+                                      trader.activitiesList.length - 1
                                     ].name
                                   }
                                   <span className="ml-2 text-xs font-normal text-blue-600">
                                     +
                                     {
-                                      investor.activitiesList[
-                                        investor.activitiesList.length - 1
+                                      trader.activitiesList[
+                                        trader.activitiesList.length - 1
                                       ].points
                                     }
                                     pts
@@ -479,8 +483,8 @@ const LeaderboardComponent = () => {
                                 </span>
                                 <span className="text-xs text-gray-500">
                                   {getTimeAgo(
-                                    investor.activitiesList[
-                                      investor.activitiesList.length - 1
+                                    trader.activitiesList[
+                                      trader.activitiesList.length - 1
                                     ].date
                                   )}
                                 </span>
@@ -494,32 +498,32 @@ const LeaderboardComponent = () => {
 
                 {/* Mobile View */}
                 <div className="sm:hidden space-y-3">
-                  {myInvestor && (
+                  {myTrader && (
                     <>
                       <div
                         className={`border rounded-lg px-4 py-3 bg-white hover:border-gray-300 transition-colors ${
-                          isCurrentUserAddress(myInvestor.address)
+                          isCurrentUserAddress(myTrader.address)
                             ? "bg-violet-100 border-violet-300"
                             : ""
                         }`}
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            {myInvestor.rank <= 3 ? (
+                            {myTrader.rank <= 3 ? (
                               <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-100 text-amber-800 font-bold text-sm">
-                                {myInvestor.rank}
+                                {myTrader.rank}
                               </span>
                             ) : (
                               <span className="text-gray-700 font-medium text-sm">
-                                {myInvestor.rank}
+                                {myTrader.rank}
                               </span>
                             )}
                             <div className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden border border-gray-100">
-                              {myInvestor.nadAvatar &&
-                              myInvestor.nadAvatar !== "" &&
-                              isValidUrl(myInvestor.nadAvatar) ? (
+                              {myTrader.nadAvatar &&
+                              myTrader.nadAvatar !== "" &&
+                              isValidUrl(myTrader.nadAvatar) ? (
                                 <Image
-                                  src={myInvestor.nadAvatar}
+                                  src={myTrader.nadAvatar}
                                   alt="User Avatar"
                                   width={32}
                                   height={32}
@@ -527,7 +531,7 @@ const LeaderboardComponent = () => {
                                 />
                               ) : (
                                 <Image
-                                  src={`/avatar_${myInvestor.rank % 6}.png`}
+                                  src={`/avatar_${myTrader.rank % 6}.png`}
                                   alt="User Avatar"
                                   width={32}
                                   height={32}
@@ -537,30 +541,32 @@ const LeaderboardComponent = () => {
                             </div>
                             <div className="flex flex-col">
                               <Link
-                                href={`/users/${myInvestor.address}`}
+                                href={`/users/${myTrader.address}`}
                                 className="text-gray-800 font-semibold text-sm hover:underline"
                               >
-                                {myInvestor?.nadName ||
-                                  shortenAddress(myInvestor.address)}
+                                {displayAddress(
+                                  myTrader.address,
+                                  myTrader.nadName
+                                )}
                               </Link>
                               <span className="text-[10px] text-gray-500">
-                                {myInvestor.pagination.total} activities
+                                {myTrader.pagination.total} activities
                               </span>
-                              {(myInvestor.totalReferred &&
-                                myInvestor.totalReferred > 0) ||
-                              (myInvestor.totalReferralPoints &&
-                                myInvestor.totalReferralPoints > 0) ? (
+                              {(myTrader.totalReferred &&
+                                myTrader.totalReferred > 0) ||
+                              (myTrader.totalReferralPoints &&
+                                myTrader.totalReferralPoints > 0) ? (
                                 <div className="flex items-center gap-2 mt-1">
-                                  {myInvestor.totalReferred &&
-                                    myInvestor.totalReferred > 0 && (
+                                  {myTrader.totalReferred &&
+                                    myTrader.totalReferred > 0 && (
                                       <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-green-50 text-green-700">
-                                        {myInvestor.totalReferred} referrals
+                                        {myTrader.totalReferred} referrals
                                       </span>
                                     )}
-                                  {myInvestor.totalReferralPoints &&
-                                    myInvestor.totalReferralPoints > 0 && (
+                                  {myTrader.totalReferralPoints &&
+                                    myTrader.totalReferralPoints > 0 && (
                                       <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
-                                        {myInvestor.totalReferralPoints} ref pts
+                                        {myTrader.totalReferralPoints} ref pts
                                       </span>
                                     )}
                                 </div>
@@ -572,24 +578,24 @@ const LeaderboardComponent = () => {
                           <div className="flex flex-col items-end">
                             <div className="flex items-center gap-1.5">
                               <span className="text-violet-700 font-bold text-sm">
-                                {myInvestor.points} pts
+                                {myTrader.points} pts
                               </span>
                               <span className="inline-flex items-center justify-center px-2 py-0.5 text-[10px] font-medium rounded-full bg-white border border-violet-200 text-violet-700">
-                                Level {getLevelInfo(myInvestor.points).level}
+                                Level {getLevelInfo(myTrader.points).level}
                               </span>
                             </div>
-                            {myInvestor.activitiesList &&
-                              myInvestor.activitiesList.length > 0 && (
+                            {myTrader.activitiesList &&
+                              myTrader.activitiesList.length > 0 && (
                                 <span className="text-[10px] text-gray-500 text-right mt-0.5">
                                   <span className="font-medium text-gray-700">
-                                    {myInvestor.activitiesList[0].name}
+                                    {myTrader.activitiesList[0].name}
                                   </span>
                                   <span className="ml-1 text-blue-600 font-medium">
-                                    +{myInvestor.activitiesList[0].points}
+                                    +{myTrader.activitiesList[0].points}
                                   </span>
                                   <span className="ml-1">
                                     {getTimeAgo(
-                                      myInvestor.activitiesList[0].date
+                                      myTrader.activitiesList[0].date
                                     )}
                                   </span>
                                 </span>
@@ -600,32 +606,32 @@ const LeaderboardComponent = () => {
                       <div style={{ height: 8 }}></div>
                     </>
                   )}
-                  {pageInvestors.map((investor) => (
+                  {pageTraders.map((trader) => (
                     <div
-                      key={investor.address}
+                      key={trader.address}
                       className={`border rounded-lg px-4 py-3 bg-white hover:border-gray-300 transition-colors ${
-                        isCurrentUserAddress(investor.address)
+                        isCurrentUserAddress(trader.address)
                           ? "bg-violet-100 border-violet-300"
                           : ""
                       }`}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          {investor.rank <= 3 ? (
+                          {trader.rank <= 3 ? (
                             <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-100 text-amber-800 font-bold text-sm">
-                              {investor.rank}
+                              {trader.rank}
                             </span>
                           ) : (
                             <span className="text-gray-700 font-medium text-sm">
-                              {investor.rank}
+                              {trader.rank}
                             </span>
                           )}
                           <div className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden border border-gray-100">
-                            {investor.nadAvatar &&
-                            investor.nadAvatar !== "" &&
-                            isValidUrl(investor.nadAvatar) ? (
+                            {trader.nadAvatar &&
+                            trader.nadAvatar !== "" &&
+                            isValidUrl(trader.nadAvatar) ? (
                               <Image
-                                src={investor.nadAvatar}
+                                src={trader.nadAvatar}
                                 alt="User Avatar"
                                 width={32}
                                 height={32}
@@ -633,7 +639,7 @@ const LeaderboardComponent = () => {
                               />
                             ) : (
                               <Image
-                                src={`/avatar_${investor.rank % 6}.png`}
+                                src={`/avatar_${trader.rank % 6}.png`}
                                 alt="User Avatar"
                                 width={32}
                                 height={32}
@@ -643,30 +649,29 @@ const LeaderboardComponent = () => {
                           </div>
                           <div className="flex flex-col">
                             <Link
-                              href={`/users/${investor.address}`}
+                              href={`/users/${trader.address}`}
                               className="text-gray-800 font-semibold text-sm hover:underline"
                             >
-                              {investor?.nadName ||
-                                shortenAddress(investor.address)}
+                              {displayAddress(trader.address, trader.nadName)}
                             </Link>
                             <span className="text-[10px] text-gray-500">
-                              {investor.activitiesList.length} activities
+                              {trader.activitiesList.length} activities
                             </span>
-                            {(investor.totalReferred &&
-                              investor.totalReferred > 0) ||
-                            (investor.totalReferralPoints &&
-                              investor.totalReferralPoints > 0) ? (
+                            {(trader.totalReferred &&
+                              trader.totalReferred > 0) ||
+                            (trader.totalReferralPoints &&
+                              trader.totalReferralPoints > 0) ? (
                               <div className="flex items-center gap-2 mt-1">
-                                {investor.totalReferred &&
-                                  investor.totalReferred > 0 && (
+                                {trader.totalReferred &&
+                                  trader.totalReferred > 0 && (
                                     <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-green-50 text-green-700">
-                                      {investor.totalReferred} referrals
+                                      {trader.totalReferred} referrals
                                     </span>
                                   )}
-                                {investor.totalReferralPoints &&
-                                  investor.totalReferralPoints > 0 && (
+                                {trader.totalReferralPoints &&
+                                  trader.totalReferralPoints > 0 && (
                                     <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700">
-                                      {investor.totalReferralPoints} ref pts
+                                      {trader.totalReferralPoints} ref pts
                                     </span>
                                   )}
                               </div>
@@ -678,34 +683,34 @@ const LeaderboardComponent = () => {
                         <div className="flex flex-col items-end">
                           <div className="flex items-center gap-1.5">
                             <span className="text-violet-700 font-bold text-sm">
-                              {investor.points} pts
+                              {trader.points} pts
                             </span>
                             <span className="inline-flex items-center justify-center px-2 py-0.5 text-[10px] font-medium rounded-full bg-white border border-violet-200 text-violet-700">
-                              Level {getLevelInfo(investor.points).level}
+                              Level {getLevelInfo(trader.points).level}
                             </span>
                           </div>
-                          {investor.activitiesList &&
-                            investor.activitiesList.length > 0 && (
+                          {trader.activitiesList &&
+                            trader.activitiesList.length > 0 && (
                               <span className="text-[10px] text-gray-500 text-right mt-0.5">
                                 <span className="font-medium text-gray-700">
                                   {
-                                    investor.activitiesList[
-                                      investor.activitiesList.length - 1
+                                    trader.activitiesList[
+                                      trader.activitiesList.length - 1
                                     ].name
                                   }
                                 </span>
                                 <span className="ml-1 text-blue-600 font-medium">
                                   +
                                   {
-                                    investor.activitiesList[
-                                      investor.activitiesList.length - 1
+                                    trader.activitiesList[
+                                      trader.activitiesList.length - 1
                                     ].points
                                   }
                                 </span>
                                 <span className="ml-1">
                                   {getTimeAgo(
-                                    investor.activitiesList[
-                                      investor.activitiesList.length - 1
+                                    trader.activitiesList[
+                                      trader.activitiesList.length - 1
                                     ].date
                                   )}
                                 </span>
@@ -717,9 +722,9 @@ const LeaderboardComponent = () => {
                   ))}
 
                   {/* Empty state for mobile if needed */}
-                  {currentInvestors.length === 0 && (
+                  {currentTraders.length === 0 && (
                     <div className="text-center text-gray-500 text-sm py-8">
-                      No investors to display
+                      No traders to display
                     </div>
                   )}
                 </div>
@@ -730,16 +735,16 @@ const LeaderboardComponent = () => {
           <div className="mt-2 flex flex-col items-center w-full gap-1 flex-1">
             <span className="text-xs text-gray-500 text-center w-full">
               Showing{" "}
-              {investors.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}-
-              {Math.min(currentPage * itemsPerPage, investorCount)} of{" "}
-              {investorCount}
+              {traders.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}-
+              {Math.min(currentPage * itemsPerPage, traderCount)} of{" "}
+              {traderCount}
             </span>
             <div className="w-full overflow-x-auto">
               <div className="flex justify-center min-w-[320px]">
                 <div className="hidden sm:block">
                   <Pagination
                     currentPage={currentPage}
-                    totalPages={totalInvestorPages > 0 ? totalInvestorPages : 1}
+                    totalPages={totalTraderPages > 0 ? totalTraderPages : 1}
                     onPageChange={onPageChange}
                     showIcons={true}
                   />
@@ -755,7 +760,7 @@ const LeaderboardComponent = () => {
         <div className="w-full">
           <MobilePagination
             currentPage={currentPage}
-            totalPages={totalInvestorPages > 0 ? totalInvestorPages : 1}
+            totalPages={totalTraderPages > 0 ? totalTraderPages : 1}
             onPageChange={onPageChange}
           />
         </div>
