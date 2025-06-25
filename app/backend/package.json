@@ -6,6 +6,12 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
+    "migrate:activities": "node src/scripts/migrateActivities.js",
+    "test:migration": "node src/scripts/testMigration.js",
+    "migration:helper": "node src/scripts/migrationHelper.js",
+    "check:unmigrated": "node src/scripts/checkUnmigratedUsers.js",
+    "compare:addresses": "node src/scripts/compareAddresses.js",
+    "migrate:specific": "node src/scripts/migrateSpecificAddresses.js",
     "start-gendoc": "node swagger.js"
   },
   "dependencies": {
