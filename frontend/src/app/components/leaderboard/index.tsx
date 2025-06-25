@@ -9,6 +9,7 @@ import { nnsClient } from "@/app/providers";
 import Link from "next/link";
 import MobilePagination from "@/app/components/ui/MobilePagination";
 import { getLevelInfo } from "@/app/utils/xp";
+import { calculateFearGreedIndex } from "@/app/utils/constants";
 
 interface Trader {
   rank: number;
@@ -248,7 +249,7 @@ const LeaderboardComponent = () => {
                       <th className="pb-2 pr-2 font-medium text-center">
                         REFERRALS
                       </th>
-                      <th className="pb-2 font-medium">LATEST ACTION</th>
+                      <th className="pb-2 font-medium">GORILLA INDEX</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -336,25 +337,29 @@ const LeaderboardComponent = () => {
                               <span className="text-gray-300">-</span>
                             )}
                           </td>
-
-                          <td className="py-4 h-16 text-gray-700">
-                            {myTrader.pagination &&
-                              myTrader.pagination.total > 0 && (
-                                <div className="flex flex-col">
-                                  <span className="text-sm font-medium">
-                                    {myTrader.activitiesList[0].name}
-                                    <span className="ml-2 text-xs font-normal text-blue-600">
-                                      +{myTrader.activitiesList[0].points}
-                                      pts
-                                    </span>
+                          <td className="py-4 h-16 text-gray-700 text-center">
+                            {(() => {
+                              const index = calculateFearGreedIndex(
+                                myTrader.activitiesList
+                              );
+                              let icon = "🦧";
+                              if (index.score >= 80) icon = "🦍";
+                              else if (index.score >= 60) icon = "🐒";
+                              else if (index.score >= 20) icon = "🦥";
+                              else if (index.score < 20) icon = "🦘";
+                              return (
+                                <span
+                                  className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${index.bgColor} ${index.color}`}
+                                  title={index.description}
+                                >
+                                  <span>{icon}</span>
+                                  <span>{index.score}</span>
+                                  <span className="hidden md:inline">
+                                    {index.sentiment}
                                   </span>
-                                  <span className="text-xs text-gray-500">
-                                    {getTimeAgo(
-                                      myTrader.activitiesList[0].date
-                                    )}
-                                  </span>
-                                </div>
-                              )}
+                                </span>
+                              );
+                            })()}
                           </td>
                         </tr>
                         <tr>
@@ -461,35 +466,29 @@ const LeaderboardComponent = () => {
                             <span className="text-gray-300">-</span>
                           )}
                         </td>
-                        <td className="py-4 h-16 text-gray-700">
-                          {trader.activitiesList &&
-                            trader.activitiesList.length > 0 && (
-                              <div className="flex flex-col">
-                                <span className="text-sm font-medium">
-                                  {
-                                    trader.activitiesList[
-                                      trader.activitiesList.length - 1
-                                    ].name
-                                  }
-                                  <span className="ml-2 text-xs font-normal text-blue-600">
-                                    +
-                                    {
-                                      trader.activitiesList[
-                                        trader.activitiesList.length - 1
-                                      ].points
-                                    }
-                                    pts
-                                  </span>
+                        <td className="py-4 h-16 text-gray-700 text-center">
+                          {(() => {
+                            const index = calculateFearGreedIndex(
+                              trader.activitiesList
+                            );
+                            let icon = "🦧";
+                            if (index.score >= 80) icon = "🦍";
+                            else if (index.score >= 60) icon = "🐒";
+                            else if (index.score >= 20) icon = "🦥";
+                            else if (index.score < 20) icon = "🦘";
+                            return (
+                              <span
+                                className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${index.bgColor} ${index.color}`}
+                                title={index.description}
+                              >
+                                <span>{icon}</span>
+                                <span>{index.score}</span>
+                                <span className="hidden md:inline">
+                                  {index.sentiment}
                                 </span>
-                                <span className="text-xs text-gray-500">
-                                  {getTimeAgo(
-                                    trader.activitiesList[
-                                      trader.activitiesList.length - 1
-                                    ].date
-                                  )}
-                                </span>
-                              </div>
-                            )}
+                              </span>
+                            );
+                          })()}
                         </td>
                       </tr>
                     ))}
