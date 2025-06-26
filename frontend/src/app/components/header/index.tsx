@@ -1,6 +1,6 @@
 "use client";
 import { useLogin, usePrivy } from "@privy-io/react-auth";
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { ToastContainer, toast, Bounce } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import LeaderboardBadge from "../leaderboard_badge";
@@ -27,19 +27,30 @@ interface Notification {
 export default function Header() {
   const { ready, authenticated, user, logout } = usePrivy();
   const { disconnect } = useDisconnect();
+
+  // Always use the correct address, never '0x' or empty
+  const userAddress = user?.wallet?.address || null;
+  const [address, setAddress] = useState<string | null>(userAddress);
+
+  // Only call useGetProfile if address is valid
   const { profile: nadProfile } = useGetProfile(
-    (user?.wallet?.address || "0x") as HexString
+    address && address !== "0x"
+      ? (address as HexString)
+      : "0x0000000000000000000000000000000000000000"
   );
 
-  const userAddress = useMemo(() => user?.wallet?.address, [user]);
-  const [address, setAddress] = useState<string | null>(userAddress || null);
+  // Debug log for troubleshooting
+  useEffect(() => {
+    // eslint-disable-next-line no-console
+    console.log("Header nadProfile:", nadProfile, "address:", address);
+  }, [nadProfile, address]);
 
-  // Update address when userAddress changes
+  // Update address when user changes
   useEffect(() => {
     if (!authenticated) {
       setAddress(null);
     } else {
-      setAddress(userAddress || null);
+      setAddress(userAddress);
     }
   }, [userAddress, authenticated]);
 
@@ -270,7 +281,7 @@ export default function Header() {
 
           {ready && authenticated ? (
             <div className="flex items-center gap-2 sm:gap-4">
-              {nadProfile.primaryName ? (
+              {nadProfile?.primaryName ? (
                 <div className="text-xs sm:text-sm text-gray-600 truncate max-w-[80px] sm:max-w-none">
                   {nadProfile.primaryName}
                 </div>
