@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { usePrivy } from "@privy-io/react-auth";
+import { nnsClient } from "@/app/providers";
+import { HexString } from "@/app/types";
 
 const LeaderboardBadge: React.FC = () => {
   const { authenticated, user } = usePrivy();
@@ -14,6 +16,9 @@ const LeaderboardBadge: React.FC = () => {
     rank: string;
   } | null>(null);
 
+  const [nadName, setNadName] = useState<string | null>(null);
+  const [nadAvatar, setNadAvatar] = useState<string | null>(null);
+
   useEffect(() => {
     if (!authenticated || !address) return;
 
@@ -23,6 +28,17 @@ const LeaderboardBadge: React.FC = () => {
           `${process.env.NEXT_PUBLIC_API_URL}/activity/track/me?address=${address}`
         );
         const data = await response.json();
+
+        // Fetch NNS profile
+        let nnsProfile = null;
+        try {
+          nnsProfile = await nnsClient.getProfile(address as HexString);
+        } catch (e: unknown) {
+          console.log("❌ Error fetching NNS profile:", e);
+          nnsProfile = null;
+        }
+        setNadName(nnsProfile?.primaryName || null);
+        setNadAvatar(nnsProfile?.avatar || null);
 
         setPositionUser({
           points: data.userActivity?.points || 0,
@@ -46,7 +62,7 @@ const LeaderboardBadge: React.FC = () => {
       <div className="flex items-center gap-2 min-w-0 flex-shrink">
         <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0">
           <Image
-            src={positionUser.avatarSrc}
+            src={nadAvatar ? nadAvatar : positionUser.avatarSrc}
             alt="avatar"
             width={28}
             height={28}
@@ -54,7 +70,7 @@ const LeaderboardBadge: React.FC = () => {
           />
         </div>
         <span className="text-sm font-semibold text-gray-900 truncate max-w-[120px] md:max-w-[200px]">
-          {positionUser.address}
+          {nadName ? nadName : positionUser.address}
         </span>
       </div>
 
