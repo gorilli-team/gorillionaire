@@ -16,7 +16,7 @@ import sendTelegramNotification from "./telegram.js";
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const SUPABASE_API_KEY = process.env.SUPABASE_API_KEY;
 const SUPABASE_URL = process.env.SUPABASE_URL_GORILLIONAIRE;
-const POLLING_INTERVAL = 60 * 60 * 1000; // 1 hour
+const POLLING_INTERVAL = 10 * 60 * 1000; // 10 minutes
 const MAX_DOCUMENTS = 500; // Limit to prevent crashes
 
 // Templates for prompts

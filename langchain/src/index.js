@@ -3,7 +3,7 @@ import { fetchData, closeConnection } from "./mongodb.js";
 import { processAndStoreData } from "./vectorStore.js";
 import { startSignalPolling } from "./tradingAgent.js";
 
-const DATA_POLLING_INTERVAL = 30 * 60 * 1000; // 30 minutes
+const DATA_POLLING_INTERVAL = 10 * 60 * 1000; // 10 minutes
 
 async function fetchAndUpdateData() {
   try {
