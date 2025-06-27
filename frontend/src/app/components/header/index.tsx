@@ -41,7 +41,6 @@ export default function Header() {
 
   // Debug log for troubleshooting
   useEffect(() => {
-    // eslint-disable-next-line no-console
     console.log("Header nadProfile:", nadProfile, "address:", address);
   }, [nadProfile, address]);
 
