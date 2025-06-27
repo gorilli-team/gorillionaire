@@ -88,6 +88,8 @@ class PriceOracle {
         );
         if (!token) continue;
 
+        if (priceData.priceUsd > 1000000) continue;
+
         await PriceData.create({
           tokenSymbol: token.symbol,
           price: parseFloat(priceData.priceUsd),
