@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createConfig, WagmiProvider } from "wagmi";
 import { coinbaseWallet } from "wagmi/connectors";
 import { NNS } from "@nadnameservice/nns-viem-sdk";
+import { AuthProvider } from "@/app/contexts/AuthContext";
 
 // Viem define chain
 export const monadChain = defineChain({
@@ -91,7 +92,7 @@ export function Providers({ children }: { children: ReactNode }) {
             },
           }}
         >
-          {children}
+          <AuthProvider>{children}</AuthProvider>
         </PrivyProvider>
       </QueryClientProvider>
     </WagmiProvider>
