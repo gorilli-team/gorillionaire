@@ -44,10 +44,9 @@ const EventSignalsComponent = () => {
       auth: true,
     });
     if (response && response.status === 200) {
-        console.log(response.data.signals);
-        const signals = new Map<string, Signal>(response.data.signals.map((signal: Signal) => [signal.id, signal]));
-        console.log(signals);
-      setSignals(signals);
+        const data = response.data as { signals: Signal[] };
+        const signals = new Map<string, Signal>(data.signals.map((signal) => [signal.id, signal]));
+        setSignals(signals);
     }
   };
 
@@ -57,7 +56,8 @@ const EventSignalsComponent = () => {
       auth: true,
     });
     if (response && response.status === 200) {
-      setEvents(response.data.slice(0, 50));
+      const data = response.data as { events: Event[] };
+      setEvents(data.events.slice(0, 50));
     }
   }, []);
 

@@ -8,14 +8,11 @@ import { ENDPOINTS } from "@/app/const/Endpoints";
 import { getTimeAgo } from "@/app/utils/time";
 import { useSSE } from "@/app/hooks/useSSE";
 import { Pagination } from "flowbite-react";
-<<<<<<< HEAD
 import { usePrivy } from "@privy-io/react-auth";
 import { useTrade } from "@/app/contexts/TradeContext";
 import { useAccount } from "wagmi";
 import { Token } from "@/app/types";
 import { getTokenImage } from "@/app/utils/tokens";
-=======
->>>>>>> 6e0dbb5 (GOR-65 fix build)
 
 type Signal = {
   id: string;
@@ -162,7 +159,9 @@ export default function SignalsPage() {
     });
     if (response && response.status === 200) {
       const signals = new Map<string, Signal>(
-        (response.data as { signals: Signal[] }).signals.map((signal: Signal) => [signal.id, signal])
+        (response.data as { signals: Signal[] }).signals.map(
+          (signal: Signal) => [signal.id, signal]
+        )
       );
       setSignals(signals);
     }
@@ -174,11 +173,7 @@ export default function SignalsPage() {
         url: ENDPOINTS.PRICE_DATA.replace(":id", event.token_id) + "?limit=500",
         auth: true,
       });
-<<<<<<< HEAD
       const chartData = response.data.map((item: PriceData) => ({
-=======
-      const chartData = (response.data as { data: { timestamp: string; close: number }[] }).data.map((item: { timestamp: string; close: number }) => ({
->>>>>>> 6e0dbb5 (GOR-65 fix build)
         timestamp: item.timestamp,
         price: item.close,
       }));
@@ -195,20 +190,12 @@ export default function SignalsPage() {
   }, []);
 
   const fetchEvents = useCallback(async () => {
-<<<<<<< HEAD
     const response = await apiClient.get<Event[]>({
-=======
-    const response = await apiClient.get<{ data: Event[] }>({
->>>>>>> 6e0dbb5 (GOR-65 fix build)
       url: ENDPOINTS.SIGNAL_EVENTS_ALL,
       auth: true,
     });
     if (response && response.status === 200) {
-<<<<<<< HEAD
       const events = response.data.slice(0, 50);
-=======
-      const events = response.data.data.slice(0, 50);
->>>>>>> 6e0dbb5 (GOR-65 fix build)
       console.log("events", events);
       setEvents(events);
       const uniqueEvents = events.filter(
@@ -564,7 +551,6 @@ export default function SignalsPage() {
                 <div className="flex justify-between items-center">
                   <div className="text-sm text-gray-500">
                     <span className="text-sm text-gray-500 mb-4 sm:mb-0">
-<<<<<<< HEAD
                       <span className="font-normal">Showing</span>{" "}
                       <span className="font-bold">
                         {(currentPage - 1) * rowsPerPage + 1}-
@@ -576,24 +562,6 @@ export default function SignalsPage() {
                   </div>
                   <div className="flex-grow flex justify-center mb-2">
                     <Pagination
-=======
-                    <span className="font-normal">Showing</span>{" "}
-                    <span className="font-bold">
-                      {(currentPage - 1) * rowsPerPage + 1}-
-                      {Math.min(
-                        currentPage * rowsPerPage,
-                        events.length
-                      )}
-                    </span>{" "}
-                    <span className="font-normal">of</span>{" "}
-                    <span className="font-bold">{events.length}</span>
-                  </span>
-
-
-                  </div>
-                  <div className="flex-grow flex justify-center mb-2">
-                  <Pagination
->>>>>>> 6e0dbb5 (GOR-65 fix build)
                       currentPage={currentPage}
                       totalPages={events.length}
                       onPageChange={() =>
@@ -606,10 +574,6 @@ export default function SignalsPage() {
                       }
                       showIcons={false}
                     />
-<<<<<<< HEAD
-=======
-
->>>>>>> 6e0dbb5 (GOR-65 fix build)
                   </div>
                 </div>
               </div>

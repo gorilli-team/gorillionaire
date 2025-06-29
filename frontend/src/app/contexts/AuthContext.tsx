@@ -42,18 +42,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     },
   });
 
-<<<<<<< HEAD
   const logout = useCallback(async () => {
     await privyLogout();
-=======
-  const logout = useCallback(() => {
-    privyLogout();
->>>>>>> 6e0dbb5 (GOR-65 fix build)
     removeAuthToken();
     setToken(null);
   }, [privyLogout]);
 
-<<<<<<< HEAD
   const login = useCallback(async () => {
     console.log("privy.authenticated", privy.authenticated);
     // const valid = isTokenValid(token || "");
@@ -66,18 +60,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // } else {
     // privyLogin();
     // }
-=======
-  const login = useCallback(() => {
-    const existing = getAuthToken();
-    console.log("existing", existing);
-    console.log("privy.authenticated", privy.authenticated);
-    if (privy.authenticated && !existing) {
-      logout();
-      privyLogin();
-    } else {
-      privyLogin();
-    }
->>>>>>> 6e0dbb5 (GOR-65 fix build)
   }, [privyLogin, privy, logout]);
 
   // const validateToken = useCallback(() => {
@@ -114,15 +96,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const data = response.data as { token: string; refreshToken: string };
       setAuthToken(data.token, data.refreshToken);
       setToken(data.token);
-<<<<<<< HEAD
       setIsAuthenticated(true);
-=======
->>>>>>> 6e0dbb5 (GOR-65 fix build)
     }
   }, [privy, logout]);
 
   useEffect(() => {
-<<<<<<< HEAD
     console.log("privy.ready", privy.ready);
     console.log("privy.authenticated", privy.authenticated);
 
@@ -141,19 +119,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     //   logout();
     // }
   }, [logout, privy.authenticated, privy.ready]);
-=======
-    if (!privy.ready) return; // wait for Privy to load
-  
-    const token = getAuthToken();
-    if (token && isTokenValid(token) && privy.authenticated) {
-        setIsAuthenticated(true);
-        setIsLoading(false);
-      } else {
-        setIsAuthenticated(false);
-        // logout();
-      }
-  }, [logout, privy]);
->>>>>>> 6e0dbb5 (GOR-65 fix build)
 
   // useEffect(() => {
   //   if (!token && privy.ready && privy.authenticated) {
