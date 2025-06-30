@@ -7,6 +7,11 @@ const { broadcastNotification } = require("../../websocket");
 const UserAuth = require("../../models/UserAuth");
 const { trackOnDiscordXpGained } = require("../../controllers/points");
 const Referral = require("../../models/Referral");
+const WeeklyLeaderboardService = require("../../services/WeeklyLeaderboardService");
+const {
+  manualArchive,
+  archiveSpecificWeek,
+} = require("../../cron/weeklyLeaderboard");
 
 // Simple in-memory cache for weekly leaderboard
 const weeklyCache = {
@@ -860,6 +865,135 @@ router.get("/performance", async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching performance stats:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Get all archived weekly leaderboards
+router.get("/leaderboard/archived", async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+
+    const result = await WeeklyLeaderboardService.getAllArchivedLeaderboards(
+      page,
+      limit
+    );
+
+    res.json(result);
+  } catch (error) {
+    console.error("Error fetching archived leaderboards:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Get archived leaderboard for a specific week
+router.get("/leaderboard/archived/:weekNumber/:year", async (req, res) => {
+  try {
+    const { weekNumber, year } = req.params;
+    const parsedWeekNumber = parseInt(weekNumber);
+    const parsedYear = parseInt(year);
+
+    if (isNaN(parsedWeekNumber) || isNaN(parsedYear)) {
+      return res.status(400).json({ error: "Invalid week number or year" });
+    }
+
+    const leaderboard = await WeeklyLeaderboardService.getArchivedLeaderboard(
+      parsedWeekNumber,
+      parsedYear
+    );
+
+    if (!leaderboard) {
+      return res.status(404).json({ error: "Archived leaderboard not found" });
+    }
+
+    res.json(leaderboard);
+  } catch (error) {
+    console.error("Error fetching archived leaderboard:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Get user's historical performance across weeks
+router.get("/leaderboard/history/:address", async (req, res) => {
+  try {
+    const { address } = req.params;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+
+    if (!address) {
+      return res.status(400).json({ error: "No address provided" });
+    }
+
+    const result = await WeeklyLeaderboardService.getUserHistory(
+      address,
+      page,
+      limit
+    );
+
+    res.json(result);
+  } catch (error) {
+    console.error("Error fetching user history:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Manually trigger weekly leaderboard archive (admin endpoint)
+router.post("/leaderboard/archive", async (req, res) => {
+  try {
+    const { date } = req.body;
+
+    let archived;
+    if (date) {
+      // Archive specific week
+      archived = await archiveSpecificWeek(new Date(date));
+    } else {
+      // Archive current week if it's over
+      archived = await manualArchive();
+    }
+
+    if (archived) {
+      res.json({
+        success: true,
+        message: "Weekly leaderboard archived successfully",
+        data: archived,
+      });
+    } else {
+      res.json({
+        success: false,
+        message: "No data to archive or week not over yet",
+      });
+    }
+  } catch (error) {
+    console.error("Error archiving weekly leaderboard:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Get current week status
+router.get("/leaderboard/status", async (req, res) => {
+  try {
+    const now = new Date();
+    const { startOfWeek, endOfWeek } =
+      WeeklyLeaderboardService.getWeekBoundaries(now);
+    const { weekNumber, year } =
+      WeeklyLeaderboardService.getWeekInfo(startOfWeek);
+    const isWeekOver = WeeklyLeaderboardService.isWeekOver();
+    const exists = await WeeklyLeaderboardService.existsForWeek(startOfWeek);
+
+    res.json({
+      currentWeek: {
+        weekNumber,
+        year,
+        startOfWeek,
+        endOfWeek,
+        isWeekOver,
+        isArchived: exists,
+      },
+      timeRemaining: isWeekOver ? 0 : endOfWeek.getTime() - now.getTime(),
+    });
+  } catch (error) {
+    console.error("Error fetching leaderboard status:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });

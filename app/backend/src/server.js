@@ -7,6 +7,9 @@ const app = require("./app");
 const { initWebSocketServer } = require("./websocket");
 const { initTokenHoldersCron } = require("./cron/blockvision");
 const { initPriceUpdateCron } = require("./cron/prices");
+const {
+  scheduleWeeklyLeaderboardArchive,
+} = require("./cron/weeklyLeaderboard");
 require("dotenv").config();
 const mongoose = require("mongoose");
 const Sentry = require("@sentry/node");
@@ -72,6 +75,7 @@ async function startServer() {
       try {
         initTokenHoldersCron();
         initPriceUpdateCron();
+        scheduleWeeklyLeaderboardArchive();
         console.log("Cron jobs initialized successfully");
 
         Sentry.setContext("services", {
