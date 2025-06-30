@@ -13,3 +13,9 @@
 [submodule "access-nft/lib/openzeppelin-contracts"]
 	path = access-nft/lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "contracts/smart-wallet/lib/forge-std"]
+	path = contracts/smart-wallet/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
+[submodule "contracts/smart-wallet/lib/openzeppelin-contracts"]
+	path = contracts/smart-wallet/lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts
