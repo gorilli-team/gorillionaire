@@ -22,23 +22,66 @@ contract SmartWalletTest is Test {
         vm.stopPrank();
     }
 
-    function testDeposit() public {
+    function test_deposit() public {
         vm.startPrank(deployer);
         tokenA.approve(address(smartWallet), 100);
         smartWallet.deposit(address(tokenA), 100);
         vm.stopPrank();
 
         uint256 tokenABalance = smartWallet.getTokenBalance(address(tokenA));
+        uint256 tokenCounter = smartWallet.s_tokenCounter();
+        bool isTokenAInWallet = smartWallet.checkIfTokenInWallet(address(tokenA));
+        address savedToken = smartWallet.getTokenByIndex(tokenCounter - 1);
 
         assertEq(tokenABalance, 100);
+        assertEq(isTokenAInWallet, true);
+        assertEq(tokenCounter, 1);
+        assertEq(savedToken, address(tokenA));
     }
 
-    function testDepositShouldFailWhenNonOwner() public {
+    function test_tokenCounterShouldNotIncreaseWhenDepositingSameToken() public {
+        vm.startPrank(deployer);
+        tokenA.approve(address(smartWallet), 200);
+        smartWallet.deposit(address(tokenA), 100);
+        vm.stopPrank();
+
+        uint256 tokenCounterBefore = smartWallet.s_tokenCounter();
+
+        vm.prank(deployer);
+        smartWallet.deposit(address(tokenA), 100);
+
+        uint256 tokenCounterAfter = smartWallet.s_tokenCounter();
+
+        uint256 tokenABalance = smartWallet.getTokenBalance(address(tokenA));
+
+        assertEq(tokenCounterBefore, tokenCounterAfter);
+        assertEq(tokenABalance, 200);
+    }
+
+    function test_depositShouldFailWhenNonOwner() public {
         vm.prank(user1);
         tokenA.approve(address(smartWallet), 100);
 
         vm.prank(user1);
         vm.expectRevert(SmartWallet.SmartWallet__NotOwner.selector);
         smartWallet.deposit(address(tokenA), 100);
+    }
+
+    function test_withdraw() public {
+        vm.startPrank(deployer);
+        tokenA.approve(address(smartWallet), 100);
+        smartWallet.deposit(address(tokenA), 100);
+        vm.stopPrank();
+
+        uint256 tokenABalanceBefore = smartWallet.getTokenBalance(address(tokenA));
+
+        assertEq(tokenABalanceBefore, 100);
+
+        vm.prank(deployer);
+        smartWallet.withdraw(address(tokenA), 50);
+
+        uint256 tokenABalanceAfter = smartWallet.getTokenBalance(address(tokenA));
+
+        assertEq(tokenABalanceAfter, 50);
     }
 }

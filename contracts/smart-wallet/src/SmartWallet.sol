@@ -115,4 +115,12 @@ contract SmartWallet {
     function getTokenBalance(address _token) public view returns(uint256) {
         return s_balances[_token];
     }
+
+    function checkIfTokenInWallet(address _token) public view returns(bool) {
+        return s_isTokenInWallet[_token];
+    }
+
+    function getTokenByIndex(uint256 index) public view returns(address) {
+        return s_tokens[index];
+    }
 }
