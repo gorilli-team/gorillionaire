@@ -111,4 +111,8 @@ contract SmartWallet {
 
         s_tokenCounter = 0;
     }
+
+    function getTokenBalance(address _token) public view returns(uint256) {
+        return s_balances[_token];
+    }
 }
