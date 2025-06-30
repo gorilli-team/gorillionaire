@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Sidebar from "@/app/components/sidebar";
 import Header from "@/app/components/header";
@@ -8,7 +8,28 @@ import LeaderboardComponent from "@/app/components/leaderboard/index";
 import WeeklyLeaderboardComponent from "@/app/components/leaderboard/WeeklyLeaderboard";
 import ArchivedLeaderboard from "@/app/components/leaderboard/ArchivedLeaderboard";
 
-const LeaderboardPage = () => {
+// Wrapper component for ArchivedLeaderboard with Suspense
+const ArchivedLeaderboardWrapper = () => {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">
+              Loading archived leaderboards...
+            </p>
+          </div>
+        </div>
+      }
+    >
+      <ArchivedLeaderboard />
+    </Suspense>
+  );
+};
+
+// Main content component that uses useSearchParams
+const LeaderboardContent = () => {
   const searchParams = useSearchParams();
   const [selectedPage, setSelectedPage] = useState("Leaderboard");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -127,11 +148,29 @@ const LeaderboardPage = () => {
           ) : activeTab === "weekly" ? (
             <WeeklyLeaderboardComponent />
           ) : (
-            <ArchivedLeaderboard />
+            <ArchivedLeaderboardWrapper />
           )}
         </div>
       </div>
     </div>
+  );
+};
+
+// Main page component wrapped in Suspense
+const LeaderboardPage = () => {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading leaderboard...</p>
+          </div>
+        </div>
+      }
+    >
+      <LeaderboardContent />
+    </Suspense>
   );
 };
 
