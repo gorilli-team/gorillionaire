@@ -6,19 +6,19 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
 contract SmartWalletFactory is Ownable {
     event SmartWalletCreated(address indexed user, address indexed smartWallet);
-    event MaxWalletPerUserUpdated(uint256 indexed newLimit);
+    event UserWalletLimitUpdated(uint256 indexed newLimit);
     
     error SmartWalletFactory__ExceededWalletLimit();
 
     SmartWallet[] public s_deployedSmartWallets;
     mapping(address user => SmartWallet[] smartWallets) public s_userToSmartWallets;
 
-    uint256 public s_maxWalletPerUser = 1;
+    uint256 public s_userWalletLimit = 1;
 
     constructor() Ownable(msg.sender) {}
 
-    function createSmartWallet() public {
-        if(s_userToSmartWallets[msg.sender].length >= s_maxWalletPerUser) {
+    function createSmartWallet() public returns(SmartWallet) {
+        if(s_userToSmartWallets[msg.sender].length >= s_userWalletLimit) {
             revert SmartWalletFactory__ExceededWalletLimit();
         }
 
@@ -27,10 +27,16 @@ contract SmartWalletFactory is Ownable {
         s_userToSmartWallets[msg.sender].push(smartWallet);
 
         emit SmartWalletCreated(msg.sender, address(smartWallet));
+
+        return smartWallet;
     }
 
-    function setMaxWalletPerUser(uint256 _newLimit) public onlyOwner {
-        s_maxWalletPerUser = _newLimit;
-        emit MaxWalletPerUserUpdated(_newLimit);
+    function setUserWalletLimit(uint256 _newLimit) public onlyOwner {
+        s_userWalletLimit = _newLimit;
+        emit UserWalletLimitUpdated(_newLimit);
+    }
+
+    function getUserSmartWallets(address _user) public view returns(SmartWallet[] memory) {
+        return s_userToSmartWallets[_user];
     }
 }
