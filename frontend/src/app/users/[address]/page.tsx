@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -265,7 +265,7 @@ const UserProfilePage = () => {
     }
   };
 
-  const fetchReferralStats = async () => {
+  const fetchReferralStats = useCallback(async () => {
     if (!params.address) return;
 
     try {
@@ -282,7 +282,7 @@ const UserProfilePage = () => {
     } catch (error) {
       console.error("Error fetching referral stats:", error);
     }
-  };
+  }, [params.address]);
 
   const copyToClipboard = async (text: string) => {
     try {
@@ -297,7 +297,7 @@ const UserProfilePage = () => {
     }
   };
 
-  const checkIfUserHasReferrer = async () => {
+  const checkIfUserHasReferrer = useCallback(async () => {
     if (!params.address) return;
 
     try {
@@ -314,7 +314,7 @@ const UserProfilePage = () => {
     } catch (error) {
       console.error("Error checking referrer status:", error);
     }
-  };
+  }, [params.address]);
 
   const submitReferralCode = async () => {
     if (!params.address || !referralCodeInput.trim()) return;
@@ -357,7 +357,7 @@ const UserProfilePage = () => {
     }
   };
 
-  const fetchUserQuests = async () => {
+  const fetchUserQuests = useCallback(async () => {
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/activity/quests/${params.address}`
     );
@@ -370,7 +370,7 @@ const UserProfilePage = () => {
         .map((quest: Quest) => quest._id)
     );
     setClaimedQuests(alreadyClaimed);
-  };
+  }, [params.address]);
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -415,7 +415,7 @@ const UserProfilePage = () => {
     if (params.address) {
       fetchUserQuests();
     }
-  }, [params.address]);
+  }, [params.address, fetchUserQuests]);
 
   useEffect(() => {
     const checkDiscordQuestStatus = async () => {
@@ -458,13 +458,13 @@ const UserProfilePage = () => {
     if (params.address) {
       fetchReferralStats();
     }
-  }, [params.address]);
+  }, [params.address, fetchReferralStats]);
 
   useEffect(() => {
     if (params.address && isOwnProfile) {
       checkIfUserHasReferrer();
     }
-  }, [params.address, isOwnProfile]);
+  }, [params.address, isOwnProfile, checkIfUserHasReferrer]);
 
   const formatAddress = (address: string) => {
     if (!address) return "";

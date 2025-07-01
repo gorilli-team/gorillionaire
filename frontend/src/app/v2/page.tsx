@@ -2,13 +2,13 @@
 
 import React, { useCallback, useMemo, useState, useEffect } from "react";
 import Sidebar from "@/app/components/sidebar";
+import V2Layout from "@/app/components/layout/V2Layout";
 import Header from "@/app/components/header";
 import { useAccount, useReadContract, useWriteContract } from "wagmi";
 import { abi } from "../abi/early-nft";
 import { toast } from "react-toastify";
 import { MONAD_CHAIN_ID } from "../utils/constants";
 import { usePrivy } from "@privy-io/react-auth";
-import Image from "next/image";
 import { UserService } from "../services/userService";
 
 const V2Page = () => {
@@ -17,7 +17,7 @@ const V2Page = () => {
   const [selectedPage, setSelectedPage] = useState("V2");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { writeContract } = useWriteContract();
-  const [tokenId, setTokenId] = useState<number | null>(null);
+
   const [v2Access, setV2Access] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
 
@@ -36,23 +36,6 @@ const V2Page = () => {
     address: firstNFT.address,
     args: [address || "0x0"],
   });
-
-  // Read total supply for the first contract
-  const { data: totalSupplyData } = useReadContract({
-    abi,
-    functionName: "nextTokenId",
-    address: firstNFT.address,
-  });
-
-  // Read collection name for the first contract
-  const { data: nameData } = useReadContract({
-    abi,
-    functionName: "name",
-    address: firstNFT.address,
-  });
-
-  // Set token ID if user has NFT
-  const effectiveTokenId = address && balanceData && balanceData > 0 ? 1 : null;
 
   const [chainId, setChainId] = useState<number | null>(null);
 
@@ -80,13 +63,6 @@ const V2Page = () => {
 
     checkV2Access();
   }, [address]);
-
-  // Effect to set token ID when balance changes
-  useEffect(() => {
-    if (alreadyMinted && effectiveTokenId) {
-      setTokenId(Number(effectiveTokenId));
-    }
-  }, [alreadyMinted, effectiveTokenId]);
 
   const onClick = useCallback(async () => {
     if (alreadyMinted) return;
@@ -130,7 +106,14 @@ const V2Page = () => {
       functionName: "mint",
       address: firstNFT.address,
     });
-  }, [writeContract, alreadyMinted, chainId, isConnected, login]);
+  }, [
+    writeContract,
+    alreadyMinted,
+    chainId,
+    isConnected,
+    login,
+    firstNFT.address,
+  ]);
 
   // Get the current chain ID
   useEffect(() => {
@@ -163,6 +146,88 @@ const V2Page = () => {
     };
   }, []);
 
+  // If user has V2 access, use V2 layout and redirect to dashboard
+  if (v2Access && !loading) {
+    return (
+      <V2Layout selectedPage={selectedPage} setSelectedPage={setSelectedPage}>
+        <div className="w-full max-w-5xl mx-auto p-4 md:p-6">
+          <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
+            <div className="bg-gradient-to-r from-green-600 to-green-700 p-4">
+              <div className="flex items-center gap-2">
+                <span className="text-white text-2xl">✅</span>
+                <h1 className="text-xl font-bold text-white">
+                  V2 Access Granted
+                </h1>
+              </div>
+            </div>
+            <div className="p-6">
+              <div className="flex flex-col-reverse md:flex-row gap-6">
+                {/* V2 Access Details */}
+                <div className="w-full md:w-1/2">
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-500">
+                        Access Status
+                      </h3>
+                      <p className="text-lg font-semibold text-green-600">
+                        ✅ V2 Access Enabled
+                      </p>
+                    </div>
+
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-500">
+                        User Address
+                      </h3>
+                      <a
+                        href={`https://testnet.monadexplorer.com/address/${address}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-lg font-medium text-purple-600 hover:text-purple-700 truncate block"
+                      >
+                        {address}
+                      </a>
+                    </div>
+
+                    <div className="pt-4">
+                      <div className="bg-green-50 rounded-lg p-4">
+                        <div className="flex items-center">
+                          <div className="w-2 h-2 bg-green-400 rounded-full mr-2"></div>
+                          <p className="text-sm text-green-700">
+                            You have V2 access! Welcome to Gorillionaire V2.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="pt-4">
+                      <button
+                        onClick={() => (window.location.href = "/v2/dashboard")}
+                        className="w-full py-3 px-4 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 transition-all duration-200 font-medium"
+                      >
+                        Go to V2 Dashboard
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* V2 Logo */}
+                <div className="w-full md:w-1/3">
+                  <div className="aspect-square w-full bg-gradient-to-br from-green-100 to-blue-100 rounded-lg flex border-2 border-green-200 overflow-hidden items-center justify-center">
+                    <div className="text-center">
+                      <div className="text-6xl mb-4">🦍</div>
+                      <h3 className="text-xl font-bold text-green-700">V2</h3>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </V2Layout>
+    );
+  }
+
+  // Regular layout for non-V2 users
   return (
     <div className="flex min-h-screen bg-gray-100 text-gray-800">
       {/* Mobile menu button */}
@@ -230,72 +295,6 @@ const V2Page = () => {
                 <div className="p-6 text-center">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
                   <p className="mt-4 text-gray-600">Checking V2 access...</p>
-                </div>
-              </div>
-            ) : v2Access ? (
-              <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
-                <div className="bg-gradient-to-r from-green-600 to-green-700 p-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-white text-2xl">✅</span>
-                    <h1 className="text-xl font-bold text-white">
-                      V2 Access Granted
-                    </h1>
-                  </div>
-                </div>
-
-                <div className="p-6">
-                  <div className="flex flex-col-reverse md:flex-row gap-6">
-                    {/* V2 Access Details */}
-                    <div className="w-full md:w-1/2">
-                      <div className="space-y-4">
-                        <div>
-                          <h3 className="text-sm font-medium text-gray-500">
-                            Access Status
-                          </h3>
-                          <p className="text-lg font-semibold text-green-600">
-                            ✅ V2 Access Enabled
-                          </p>
-                        </div>
-
-                        <div>
-                          <h3 className="text-sm font-medium text-gray-500">
-                            User Address
-                          </h3>
-                          <a
-                            href={`https://testnet.monadexplorer.com/address/${address}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-lg font-medium text-purple-600 hover:text-purple-700 truncate block"
-                          >
-                            {address}
-                          </a>
-                        </div>
-
-                        <div className="pt-4">
-                          <div className="bg-green-50 rounded-lg p-4">
-                            <div className="flex items-center">
-                              <div className="w-2 h-2 bg-green-400 rounded-full mr-2"></div>
-                              <p className="text-sm text-green-700">
-                                You have V2 access! Welcome to Gorillionaire V2.
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* V2 Logo */}
-                    <div className="w-full md:w-1/3">
-                      <div className="aspect-square w-full bg-gradient-to-br from-green-100 to-blue-100 rounded-lg flex border-2 border-green-200 overflow-hidden items-center justify-center">
-                        <div className="text-center">
-                          <div className="text-6xl mb-4">🦍</div>
-                          <h3 className="text-xl font-bold text-green-700">
-                            V2
-                          </h3>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
                 </div>
               </div>
             ) : (
