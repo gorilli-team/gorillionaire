@@ -109,7 +109,7 @@ export default function HomePage() {
                   href="https://discord.gg/yYtgzHywRF"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-4 py-1 border border-purple-500 text-purple-600 rounded-md font-medium hover:bg-purple-50 transition text-sm"
+                  className="px-4 py-1 border border-purple-500 text-purple-600 rounded-md font-medium hover:bg-purple-50 transition text-sm w-24 text-center"
                 >
                   Join Server
                 </a>
@@ -128,7 +128,7 @@ export default function HomePage() {
                   href="https://discord.gg/yYtgzHywRF"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-4 py-1 border border-purple-500 text-purple-600 rounded-md font-medium hover:bg-purple-50 transition text-sm"
+                  className="px-4 py-1 border border-purple-500 text-purple-600 rounded-md font-medium hover:bg-purple-50 transition text-sm w-24 text-center"
                 >
                   Drop It
                 </a>
@@ -224,7 +224,7 @@ export default function HomePage() {
           {/* V1 Access Link */}
           <div className="text-center">
             <p className="text-sm text-gray-600 mb-3">
-              Don't have a V2 access code?
+              Do not have a V2 access code?
             </p>
             <a
               href="/v1"
@@ -257,7 +257,7 @@ export default function HomePage() {
                 href="https://discord.gg/yYtgzHywRF"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-4 py-1 border border-purple-500 text-purple-600 rounded-md font-medium hover:bg-purple-50 transition text-sm"
+                className="px-4 py-1 border border-purple-500 text-purple-600 rounded-md font-medium hover:bg-purple-50 transition text-sm w-24 text-center"
               >
                 Join Server
               </a>
@@ -276,7 +276,7 @@ export default function HomePage() {
                 href="https://discord.gg/yYtgzHywRF"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-4 py-1 border border-purple-500 text-purple-600 rounded-md font-medium hover:bg-purple-50 transition text-sm"
+                className="px-4 py-1 border border-purple-500 text-purple-600 rounded-md font-medium hover:bg-purple-50 transition text-sm w-24 text-center"
               >
                 Drop It
               </a>
