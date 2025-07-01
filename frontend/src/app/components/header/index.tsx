@@ -1,16 +1,13 @@
 "use client";
 import { useLogin, usePrivy } from "@privy-io/react-auth";
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { ToastContainer, toast, Bounce } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import Cookies from "js-cookie";
 import LeaderboardBadge from "../leaderboard_badge";
+import Cookies from "js-cookie";
 import { useGetProfile } from "@nadnameservice/nns-wagmi-hooks";
 import { HexString } from "@/app/types";
-import { useAuth } from "@/app/contexts/AuthContext";
-import { apiClient, safe } from "@/app/services/api";
-import { ENDPOINTS } from "@/app/const/Endpoints";
-import { setAuthToken, removeAuthToken } from "@/app/helpers/auth";
+import { useDisconnect } from "wagmi";
 
 interface Notification {
   type: string;
@@ -28,11 +25,11 @@ interface Notification {
 }
 
 export default function Header() {
-  const { ready, authenticated, user, logout: privyLogout } = usePrivy();
-  const { logout: authLogout, isAuthenticated, token } = useAuth();
+  const { ready, authenticated, user, logout } = usePrivy();
+  const { disconnect } = useDisconnect();
 
   // Always use the correct address, never '0x' or empty
-  const userAddress = useMemo(() => user?.wallet?.address || null, [user]);
+  const userAddress = user?.wallet?.address || null;
   const [address, setAddress] = useState<string | null>(userAddress);
 
   // Only call useGetProfile if address is valid
@@ -52,56 +49,45 @@ export default function Header() {
     if (!authenticated) {
       setAddress(null);
     } else {
-      setAddress(userAddress || null);
+      setAddress(userAddress);
     }
   }, [userAddress, authenticated]);
 
   const handleLogout = async () => {
     setAddress(null);
-    privyLogout();
-    await authLogout();
+    disconnect();
+    await logout();
   };
 
-  const { login: privyLogin } = useLogin({
+  const { login } = useLogin({
     onComplete: async ({ user }) => {
-      console.log("user", user);
       const privyToken = Cookies.get("privy-token");
       if (!privyToken || !user.wallet?.address) return;
 
-      const [response, error] = await safe(
-        apiClient.post({
-          url: ENDPOINTS.PRIVY_VERIFY,
-          data: {
-            wallet_address: user.wallet.address,
-            privy_token: privyToken,
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/auth/privy`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
           },
-          csrfToken: true,
-        })
+          body: JSON.stringify({ address: user.wallet.address, privyToken }),
+        }
       );
-      if (response && response.status === 200 && response.data) {
-        const data = response.data as { token: string; refreshToken: string };
-        setAuthToken(data.token, data.refreshToken);
-        showCustomNotification(
-          "Welcome back! You've been signed in successfully.",
-          "Login Success"
-        );
-      } else {
-        removeAuthToken();
-        authLogout();
-        showCustomNotification(
-          error?.message || "Login Failed",
-          "Login Failed"
-        );
-      }
+      await response.json();
     },
   });
-
   const [monPriceFormatted, setMonPriceFormatted] = useState<string>("0.00");
   const [isFlashing, setIsFlashing] = useState(false);
 
+  // WebSocket notification state
   const wsRef = useRef<WebSocket | null>(null);
 
-  const showCustomNotification = (message: string, title = "Notification") => {
+  // Function to show notification
+  const showCustomNotification = (
+    message: string,
+    title: string = "Notification"
+  ) => {
     toast(
       <div>
         <div className="font-bold">{title}</div>
@@ -113,36 +99,48 @@ export default function Header() {
         hideProgressBar: false,
         closeOnClick: true,
         draggable: true,
+        progress: undefined,
         theme: "light",
         transition: Bounce,
       }
     );
   };
 
+  // Handle wallet connection/disconnection and address updates
   useEffect(() => {
-    if (!ready) return;
-    if (!isAuthenticated || !user?.wallet?.address) return;
+    if (!ready) return; // Wait for Privy to be ready
 
     const trackUser = async () => {
-      const privyToken = token;
-      if (!privyToken) return;
+      if (authenticated && user?.wallet) {
+        //make a call to the backend to track the user
+        const privyToken = Cookies.get("privy-token");
 
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/activity/track/signin`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${privyToken}`,
-        },
-        body: JSON.stringify({ address: user?.wallet?.address }),
-      });
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/activity/track/signin`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${privyToken}`,
+            },
+            body: JSON.stringify({ address: user.wallet.address }),
+          }
+        );
+        await response.json();
+      }
     };
 
     trackUser();
-  }, [ready, isAuthenticated, user, token]);
+  }, [ready, authenticated, user]);
 
+  // WebSocket for notifications
   useEffect(() => {
-    if (!isAuthenticated || !userAddress) return;
+    // Only connect when authenticated and we have an address
+    if (!authenticated || !address) {
+      return;
+    }
 
+    // Close any existing WebSocket connection
     if (wsRef.current) {
       wsRef.current.close();
     }
@@ -153,19 +151,29 @@ export default function Header() {
     wsRef.current.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data) as Notification;
+
+        // Debug logging to see the address comparison
         const notificationAddress = message.data?.data?.userAddress;
 
         if (
           message.type === "NOTIFICATION" &&
-          notificationAddress?.toLowerCase() === userAddress.toLowerCase()
+          notificationAddress &&
+          address &&
+          notificationAddress.toLowerCase() === address.toLowerCase()
         ) {
+          // Extract relevant data
           const { action, tokenAmount, tokenPrice, tokenSymbol } =
             message.data.data || {};
+
+          // Choose emoji based on action
           const actionEmoji = action === "buy" ? "💰" : "💸";
+
+          // Format the message for notification - using const instead of let
           const notificationMessage = `${actionEmoji} ${action?.toUpperCase()} ${tokenAmount} ${tokenSymbol} @ $${
-            tokenPrice?.toFixed(2) ?? "N/A"
+            tokenPrice ? tokenPrice.toFixed(2) : "N/A"
           }`;
 
+          // Show toast notification with formatted message
           showCustomNotification(notificationMessage, "Trade Signal");
         }
       } catch (error) {
@@ -175,12 +183,14 @@ export default function Header() {
 
     return () => {
       if (wsRef.current) {
+        console.log("Closing WebSocket connection");
         wsRef.current.close();
         wsRef.current = null;
       }
     };
-  }, [isAuthenticated, userAddress]);
+  }, [authenticated, address]);
 
+  // Memoize fetchPrice to prevent unnecessary recreations
   const fetchPrice = useCallback(async () => {
     try {
       const response = await fetch(
@@ -189,7 +199,12 @@ export default function Header() {
       const data = await response.json();
 
       data.data.forEach(
-        (item: { symbol: string; price: { price: number } }) => {
+        (item: {
+          symbol: string;
+          price: {
+            price: number;
+          };
+        }) => {
           if (item.symbol === "WMON") {
             const newPrice = item.price?.price;
             const formattedPrice = new Intl.NumberFormat("en-US", {
@@ -210,8 +225,9 @@ export default function Header() {
     }
   }, [monPriceFormatted]);
 
+  // Set up price fetching interval
   useEffect(() => {
-    fetchPrice();
+    fetchPrice(); // Initial fetch
     const interval = setInterval(fetchPrice, 60000);
     return () => clearInterval(interval);
   }, [fetchPrice]);
@@ -222,13 +238,18 @@ export default function Header() {
         position="top-right"
         autoClose={5000}
         hideProgressBar={false}
-        closeOnClick
+        newestOnTop={false}
+        closeOnClick={true}
+        rtl={false}
+        pauseOnFocusLoss
         draggable
+        pauseOnHover
         theme="light"
         transition={Bounce}
       />
 
       <header className="h-16 px-4 sm:px-6 flex items-center justify-between border-b border-gray-300 bg-gray-100 sticky top-0 z-20">
+        {/* Left space for mobile hamburger menu */}
         <div className="w-8 h-8 lg:hidden"></div>
 
         <div className="flex flex-wrap items-center justify-end space-x-4 flex-1 my-3 ml-auto">
@@ -257,17 +278,17 @@ export default function Header() {
             </div>
           )}
 
-          {ready && isAuthenticated ? (
+          {ready && authenticated ? (
             <div className="flex items-center gap-2 sm:gap-4">
               {nadProfile?.primaryName ? (
                 <div className="text-xs sm:text-sm text-gray-600 truncate max-w-[80px] sm:max-w-none">
                   {nadProfile.primaryName}
                 </div>
               ) : (
-                userAddress && (
+                address && (
                   <div className="text-xs sm:text-sm text-gray-600 truncate max-w-[80px] sm:max-w-none">
-                    {userAddress.slice(0, 6)}...
-                    {userAddress.slice(-4)}
+                    {address.slice(0, 6)}...
+                    {address.slice(-4)}
                   </div>
                 )
               )}
@@ -281,7 +302,7 @@ export default function Header() {
           ) : (
             <div>
               <button
-                onClick={privyLogin}
+                onClick={login}
                 disabled={!ready}
                 className="px-2 sm:px-4 py-1 sm:py-2 text-xs sm:text-sm font-medium text-white bg-violet-900 rounded-md hover:bg-violet-700 disabled:opacity-50"
               >

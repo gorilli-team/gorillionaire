@@ -597,58 +597,116 @@ export default function SignalDetails() {
     [signal, tokens, onYes, onNo, user?.wallet?.address]
   );
   return (
-    <div>
-      <div className="flex-1 overflow-y-auto p-6">
-        {isLoading ? (
-          <LoadingOverlay />
-        ) : error ? (
-          <div className="text-red-500">{error}</div>
-        ) : !signal ? (
-          <div className="p-3 sm:p-4">
-            <div className="text-red-500">Signal not found</div>
-            <div className="text-sm text-gray-500 mt-2">ID: {params.id}</div>
-          </div>
-        ) : (
-          <div className="max-w-4xl mx-auto">
-            <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-12 h-12 rounded-full overflow-hidden">
-                  <Image
-                    src={getTokenImage(signal.token || "")}
-                    alt={signal.token || ""}
-                    width={48}
-                    height={48}
-                    className="object-cover"
-                  />
-                </div>
-                <div>
-                  <h1 className="text-2xl font-bold">{signal.signal_text}</h1>
-                  <div className="flex items-center gap-2 mt-2">
-                    <span
-                      className={`px-3 py-1 rounded-full text-sm ${
-                        signal.type === "Buy"
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
-                      }`}
-                    >
-                      {signal.type || "Unknown"}
-                    </span>
-                    <span
-                      className={`px-3 py-1 rounded-full text-sm ${
-                        mapConfidenceToRisk(signal.confidenceScore) ===
-                        "Conservative"
-                          ? "bg-green-100 text-green-800"
-                          : mapConfidenceToRisk(signal.confidenceScore) ===
-                            "Moderate"
-                          ? "bg-yellow-100 text-yellow-800"
-                          : "bg-red-100 text-red-800"
-                      }`}
-                    >
-                      {mapConfidenceToRisk(signal.confidenceScore)}
-                    </span>
+    <div className="flex min-h-screen bg-gray-100 text-gray-800">
+      {/* Mobile menu button */}
+      <button
+        className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-full bg-gray-200"
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        aria-label="Toggle menu"
+      >
+        <svg
+          className="w-6 h-6"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d={
+              isMobileMenuOpen
+                ? "M6 18L18 6M6 6l12 12"
+                : "M4 6h16M4 12h16M4 18h16"
+            }
+          />
+        </svg>
+      </button>
+
+      {/* Sidebar */}
+      <div
+        className={`
+          fixed lg:static
+          ${
+            isMobileMenuOpen
+              ? "translate-x-0"
+              : "-translate-x-full lg:translate-x-0"
+          }
+          transition-transform duration-300 ease-in-out
+          z-40 lg:z-0
+          bg-white
+          shadow-xl lg:shadow-none
+          w-64 lg:w-auto
+        `}
+      >
+        <Sidebar
+          selectedPage={selectedPage}
+          setSelectedPage={setSelectedPage}
+        />
+      </div>
+
+      {/* Overlay */}
+      {isMobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Main content */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <Header />
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+          {isLoading ? (
+            <LoadingOverlay />
+          ) : error ? (
+            <div className="text-red-500">{error}</div>
+          ) : !signal ? (
+            <div className="p-3 sm:p-4">
+              <div className="text-red-500">Signal not found</div>
+              <div className="text-sm text-gray-500 mt-2">ID: {params.id}</div>
+            </div>
+          ) : (
+            <div className="max-w-4xl mx-auto">
+              <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-12 h-12 rounded-full overflow-hidden">
+                    <Image
+                      src={getTokenImage(signal.token || "")}
+                      alt={signal.token || ""}
+                      width={48}
+                      height={48}
+                      className="object-cover"
+                    />
+                  </div>
+                  <div>
+                    <h1 className="text-2xl font-bold">{signal.signal_text}</h1>
+                    <div className="flex items-center gap-2 mt-2">
+                      <span
+                        className={`px-3 py-1 rounded-full text-sm ${
+                          signal.type === "Buy"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
+                        }`}
+                      >
+                        {signal.type || "Unknown"}
+                      </span>
+                      <span
+                        className={`px-3 py-1 rounded-full text-sm ${
+                          mapConfidenceToRisk(signal.confidenceScore) ===
+                          "Conservative"
+                            ? "bg-green-100 text-green-800"
+                            : mapConfidenceToRisk(signal.confidenceScore) ===
+                              "Moderate"
+                            ? "bg-yellow-100 text-yellow-800"
+                            : "bg-red-100 text-red-800"
+                        }`}
+                      >
+                        {mapConfidenceToRisk(signal.confidenceScore)}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div className="bg-gray-50 p-4 rounded-lg">
@@ -712,45 +770,49 @@ export default function SignalDetails() {
                   </div>
                 )}
 
-              {signal.userSignals && signal.userSignals.length > 0 && (
-                <div className="mb-6">
-                  <h2 className="text-lg font-semibold mb-2">User Responses</h2>
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <div className="space-y-3">
-                      {signal.userSignals.map((userSignal, index) => (
-                        <div
-                          key={index}
-                          className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-white rounded-lg shadow-sm gap-2"
-                        >
-                          <div className="flex items-center space-x-3">
-                            <div
-                              className={`px-3 py-1 rounded-full text-sm ${
-                                userSignal.choice === "Yes"
-                                  ? "bg-green-100 text-green-800"
-                                  : "bg-red-100 text-red-800"
-                              }`}
-                            >
-                              {userSignal.choice}
+                {signal.userSignals && signal.userSignals.length > 0 && (
+                  <div className="mb-6">
+                    <h2 className="text-lg font-semibold mb-2">
+                      User Responses
+                    </h2>
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <div className="space-y-3">
+                        {signal.userSignals.map((userSignal, index) => (
+                          <div
+                            key={index}
+                            className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-white rounded-lg shadow-sm gap-2"
+                          >
+                            <div className="flex items-center space-x-3">
+                              <div
+                                className={`px-3 py-1 rounded-full text-sm ${
+                                  userSignal.choice === "Yes"
+                                    ? "bg-green-100 text-green-800"
+                                    : "bg-red-100 text-red-800"
+                                }`}
+                              >
+                                {userSignal.choice}
+                              </div>
+                              <div
+                                className="text-sm text-gray-600 hover:text-violet-600 cursor-pointer transition-colors duration-200 max-w-[200px] truncate"
+                                onClick={() =>
+                                  router.push(
+                                    `/users/${userSignal.userAddress}`
+                                  )
+                                }
+                                title={userSignal.userAddress}
+                              >
+                                {userSignal.userAddress}
+                              </div>
                             </div>
-                            <div
-                              className="text-sm text-gray-600 hover:text-violet-600 cursor-pointer transition-colors duration-200 max-w-[200px] truncate"
-                              onClick={() =>
-                                router.push(`/users/${userSignal.userAddress}`)
-                              }
-                              title={userSignal.userAddress}
-                            >
-                              {userSignal.userAddress}
+                            <div className="text-sm text-gray-500">
+                              {new Date(userSignal.created_at).toLocaleString()}
                             </div>
                           </div>
-                          <div className="text-sm text-gray-500">
-                            {new Date(userSignal.created_at).toLocaleString()}
-                          </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
               <div className="text-sm text-gray-500">
                 Created:{" "}
