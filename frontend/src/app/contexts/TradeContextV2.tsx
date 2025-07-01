@@ -2,19 +2,19 @@
 
 import React, { createContext, useContext, ReactNode } from "react";
 import { toast } from "react-toastify";
-import { usePrivy } from "@privy-io/react-auth";
-import { useAccount, useSwitchChain } from "wagmi";
 import { MONAD_CHAIN_ID } from "@/app/utils/constants";
-import { Token } from "@/app/types";
+
+interface User {
+  wallet?: {
+    address: string;
+  };
+}
 
 interface TradeContextType {
   handleOptionSelect: (params: {
     signal_id: string;
     option: "Yes" | "No";
-    user: any;
-    tokens?: Token[];
-    amount?: number;
-    type?: string;
+    user: User;
     chainId?: number | null;
   }) => void;
 }
@@ -34,26 +34,16 @@ interface TradeProviderProps {
 }
 
 export const TradeProviderV2: React.FC<TradeProviderProps> = ({ children }) => {
-  const { user } = usePrivy();
-  const { chainId } = useAccount();
-  const { switchChain } = useSwitchChain();
-
   const handleOptionSelect = async (params: {
     signal_id: string;
     option: "Yes" | "No";
-    user: any;
-    tokens?: Token[];
-    amount?: number;
-    type?: string;
+    user: User;
     chainId?: number | null;
   }) => {
     const {
       signal_id,
       option,
       user: userParam,
-      tokens,
-      amount,
-      type,
       chainId: paramChainId,
     } = params;
 

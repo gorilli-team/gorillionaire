@@ -1,9 +1,9 @@
 import { useEffect, useRef } from "react";
 import { getAuthToken } from "@/app/helpers/auth";
 
-export const useSSE = (
+export const useSSE = <T = unknown>(
   url: string,
-  onMessage: (data: any) => void,
+  onMessage: (data: T) => void,
   auth: boolean = false
 ) => {
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -27,7 +27,7 @@ export const useSSE = (
 
     eventSource.onmessage = (event) => {
       try {
-        const data = JSON.parse(event.data);
+        const data = JSON.parse(event.data) as T;
         onMessage(data);
       } catch (error) {
         console.error("Error parsing SSE data:", error);

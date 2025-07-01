@@ -11,8 +11,7 @@ import { Pagination } from "flowbite-react";
 import { usePrivy } from "@privy-io/react-auth";
 import { useTradeV2 } from "@/app/contexts/TradeContextV2";
 import { useAccount } from "wagmi";
-import { Token } from "@/app/types";
-import { getTokenImage } from "@/app/utils/tokens";
+import { toast } from "react-toastify";
 
 type Signal = {
   id: string;
@@ -41,13 +40,6 @@ type ChartData = {
 type PriceData = {
   timestamp: string;
   close: number;
-};
-
-type TokenData = {
-  token_id: string;
-  symbol: string;
-  name: string;
-  decimal: string;
 };
 
 const chart = (data: ChartData[]) => {
@@ -119,7 +111,6 @@ export default function SignalsPage() {
   const router = useRouter();
   const [hasAccess, setHasAccess] = useState(false);
   const [signals, setSignals] = useState<Map<string, Signal>>(new Map());
-  const [tokens, setTokens] = useState<Map<string, Token>>(new Map());
   const [events, setEvents] = useState<Event[]>([]);
   const [latestEventId, setLatestEventId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -209,36 +200,6 @@ export default function SignalsPage() {
     }
   }, [fetchCharts]);
 
-  const fetchTokens = useCallback(async () => {
-    const response = await apiClientV2.get<TokenData[]>({
-      url: ENDPOINTS.TOKENS_INFO + "?type=token",
-      auth: true,
-    });
-    if (response && response.status === 200) {
-      const tokens = response.data;
-      console.log("tokens", tokens);
-      setTokens((prev) => {
-        const newTokens = new Map(prev);
-        tokens.forEach((token: TokenData) => {
-          const token_ids = token.token_id.split(":");
-          const chainId = parseInt(token_ids[0]);
-          const tokenAddress = token_ids[1];
-          newTokens.set(token.symbol, {
-            symbol: token.symbol,
-            name: token.name,
-            decimals: parseInt(token.decimal),
-            address: tokenAddress as `0x${string}`,
-            chainId: chainId,
-            totalHolding: 0,
-            price: 0,
-            imageUrl: getTokenImage(token.symbol),
-          });
-        });
-        return newTokens;
-      });
-    }
-  }, []);
-
   useEffect(() => {
     const access = localStorage.getItem("hasAccess");
     if (!access) {
@@ -250,8 +211,7 @@ export default function SignalsPage() {
 
   useEffect(() => {
     fetchSignals();
-    fetchTokens();
-  }, [fetchTokens, fetchSignals]);
+  }, [fetchSignals]);
 
   useEffect(() => {
     fetchEvents();
@@ -491,21 +451,20 @@ export default function SignalsPage() {
                             <button
                               className="text-xs cursor-pointer px-3 py-1 rounded-md bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 mr-2"
                               onClick={() => {
+                                if (!user?.wallet?.address) {
+                                  toast.error(
+                                    "Please connect your wallet first"
+                                  );
+                                  return;
+                                }
                                 handleOptionSelect({
                                   signal_id: event.signal_id,
                                   option: "No",
-                                  user: user
-                                    ? {
-                                        wallet: {
-                                          address: user.wallet?.address || "",
-                                        },
-                                      }
-                                    : null,
-                                  tokens: event.symbol
-                                    .split("/")
-                                    .map(
-                                      (symbol) => tokens.get(symbol) as Token
-                                    ),
+                                  user: {
+                                    wallet: {
+                                      address: user.wallet.address,
+                                    },
+                                  },
                                   chainId: chainId || null,
                                 });
                               }}
@@ -515,23 +474,20 @@ export default function SignalsPage() {
                             <button
                               className="text-xs cursor-pointer px-3 py-1 rounded-md bg-purple-600 text-white hover:bg-purple-700"
                               onClick={() => {
+                                if (!user?.wallet?.address) {
+                                  toast.error(
+                                    "Please connect your wallet first"
+                                  );
+                                  return;
+                                }
                                 handleOptionSelect({
                                   signal_id: event.signal_id,
                                   option: "Yes",
-                                  user: user
-                                    ? {
-                                        wallet: {
-                                          address: user.wallet?.address || "",
-                                        },
-                                      }
-                                    : null,
-                                  tokens: event.symbol
-                                    .split("/")
-                                    .map(
-                                      (symbol) => tokens.get(symbol) as Token
-                                    ),
-                                  amount: event.price,
-                                  type: event.action,
+                                  user: {
+                                    wallet: {
+                                      address: user.wallet.address,
+                                    },
+                                  },
                                   chainId: chainId || null,
                                 });
                               }}
