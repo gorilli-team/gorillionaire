@@ -4,7 +4,7 @@ import ProtectPage from "@/app/components/protect-page/index";
 import { useRouter } from "next/navigation";
 import { useState, useCallback, useEffect } from "react";
 import { apiClientV2 } from "@/app/services/apiV2";
-import { ENDPOINTS } from "@/app/const/Endpoints";
+import { ENDPOINTS, BASE_URL } from "@/app/const/Endpoints";
 import { getTimeAgo } from "@/app/utils/time";
 import { useSSE } from "@/app/hooks/useSSE";
 import { Pagination } from "flowbite-react";
@@ -257,10 +257,7 @@ export default function SignalsPage() {
     fetchEvents();
   }, [signals, fetchEvents]);
 
-  useSSE(
-    `${process.env.NEXT_PUBLIC_API_V2_URL}${ENDPOINTS.SIGNAL_SSE_EVENTS}`,
-    handleEvent
-  );
+  useSSE(`${BASE_URL}${ENDPOINTS.SIGNAL_SSE_EVENTS}`, handleEvent, true);
 
   const colorSignalName = (name: string) => {
     switch (name) {

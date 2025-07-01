@@ -1,12 +1,28 @@
 import { useEffect, useRef } from "react";
+import { getAuthToken } from "@/app/helpers/auth";
 
-export const useSSE = (url: string, onMessage: (data: any) => void) => {
+export const useSSE = (
+  url: string,
+  onMessage: (data: any) => void,
+  auth: boolean = false
+) => {
   const eventSourceRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
     if (!url) return;
 
-    const eventSource = new EventSource(url);
+    // For authenticated SSE, we need to include the token in the URL
+    // since EventSource doesn't support custom headers
+    let finalUrl = url;
+    if (auth) {
+      const token = getAuthToken();
+      if (token) {
+        const separator = url.includes("?") ? "&" : "?";
+        finalUrl = `${url}${separator}token=${token}`;
+      }
+    }
+
+    const eventSource = new EventSource(finalUrl);
     eventSourceRef.current = eventSource;
 
     eventSource.onmessage = (event) => {
@@ -28,7 +44,7 @@ export const useSSE = (url: string, onMessage: (data: any) => void) => {
         eventSourceRef.current.close();
       }
     };
-  }, [url, onMessage]);
+  }, [url, onMessage, auth]);
 
   return eventSourceRef.current;
 };

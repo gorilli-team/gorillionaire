@@ -120,7 +120,7 @@ const V2Page = () => {
     const getChainId = async () => {
       if (typeof window !== "undefined" && window.ethereum) {
         try {
-          const chainId = await window.ethereum.request({
+          const chainId = await (window.ethereum as { request: (args: { method: string }) => Promise<string> }).request({
             method: "eth_chainId",
           });
           setChainId(parseInt(chainId, 16));
@@ -134,14 +134,19 @@ const V2Page = () => {
 
     // Listen for chain changes
     if (typeof window !== "undefined" && window.ethereum) {
-      window.ethereum.on("chainChanged", (chainId: string) => {
+      const handleChainChange = (chainId: string) => {
         setChainId(parseInt(chainId, 16));
-      });
+      };
+      (window.ethereum as { on: (event: string, listener: (chainId: string) => void) => void })
+        .on("chainChanged", handleChainChange);
     }
 
     return () => {
       if (typeof window !== "undefined" && window.ethereum) {
-        window.ethereum.removeListener("chainChanged", () => {});
+        (window.ethereum as { removeListener: (event: string, listener: (chainId: string) => void) => void })
+          .removeListener("chainChanged", (chainId: string) => {
+            setChainId(parseInt(chainId, 16));
+          });
       }
     };
   }, []);
@@ -201,10 +206,10 @@ const V2Page = () => {
 
                     <div className="pt-4">
                       <button
-                        onClick={() => (window.location.href = "/v2/dashboard")}
+                        onClick={() => (window.location.href = "/v2/signals")}
                         className="w-full py-3 px-4 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 transition-all duration-200 font-medium"
                       >
-                        Go to V2 Dashboard
+                        Go to V2 Signals
                       </button>
                     </div>
                   </div>

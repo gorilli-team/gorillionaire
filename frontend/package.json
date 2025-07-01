@@ -17,6 +17,7 @@
     "ethers": "^6.13.5",
     "flowbite-react": "^0.10.2",
     "js-cookie": "^3.0.5",
+    "jwt-decode": "^4.0.0",
     "lightweight-charts": "^5.0.3",
     "next": "15.1.6",
     "pino-pretty": "^13.0.0",
