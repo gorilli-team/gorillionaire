@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
+import { useAccount } from "wagmi";
+import { AccessService } from "./services/accessService";
 
 export default function HomePage() {
   const [accessCode, setAccessCode] = useState("");
@@ -10,6 +12,7 @@ export default function HomePage() {
   const [error, setError] = useState("");
   const router = useRouter();
   const { login, authenticated, ready } = usePrivy();
+  const { address } = useAccount();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,21 +23,44 @@ export default function HomePage() {
       return;
     }
 
+    if (!address) {
+      setError("Please connect your wallet");
+      return;
+    }
+
     setIsLoading(true);
     setError("");
 
-    // Access code validation rules from the original code
-    if (accessCode.trim() === "") {
-      // Empty code grants access
-      localStorage.setItem("hasAccess", "true");
-      router.push("/v2");
-    } else {
-      // Any non-empty code shows error
-      setError("Invalid access code");
+    try {
+      const result = await AccessService.verifyAccessCode(accessCode, address);
+
+      if (result.success) {
+        // Redirect to V2
+        router.push("/v2");
+      } else {
+        setError(result.message);
+        setAccessCode("");
+      }
+    } catch (error) {
+      setError("An error occurred. Please try again. " + error);
       setAccessCode("");
+    } finally {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    const checkV2Access = async () => {
+      if (address && authenticated) {
+        const status = await AccessService.checkV2Status(address);
+        if (status.success && status.v2Enabled) {
+          router.push("/v2");
+        }
+      }
+    };
+
+    checkV2Access();
+  }, [address, authenticated, router]);
 
   if (!ready) {
     return (

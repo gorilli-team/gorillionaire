@@ -9,6 +9,7 @@ import { toast } from "react-toastify";
 import { MONAD_CHAIN_ID } from "../utils/constants";
 import { usePrivy } from "@privy-io/react-auth";
 import Image from "next/image";
+import { UserService } from "../services/userService";
 
 const V2Page = () => {
   const { address, isConnected } = useAccount();
@@ -17,6 +18,8 @@ const V2Page = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { writeContract } = useWriteContract();
   const [tokenId, setTokenId] = useState<number | null>(null);
+  const [v2Access, setV2Access] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
 
   // NFT Contract
   const firstNFT = {
@@ -54,6 +57,29 @@ const V2Page = () => {
   const [chainId, setChainId] = useState<number | null>(null);
 
   const alreadyMinted = useMemo(() => (balanceData ?? 0) > 0, [balanceData]);
+
+  // Check V2 access from user service
+  useEffect(() => {
+    const checkV2Access = async () => {
+      if (address) {
+        setLoading(true);
+        try {
+          const hasAccess = await UserService.checkV2Access(address);
+          setV2Access(hasAccess);
+        } catch (error) {
+          console.error("Error checking V2 access:", error);
+          setV2Access(false);
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        setV2Access(false);
+        setLoading(false);
+      }
+    };
+
+    checkV2Access();
+  }, [address]);
 
   // Effect to set token ID when balance changes
   useEffect(() => {
@@ -199,52 +225,41 @@ const V2Page = () => {
         <Header />
         <div className="flex-1 overflow-y-auto">
           <div className="w-full max-w-5xl mx-auto p-4 md:p-6">
-            {alreadyMinted && tokenId !== null ? (
+            {loading ? (
               <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
-                <div className="bg-gradient-to-r from-purple-600 to-purple-700 p-4">
+                <div className="p-6 text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+                  <p className="mt-4 text-gray-600">Checking V2 access...</p>
+                </div>
+              </div>
+            ) : v2Access ? (
+              <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
+                <div className="bg-gradient-to-r from-green-600 to-green-700 p-4">
                   <div className="flex items-center gap-2">
-                    <span className="text-white text-2xl">🎫</span>
+                    <span className="text-white text-2xl">✅</span>
                     <h1 className="text-xl font-bold text-white">
-                      Your V2 Access NFT
+                      V2 Access Granted
                     </h1>
                   </div>
                 </div>
 
                 <div className="p-6">
                   <div className="flex flex-col-reverse md:flex-row gap-6">
-                    {/* NFT Details */}
+                    {/* V2 Access Details */}
                     <div className="w-full md:w-1/2">
                       <div className="space-y-4">
                         <div>
                           <h3 className="text-sm font-medium text-gray-500">
-                            Collection
+                            Access Status
                           </h3>
-                          <p className="text-lg font-semibold">
-                            {nameData || "Gorillionaire V2"}
-                          </p>
-                          <a
-                            href="https://testnet.monadexplorer.com/address/0xD0f38A3Fb0F71e3d2B60e90327afde25618e1150"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm text-purple-600 hover:text-purple-700 underline"
-                          >
-                            View on Explorer
-                          </a>
-                        </div>
-
-                        <div>
-                          <h3 className="text-sm font-medium text-gray-500">
-                            Token ID
-                          </h3>
-                          <p className="text-lg font-semibold">
-                            #{tokenId} <span className="text-gray-400">OF</span>{" "}
-                            #{totalSupplyData ? Number(totalSupplyData) : "..."}
+                          <p className="text-lg font-semibold text-green-600">
+                            ✅ V2 Access Enabled
                           </p>
                         </div>
 
                         <div>
                           <h3 className="text-sm font-medium text-gray-500">
-                            Owner
+                            User Address
                           </h3>
                           <a
                             href={`https://testnet.monadexplorer.com/address/${address}`}
@@ -257,12 +272,11 @@ const V2Page = () => {
                         </div>
 
                         <div className="pt-4">
-                          <div className="bg-purple-50 rounded-lg p-4">
+                          <div className="bg-green-50 rounded-lg p-4">
                             <div className="flex items-center">
-                              <div className="w-2 h-2 bg-purple-400 rounded-full mr-2"></div>
-                              <p className="text-sm text-purple-700">
-                                You are on the V2 waitlist! Stay tuned for
-                                updates.
+                              <div className="w-2 h-2 bg-green-400 rounded-full mr-2"></div>
+                              <p className="text-sm text-green-700">
+                                You have V2 access! Welcome to Gorillionaire V2.
                               </p>
                             </div>
                           </div>
@@ -270,17 +284,15 @@ const V2Page = () => {
                       </div>
                     </div>
 
-                    {/* NFT Image */}
+                    {/* V2 Logo */}
                     <div className="w-full md:w-1/3">
-                      <div className="aspect-square w-full bg-gradient-to-br from-purple-100 to-indigo-100 rounded-lg flex border-2 border-purple-200 overflow-hidden">
-                        <Image
-                          src="/earlygorilla.jpg"
-                          alt="Your V2 Access NFT"
-                          width={800}
-                          height={800}
-                          className="w-full h-full object-cover"
-                          priority
-                        />
+                      <div className="aspect-square w-full bg-gradient-to-br from-green-100 to-blue-100 rounded-lg flex border-2 border-green-200 overflow-hidden items-center justify-center">
+                        <div className="text-center">
+                          <div className="text-6xl mb-4">🦍</div>
+                          <h3 className="text-xl font-bold text-green-700">
+                            V2
+                          </h3>
+                        </div>
                       </div>
                     </div>
                   </div>
