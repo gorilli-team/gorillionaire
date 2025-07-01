@@ -92,6 +92,8 @@ router.post("/verify", async (req, res) => {
       address: address.toLowerCase(),
     });
 
+    let isNewV2Access = false;
+
     if (!userActivity) {
       // Create new user activity if doesn't exist
       userActivity = new UserActivity({
@@ -102,6 +104,7 @@ router.post("/verify", async (req, res) => {
           accessCodeUsed: code.toUpperCase(),
         },
       });
+      isNewV2Access = true;
     } else {
       // Enable V2 access if not already enabled
       if (!userActivity.v2Access.enabled) {
@@ -110,7 +113,18 @@ router.post("/verify", async (req, res) => {
           enabledAt: new Date(),
           accessCodeUsed: code.toUpperCase(),
         };
+        isNewV2Access = true;
       }
+    }
+
+    // Award 100 XP for new V2 access
+    if (isNewV2Access) {
+      userActivity.points += 100;
+      userActivity.activitiesList.push({
+        name: "V2 Access Granted",
+        points: 100,
+        date: new Date(),
+      });
     }
 
     await userActivity.save();
