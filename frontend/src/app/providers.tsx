@@ -6,6 +6,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createConfig, WagmiProvider } from "wagmi";
 import { coinbaseWallet } from "wagmi/connectors";
 import { NNS } from "@nadnameservice/nns-viem-sdk";
+import { TradeProvider } from "@/app/contexts/TradeContext";
+import { TradeProviderV2 } from "@/app/contexts/TradeContextV2";
 
 // Viem define chain
 export const monadChain = defineChain({
@@ -91,7 +93,9 @@ export function Providers({ children }: { children: ReactNode }) {
             },
           }}
         >
-          {children}
+          <TradeProvider>
+            <TradeProviderV2>{children}</TradeProviderV2>
+          </TradeProvider>
         </PrivyProvider>
       </QueryClientProvider>
     </WagmiProvider>
