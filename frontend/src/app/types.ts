@@ -28,6 +28,10 @@ export interface Token {
   symbol: string;
   name: string;
   decimals: number;
+  chainId?: number;
+  totalHolding?: number;
+  price?: number;
+  imageUrl?: string;
 }
 export type HexString = `0x${string}`;
 

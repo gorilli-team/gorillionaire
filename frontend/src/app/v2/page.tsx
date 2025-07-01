@@ -2,13 +2,14 @@
 
 import React, { useCallback, useMemo, useState, useEffect } from "react";
 import Sidebar from "@/app/components/sidebar";
+import V2Layout from "@/app/components/layout/V2Layout";
 import Header from "@/app/components/header";
 import { useAccount, useReadContract, useWriteContract } from "wagmi";
 import { abi } from "../abi/early-nft";
 import { toast } from "react-toastify";
 import { MONAD_CHAIN_ID } from "../utils/constants";
 import { usePrivy } from "@privy-io/react-auth";
-import Image from "next/image";
+import { UserService } from "../services/userService";
 
 const V2Page = () => {
   const { address, isConnected } = useAccount();
@@ -16,7 +17,9 @@ const V2Page = () => {
   const [selectedPage, setSelectedPage] = useState("V2");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { writeContract } = useWriteContract();
-  const [tokenId, setTokenId] = useState<number | null>(null);
+
+  const [v2Access, setV2Access] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
 
   // NFT Contract
   const firstNFT = {
@@ -34,33 +37,32 @@ const V2Page = () => {
     args: [address || "0x0"],
   });
 
-  // Read total supply for the first contract
-  const { data: totalSupplyData } = useReadContract({
-    abi,
-    functionName: "nextTokenId",
-    address: firstNFT.address,
-  });
-
-  // Read collection name for the first contract
-  const { data: nameData } = useReadContract({
-    abi,
-    functionName: "name",
-    address: firstNFT.address,
-  });
-
-  // Set token ID if user has NFT
-  const effectiveTokenId = address && balanceData && balanceData > 0 ? 1 : null;
-
   const [chainId, setChainId] = useState<number | null>(null);
 
   const alreadyMinted = useMemo(() => (balanceData ?? 0) > 0, [balanceData]);
 
-  // Effect to set token ID when balance changes
+  // Check V2 access from user service
   useEffect(() => {
-    if (alreadyMinted && effectiveTokenId) {
-      setTokenId(Number(effectiveTokenId));
-    }
-  }, [alreadyMinted, effectiveTokenId]);
+    const checkV2Access = async () => {
+      if (address) {
+        setLoading(true);
+        try {
+          const hasAccess = await UserService.checkV2Access(address);
+          setV2Access(hasAccess);
+        } catch (error) {
+          console.error("Error checking V2 access:", error);
+          setV2Access(false);
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        setV2Access(false);
+        setLoading(false);
+      }
+    };
+
+    checkV2Access();
+  }, [address]);
 
   const onClick = useCallback(async () => {
     if (alreadyMinted) return;
@@ -104,14 +106,21 @@ const V2Page = () => {
       functionName: "mint",
       address: firstNFT.address,
     });
-  }, [writeContract, alreadyMinted, chainId, isConnected, login]);
+  }, [
+    writeContract,
+    alreadyMinted,
+    chainId,
+    isConnected,
+    login,
+    firstNFT.address,
+  ]);
 
   // Get the current chain ID
   useEffect(() => {
     const getChainId = async () => {
       if (typeof window !== "undefined" && window.ethereum) {
         try {
-          const chainId = await window.ethereum.request({
+          const chainId = await (window.ethereum as { request: (args: { method: string }) => Promise<string> }).request({
             method: "eth_chainId",
           });
           setChainId(parseInt(chainId, 16));
@@ -125,18 +134,105 @@ const V2Page = () => {
 
     // Listen for chain changes
     if (typeof window !== "undefined" && window.ethereum) {
-      window.ethereum.on("chainChanged", (chainId: string) => {
+      const handleChainChange = (chainId: string) => {
         setChainId(parseInt(chainId, 16));
-      });
+      };
+      (window.ethereum as { on: (event: string, listener: (chainId: string) => void) => void })
+        .on("chainChanged", handleChainChange);
     }
 
     return () => {
       if (typeof window !== "undefined" && window.ethereum) {
-        window.ethereum.removeListener("chainChanged", () => {});
+        (window.ethereum as { removeListener: (event: string, listener: (chainId: string) => void) => void })
+          .removeListener("chainChanged", (chainId: string) => {
+            setChainId(parseInt(chainId, 16));
+          });
       }
     };
   }, []);
 
+  // If user has V2 access, use V2 layout and redirect to dashboard
+  if (v2Access && !loading) {
+    return (
+      <V2Layout selectedPage={selectedPage} setSelectedPage={setSelectedPage}>
+        <div className="w-full max-w-5xl mx-auto p-4 md:p-6">
+          <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
+            <div className="bg-gradient-to-r from-green-600 to-green-700 p-4">
+              <div className="flex items-center gap-2">
+                <span className="text-white text-2xl">✅</span>
+                <h1 className="text-xl font-bold text-white">
+                  V2 Access Granted
+                </h1>
+              </div>
+            </div>
+            <div className="p-6">
+              <div className="flex flex-col-reverse md:flex-row gap-6">
+                {/* V2 Access Details */}
+                <div className="w-full md:w-1/2">
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-500">
+                        Access Status
+                      </h3>
+                      <p className="text-lg font-semibold text-green-600">
+                        ✅ V2 Access Enabled
+                      </p>
+                    </div>
+
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-500">
+                        User Address
+                      </h3>
+                      <a
+                        href={`https://testnet.monadexplorer.com/address/${address}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-lg font-medium text-purple-600 hover:text-purple-700 truncate block"
+                      >
+                        {address}
+                      </a>
+                    </div>
+
+                    <div className="pt-4">
+                      <div className="bg-green-50 rounded-lg p-4">
+                        <div className="flex items-center">
+                          <div className="w-2 h-2 bg-green-400 rounded-full mr-2"></div>
+                          <p className="text-sm text-green-700">
+                            You have V2 access! Welcome to Gorillionaire V2.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="pt-4">
+                      <button
+                        onClick={() => (window.location.href = "/v2/signals")}
+                        className="w-full py-3 px-4 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 transition-all duration-200 font-medium"
+                      >
+                        Go to V2 Signals
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* V2 Logo */}
+                <div className="w-full md:w-1/3">
+                  <div className="aspect-square w-full bg-gradient-to-br from-green-100 to-blue-100 rounded-lg flex border-2 border-green-200 overflow-hidden items-center justify-center">
+                    <div className="text-center">
+                      <div className="text-6xl mb-4">🦍</div>
+                      <h3 className="text-xl font-bold text-green-700">V2</h3>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </V2Layout>
+    );
+  }
+
+  // Regular layout for non-V2 users
   return (
     <div className="flex min-h-screen bg-gray-100 text-gray-800">
       {/* Mobile menu button */}
@@ -199,91 +295,11 @@ const V2Page = () => {
         <Header />
         <div className="flex-1 overflow-y-auto">
           <div className="w-full max-w-5xl mx-auto p-4 md:p-6">
-            {alreadyMinted && tokenId !== null ? (
+            {loading ? (
               <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
-                <div className="bg-gradient-to-r from-purple-600 to-purple-700 p-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-white text-2xl">🎫</span>
-                    <h1 className="text-xl font-bold text-white">
-                      Your V2 Access NFT
-                    </h1>
-                  </div>
-                </div>
-
-                <div className="p-6">
-                  <div className="flex flex-col-reverse md:flex-row gap-6">
-                    {/* NFT Details */}
-                    <div className="w-full md:w-1/2">
-                      <div className="space-y-4">
-                        <div>
-                          <h3 className="text-sm font-medium text-gray-500">
-                            Collection
-                          </h3>
-                          <p className="text-lg font-semibold">
-                            {nameData || "Gorillionaire V2"}
-                          </p>
-                          <a
-                            href="https://testnet.monadexplorer.com/address/0xD0f38A3Fb0F71e3d2B60e90327afde25618e1150"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm text-purple-600 hover:text-purple-700 underline"
-                          >
-                            View on Explorer
-                          </a>
-                        </div>
-
-                        <div>
-                          <h3 className="text-sm font-medium text-gray-500">
-                            Token ID
-                          </h3>
-                          <p className="text-lg font-semibold">
-                            #{tokenId} <span className="text-gray-400">OF</span>{" "}
-                            #{totalSupplyData ? Number(totalSupplyData) : "..."}
-                          </p>
-                        </div>
-
-                        <div>
-                          <h3 className="text-sm font-medium text-gray-500">
-                            Owner
-                          </h3>
-                          <a
-                            href={`https://testnet.monadexplorer.com/address/${address}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-lg font-medium text-purple-600 hover:text-purple-700 truncate block"
-                          >
-                            {address}
-                          </a>
-                        </div>
-
-                        <div className="pt-4">
-                          <div className="bg-purple-50 rounded-lg p-4">
-                            <div className="flex items-center">
-                              <div className="w-2 h-2 bg-purple-400 rounded-full mr-2"></div>
-                              <p className="text-sm text-purple-700">
-                                You are on the V2 waitlist! Stay tuned for
-                                updates.
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* NFT Image */}
-                    <div className="w-full md:w-1/3">
-                      <div className="aspect-square w-full bg-gradient-to-br from-purple-100 to-indigo-100 rounded-lg flex border-2 border-purple-200 overflow-hidden">
-                        <Image
-                          src="/earlygorilla.jpg"
-                          alt="Your V2 Access NFT"
-                          width={800}
-                          height={800}
-                          className="w-full h-full object-cover"
-                          priority
-                        />
-                      </div>
-                    </div>
-                  </div>
+                <div className="p-6 text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+                  <p className="mt-4 text-gray-600">Checking V2 access...</p>
                 </div>
               </div>
             ) : (

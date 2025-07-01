@@ -4,6 +4,40 @@
 
 We put strong emphasis on delivering an intuitive and accessible user experience with **Gorillionaire**, ensuring users of all backgrounds, from DeFi veterans to first-time traders, can navigate and use the platform effortlessly. The interface is clean, consistent, and easy to navigate. **Gorillionaire** offers a seamless and inclusive experience that leverages the performance power of **Monad**.
 
+## Package Manager
+
+This project uses **Yarn** as the package manager. Please ensure you have Yarn installed and use it for all package management operations.
+
+**Requirements:**
+
+- Node.js >= 18.0.0
+- Yarn >= 1.22.0
+
+**Installation:**
+
+```bash
+npm install -g yarn
+```
+
+**Usage:**
+
+```bash
+# Install dependencies
+yarn install
+
+# Add a new dependency
+yarn add package-name
+
+# Add a dev dependency
+yarn add -D package-name
+
+# Run scripts
+yarn dev
+yarn build
+yarn start
+yarn lint
+```
+
 ## How to run the project locally
 
 1- Install the dependencies
@@ -81,7 +115,7 @@ Key Features
 
 ### ✅ Accessibility
 
-We’ve paid attention to accessibility standards to make **Gorillionaire** inclusive for everyone:
+We've paid attention to accessibility standards to make **Gorillionaire** inclusive for everyone:
 
 - High-contrast color schemes for better visibility and readability.
 - Clear visual hierarchy and semantic structure.

@@ -626,6 +626,7 @@ router.get("/me", async (req, res) => {
         points: 1,
         address: 1,
         createdAt: 1,
+        v2Access: 1,
       }
     )
       .sort({ "activitiesList.date": -1 })
@@ -675,9 +676,22 @@ router.get("/me", async (req, res) => {
       rank: count + 1,
     };
 
+    // Prepare V2 access info without the access code used
+    const v2AccessInfo = userActivity.v2Access
+      ? {
+          enabled: userActivity.v2Access.enabled,
+          enabledAt: userActivity.v2Access.enabledAt,
+          // accessCodeUsed is intentionally excluded for security
+        }
+      : {
+          enabled: false,
+          enabledAt: null,
+        };
+
     res.json({
       userActivity: {
         ...result,
+        v2Access: v2AccessInfo,
         dollarValue:
           dollarValue && dollarValue.length > 0 ? dollarValue[0].total : 0,
         pagination: {
