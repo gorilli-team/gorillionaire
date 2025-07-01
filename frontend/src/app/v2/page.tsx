@@ -120,7 +120,11 @@ const V2Page = () => {
     const getChainId = async () => {
       if (typeof window !== "undefined" && window.ethereum) {
         try {
-          const chainId = await (window.ethereum as { request: (args: { method: string }) => Promise<string> }).request({
+          const chainId = await (
+            window.ethereum as {
+              request: (args: { method: string }) => Promise<string>;
+            }
+          ).request({
             method: "eth_chainId",
           });
           setChainId(parseInt(chainId, 16));
@@ -137,16 +141,25 @@ const V2Page = () => {
       const handleChainChange = (chainId: string) => {
         setChainId(parseInt(chainId, 16));
       };
-      (window.ethereum as { on: (event: string, listener: (chainId: string) => void) => void })
-        .on("chainChanged", handleChainChange);
+      (
+        window.ethereum as {
+          on: (event: string, listener: (chainId: string) => void) => void;
+        }
+      ).on("chainChanged", handleChainChange);
     }
 
     return () => {
       if (typeof window !== "undefined" && window.ethereum) {
-        (window.ethereum as { removeListener: (event: string, listener: (chainId: string) => void) => void })
-          .removeListener("chainChanged", (chainId: string) => {
-            setChainId(parseInt(chainId, 16));
-          });
+        (
+          window.ethereum as {
+            removeListener: (
+              event: string,
+              listener: (chainId: string) => void
+            ) => void;
+          }
+        ).removeListener("chainChanged", (chainId: string) => {
+          setChainId(parseInt(chainId, 16));
+        });
       }
     };
   }, []);
