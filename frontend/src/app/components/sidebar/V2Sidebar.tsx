@@ -24,7 +24,7 @@ export default function V2Sidebar({
   const handlePageChange = (page: string) => {
     setSelectedPage(page);
     if (page === "V2") {
-      router.push("/v2/dashboard");
+      router.push("/v2");
     } else if (page === "V1") {
       // V1 main item just expands/collapses the submenu
       setExpandedV1(!expandedV1);
@@ -72,7 +72,7 @@ export default function V2Sidebar({
           <li>
             <button
               className={`w-full text-left px-3 py-3 rounded-lg hover:bg-gray-200 font-semibold text-lg ${
-                  selectedPage === "V1" ? "bg-gray-200" : ""
+                selectedPage === "V1" ? "bg-gray-200" : ""
               }`}
               onClick={() => setExpandedV1(!expandedV1)}
             >

@@ -1,6 +1,6 @@
 "use client";
 
-import ProtectPage from "@/app/components/protect-page/index";
+import V2Layout from "@/app/components/layout/V2Layout";
 import { useRouter } from "next/navigation";
 import { useState, useCallback, useEffect } from "react";
 import { apiClientV2 } from "@/app/services/apiV2";
@@ -119,6 +119,7 @@ export default function SignalsPage() {
   const { user } = usePrivy();
   const { handleOptionSelect } = useTradeV2();
   const { chainId } = useAccount();
+  const [selectedPage, setSelectedPage] = useState("Signals");
 
   const handleEvent = useCallback(
     (data: Event) => {
@@ -249,7 +250,7 @@ export default function SignalsPage() {
   }
 
   return (
-    <ProtectPage>
+    <V2Layout selectedPage={selectedPage} setSelectedPage={setSelectedPage}>
       <div className="w-full min-h-screen bg-gray-50 p-4 md:p-6 lg:p-8">
         <div className="bg-white rounded-lg shadow-sm">
           <div className="flex items-center justify-between">
@@ -527,6 +528,6 @@ export default function SignalsPage() {
           </div>
         </div>
       </div>
-    </ProtectPage>
+    </V2Layout>
   );
 }
