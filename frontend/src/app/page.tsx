@@ -210,6 +210,30 @@ export default function HomePage() {
               )}
             </button>
           </form>
+
+          {/* Divider */}
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white text-gray-500">or</span>
+            </div>
+          </div>
+
+          {/* V1 Access Link */}
+          <div className="text-center">
+            <p className="text-sm text-gray-600 mb-3">
+              Don't have a V2 access code?
+            </p>
+            <a
+              href="/v1"
+              className="inline-flex items-center justify-center w-full py-3 px-4 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+            >
+              <span className="mr-2">🦍</span>
+              Access V1
+            </a>
+          </div>
         </div>
 
         {/* Right: Steps */}
