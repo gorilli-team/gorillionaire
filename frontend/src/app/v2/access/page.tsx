@@ -19,7 +19,7 @@ export default function V2AccessPage() {
       try {
         const hasV2Access = await UserService.checkV2Access(address);
         if (hasV2Access) {
-          router.push("/v2");
+          // router.push("/v2");
         } else {
           // User doesn't have V2 access, show access denied message
           console.log("User doesn't have V2 access");

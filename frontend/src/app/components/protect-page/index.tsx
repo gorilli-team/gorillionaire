@@ -18,20 +18,22 @@ export default function ProtectPage({ children }: ProtectPageProps) {
   useEffect(() => {
     const checkAccess = async () => {
       if (!address) {
-        router.push("/v2/access");
+        console.log("No address");
+        // router.push("/v2/access");
         return;
       }
 
       try {
         const hasV2Access = await UserService.checkV2Access(address);
         if (!hasV2Access) {
-          router.push("/v2/access");
+          console.log("No access");
+          // router.push("/v2/access");
           return;
         }
         setHasAccess(true);
       } catch (error) {
         console.error("Error checking access:", error);
-        router.push("/v2/access");
+        // router.push("/v2/access");
       } finally {
         setLoading(false);
       }

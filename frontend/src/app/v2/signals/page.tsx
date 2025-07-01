@@ -203,7 +203,7 @@ export default function SignalsPage() {
   useEffect(() => {
     const access = localStorage.getItem("hasAccess");
     if (!access) {
-      router.push("/v2/access");
+      // router.push("/v2/access");
     } else {
       setHasAccess(true);
     }
