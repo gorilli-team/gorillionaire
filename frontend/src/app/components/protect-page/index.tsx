@@ -4,6 +4,7 @@ import { ReactNode, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAccount } from "wagmi";
 import { UserService } from "@/app/services/userService";
+import { LoadingOverlay } from "@/app/components/ui/LoadingSpinner";
 
 interface ProtectPageProps {
   children: ReactNode;
@@ -43,11 +44,7 @@ export default function ProtectPage({ children }: ProtectPageProps) {
   }, [address, router]);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-purple-700"></div>
-      </div>
-    );
+    return <LoadingOverlay />;
   }
 
   if (!hasAccess) {
