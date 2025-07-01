@@ -26,6 +26,8 @@ import { toast } from "react-toastify";
 import Cookies from "js-cookie";
 import { usePrivy } from "@privy-io/react-auth";
 import DexModal from "@/app/components/ui/DexModal";
+import Sidebar from "@/app/components/sidebar";
+import Header from "@/app/components/header";
 
 type Signal = {
   _id: string;
@@ -95,6 +97,10 @@ export default function SignalDetails() {
   const [currentDexOutputAmount, setCurrentDexOutputAmount] =
     useState<string>("");
   const [selectedToken, setSelectedToken] = useState<Token | null>(null);
+
+  // Add state for mobile menu and page selection
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [selectedPage, setSelectedPage] = useState("Signals");
 
   // Add state for token balances and prices
   const [moyakiBalance, setMoyakiBalance] = useState<number>(0);
@@ -596,6 +602,7 @@ export default function SignalDetails() {
     },
     [signal, tokens, onYes, onNo, user?.wallet?.address]
   );
+
   return (
     <div className="flex min-h-screen bg-gray-100 text-gray-800">
       {/* Mobile menu button */}
@@ -708,67 +715,69 @@ export default function SignalDetails() {
                   </div>
                 </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <div className="text-sm text-gray-500 mb-1">Amount</div>
-                  <div className="text-lg font-medium">
-                    {signal.amount || "0"} {signal.token || ""}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <div className="text-sm text-gray-500 mb-1">Amount</div>
+                    <div className="text-lg font-medium">
+                      {signal.amount || "0"} {signal.token || ""}
+                    </div>
                   </div>
-                </div>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <div className="text-sm text-gray-500 mb-1">
-                    Confidence Score
-                  </div>
-                  <div className="text-lg font-medium">
-                    {signal.confidenceScore || "0"}
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <div className="text-sm text-gray-500 mb-1">MON Price</div>
-                  <div className="text-lg font-medium">${monPrice || "0"}</div>
-                </div>
-                {signal && (
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <div className="text-sm text-gray-500 mb-1">
-                      {selectedToken?.symbol} Price
+                      Confidence Score
                     </div>
                     <div className="text-lg font-medium">
-                      {selectedToken?.symbol === "CHOG"
-                        ? `$${chogPrice || "0"}`
-                        : selectedToken?.symbol === "DAK"
-                        ? `$${dakPrice || "0"}`
-                        : selectedToken?.symbol === "YAKI"
-                        ? `$${moyakiPrice || "0"}`
-                        : selectedToken?.symbol === "WMON"
-                        ? `$${monPrice || "0"}`
-                        : "0"}
+                      {signal.confidenceScore || "0"}
                     </div>
                   </div>
-                )}
-              </div>
+                </div>
 
-              {signal.events &&
-                signal.events.length > 0 &&
-                signal.events[0].length > 0 && (
-                  <div className="mb-6">
-                    <h2 className="text-lg font-semibold mb-2">Events</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <div className="text-sm text-gray-500 mb-1">MON Price</div>
+                    <div className="text-lg font-medium">
+                      ${monPrice || "0"}
+                    </div>
+                  </div>
+                  {signal && (
                     <div className="bg-gray-50 p-4 rounded-lg">
-                      <div className="space-y-3">
-                        {signal.events.map((event, index) => (
-                          <div
-                            key={index}
-                            className="text-sm bg-white p-3 rounded-lg shadow-sm"
-                          >
-                            {event}
-                          </div>
-                        ))}
+                      <div className="text-sm text-gray-500 mb-1">
+                        {selectedToken?.symbol} Price
+                      </div>
+                      <div className="text-lg font-medium">
+                        {selectedToken?.symbol === "CHOG"
+                          ? `$${chogPrice || "0"}`
+                          : selectedToken?.symbol === "DAK"
+                          ? `$${dakPrice || "0"}`
+                          : selectedToken?.symbol === "YAKI"
+                          ? `$${moyakiPrice || "0"}`
+                          : selectedToken?.symbol === "WMON"
+                          ? `$${monPrice || "0"}`
+                          : "0"}
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
+
+                {signal.events &&
+                  signal.events.length > 0 &&
+                  signal.events[0].length > 0 && (
+                    <div className="mb-6">
+                      <h2 className="text-lg font-semibold mb-2">Events</h2>
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <div className="space-y-3">
+                          {signal.events.map((event, index) => (
+                            <div
+                              key={index}
+                              className="text-sm bg-white p-3 rounded-lg shadow-sm"
+                            >
+                              {event}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                 {signal.userSignals && signal.userSignals.length > 0 && (
                   <div className="mb-6">
@@ -814,82 +823,83 @@ export default function SignalDetails() {
                   </div>
                 )}
 
-              <div className="text-sm text-gray-500">
-                Created:{" "}
-                {(() => {
-                  try {
-                    const date = new Date(signal.created_at);
-                    return date.toLocaleString();
-                  } catch (e) {
-                    console.error("Error parsing date:", e);
-                    return signal.created_at;
-                  }
-                })()}
-              </div>
+                <div className="text-sm text-gray-500">
+                  Created:{" "}
+                  {(() => {
+                    try {
+                      const date = new Date(signal.created_at);
+                      return date.toLocaleString();
+                    } catch (e) {
+                      console.error("Error parsing date:", e);
+                      return signal.created_at;
+                    }
+                  })()}
+                </div>
 
-              {/* Replace the existing Yes/No buttons section with this */}
-              {signal && chainId === MONAD_CHAIN_ID && (
-                <div className="flex items-center justify-center mb-6">
-                  <div className="inline-flex rounded-full border border-gray-300 overflow-hidden">
+                {/* Replace the existing Yes/No buttons section with this */}
+                {signal && chainId === MONAD_CHAIN_ID && (
+                  <div className="flex items-center justify-center mb-6">
+                    <div className="inline-flex rounded-full border border-gray-300 overflow-hidden">
+                      <button
+                        className={`px-4 py-2 text-sm flex items-center justify-center w-24 ${
+                          selectedOption === "No"
+                            ? "bg-gray-200 text-gray-700"
+                            : "bg-white text-gray-500"
+                        }`}
+                        onClick={() => handleOptionSelect(signal._id, "No")}
+                      >
+                        <span>Refuse</span>
+                        {selectedOption === "No" && (
+                          <span className="ml-1">•</span>
+                        )}
+                      </button>
+                      <button
+                        className={`px-4 py-2 text-sm flex items-center justify-center w-24 ${
+                          selectedOption === "Yes" || !selectedOption
+                            ? "bg-violet-700 text-white"
+                            : "bg-white text-gray-500"
+                        }`}
+                        onClick={() => handleOptionSelect(signal._id, "Yes")}
+                      >
+                        <span>Trade</span>
+                        {selectedOption === "Yes" && (
+                          <span className="ml-1">•</span>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {signal && chainId !== MONAD_CHAIN_ID && (
+                  <div className="flex justify-center mb-6">
                     <button
-                      className={`px-4 py-2 text-sm flex items-center justify-center w-24 ${
-                        selectedOption === "No"
-                          ? "bg-gray-200 text-gray-700"
-                          : "bg-white text-gray-500"
-                      }`}
-                      onClick={() => handleOptionSelect(signal._id, "No")}
+                      className="px-4 py-2 text-sm bg-violet-700 text-white rounded-full hover:bg-violet-800 transition-colors"
+                      onClick={() => switchChain({ chainId: MONAD_CHAIN_ID })}
                     >
-                      <span>Refuse</span>
-                      {selectedOption === "No" && (
-                        <span className="ml-1">•</span>
-                      )}
-                    </button>
-                    <button
-                      className={`px-4 py-2 text-sm flex items-center justify-center w-24 ${
-                        selectedOption === "Yes" || !selectedOption
-                          ? "bg-violet-700 text-white"
-                          : "bg-white text-gray-500"
-                      }`}
-                      onClick={() => handleOptionSelect(signal._id, "Yes")}
-                    >
-                      <span>Trade</span>
-                      {selectedOption === "Yes" && (
-                        <span className="ml-1">•</span>
-                      )}
+                      Switch to Monad
                     </button>
                   </div>
-                </div>
-              )}
+                )}
 
-              {signal && chainId !== MONAD_CHAIN_ID && (
-                <div className="flex justify-center mb-6">
-                  <button
-                    className="px-4 py-2 text-sm bg-violet-700 text-white rounded-full hover:bg-violet-800 transition-colors"
-                    onClick={() => switchChain({ chainId: MONAD_CHAIN_ID })}
-                  >
-                    Switch to Monad
-                  </button>
-                </div>
-              )}
-
-              {signal?.userSignal?.choice && (
-                <div className="flex justify-center mb-6">
-                  <span
-                    className={`px-4 py-2 rounded-full text-sm ${
-                      signal.userSignal.choice === "Yes"
-                        ? "bg-green-200 text-green-700"
-                        : "bg-red-200 text-red-700"
-                    }`}
-                  >
-                    {signal.userSignal.choice === "Yes"
-                      ? "Signal Accepted"
-                      : "Signal Refused"}
-                  </span>
-                </div>
-              )}
+                {signal?.userSignal?.choice && (
+                  <div className="flex justify-center mb-6">
+                    <span
+                      className={`px-4 py-2 rounded-full text-sm ${
+                        signal.userSignal.choice === "Yes"
+                          ? "bg-green-200 text-green-700"
+                          : "bg-red-200 text-red-700"
+                      }`}
+                    >
+                      {signal.userSignal.choice === "Yes"
+                        ? "Signal Accepted"
+                        : "Signal Refused"}
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {currentDexToken && (
