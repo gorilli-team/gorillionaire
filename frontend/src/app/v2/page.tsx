@@ -15,12 +15,15 @@ const V2Page = () => {
   const [tokenId, setTokenId] = useState<number | null>(null);
 
   // NFT Contract
-  const firstNFT = useMemo(() => ({
-    address: "0xD0f38A3Fb0F71e3d2B60e90327afde25618e1150" as `0x${string}`,
-    name: "Early Gorilla",
-    isMintable: true,
-    endDate: new Date("2025-04-17"),
-  }), []);
+  const firstNFT = useMemo(
+    () => ({
+      address: "0xD0f38A3Fb0F71e3d2B60e90327afde25618e1150" as `0x${string}`,
+      name: "Early Gorilla",
+      isMintable: true,
+      endDate: new Date("2025-04-17"),
+    }),
+    []
+  );
 
   // Read NFT balance for the first contract
   const { data: balanceData } = useReadContract({
@@ -47,7 +50,7 @@ const V2Page = () => {
   // Set token ID if user has NFT
   const effectiveTokenId = address && balanceData && balanceData > 0 ? 1 : null;
 
-  const [chainId, setChainId] = useState<number | null>(null);
+  const [chainId] = useState<number | null>(null);
 
   const alreadyMinted = useMemo(() => (balanceData ?? 0) > 0, [balanceData]);
 
@@ -103,35 +106,35 @@ const V2Page = () => {
   }, [writeContract, alreadyMinted, chainId, isConnected, login, firstNFT]);
 
   // Get the current chain ID
-  useEffect(() => {
-    const getChainId = async () => {
-      if (typeof window !== "undefined" && window.ethereum) {
-        try {
-          const chainId = await window.ethereum.request({
-            method: "eth_chainId",
-          });
-          setChainId(parseInt(chainId, 16));
-        } catch (error) {
-          console.error("Error getting chain ID:", error);
-        }
-      }
-    };
+  // useEffect(() => {
+  //   const getChainId = async () => {
+  //     if (typeof window !== "undefined" && window.ethereum) {
+  //       try {
+  //         const chainId = await window.ethereum.request({
+  //           method: "eth_chainId",
+  //         });
+  //         setChainId(parseInt(chainId, 16));
+  //       } catch (error) {
+  //         console.error("Error getting chain ID:", error);
+  //       }
+  //     }
+  //   };
 
-    getChainId();
+  //   getChainId();
 
-    // Listen for chain changes
-    if (typeof window !== "undefined" && window.ethereum) {
-      window.ethereum.on("chainChanged", (chainId: string) => {
-        setChainId(parseInt(chainId, 16));
-      });
-    }
+  //   // Listen for chain changes
+  //   if (typeof window !== "undefined" && window.ethereum) {
+  //     window.ethereum.on("chainChanged", (chainId: string) => {
+  //       setChainId(parseInt(chainId, 16));
+  //     });
+  //   }
 
-    return () => {
-      if (typeof window !== "undefined" && window.ethereum) {
-        window.ethereum.removeListener("chainChanged", () => {});
-      }
-    };
-  }, []);
+  //   return () => {
+  //     if (typeof window !== "undefined" && window.ethereum) {
+  //       window.ethereum.removeListener("chainChanged", () => {});
+  //     }
+  //   };
+  // }, []);
 
   return (
     <div className="flex-1 overflow-y-auto">

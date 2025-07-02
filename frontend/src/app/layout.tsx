@@ -5,6 +5,7 @@ import Script from "next/script";
 import { Providers } from "./providers";
 import { ThemeModeScript } from "flowbite-react";
 import ReferralBanner from "./components/ReferralBanner";
+import LayoutWrapper from "@/app/components/LayoutWrapper";
 
 export const metadata: Metadata = {
   title: "Gorillionaire – AI-Powered Crypto Signals & Gamified Trading",
@@ -50,7 +51,7 @@ export default function RootLayout({
       <body suppressHydrationWarning>
         <Providers>
           <ReferralBanner />
-          {children}
+          <LayoutWrapper>{children}</LayoutWrapper>
         </Providers>
       </body>
     </html>
