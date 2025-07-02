@@ -4,16 +4,19 @@ pragma solidity ^0.8.20;
 import { Test, console } from "forge-std/Test.sol";
 import { SmartWallet } from "../src/SmartWallet.sol";
 import { MockERC20 } from "./mocks/MockERC20.sol";
+import { MockUniswapV2Router02 } from "./mocks/MockUniswapV2Router02.sol";
 
 contract SmartWalletTest is Test {
     SmartWallet smartWallet;
     MockERC20 tokenA;
     MockERC20 tokenB;
     MockERC20 tokenC;
+    MockUniswapV2Router02 mockUniswapV2Router02;
 
     address deployer = makeAddr("deployer");
     address user1 = makeAddr("user1");
     address user2 = makeAddr("user2");
+    address operator = makeAddr("operator");
 
     function setUp() public {
         vm.startPrank(deployer);
@@ -21,6 +24,7 @@ contract SmartWalletTest is Test {
         tokenA = new MockERC20("TokenA", "TKNA");
         tokenB = new MockERC20("TokenB", "TKNB");
         tokenC = new MockERC20("TokenC", "TKNC");
+        mockUniswapV2Router02 = new MockUniswapV2Router02();
         vm.stopPrank();
     }
 
@@ -207,5 +211,47 @@ contract SmartWalletTest is Test {
         vm.prank(deployer);
         vm.expectRevert(SmartWallet.SmartWallet__NoTokensToWithdraw.selector);
         smartWallet.withdrawAll();
+    }
+
+    function test_setOperator() public {
+        vm.prank(deployer);
+        smartWallet.setOperator(operator, true);
+
+        bool isOperator = smartWallet.checkIsOperator(operator);
+
+        assertEq(isOperator, true);
+    }
+
+    function test_setOperatorShouldFailIfNotOwner() public {
+        vm.prank(user1);
+        vm.expectRevert(SmartWallet.SmartWallet__NotOwner.selector);
+        smartWallet.setOperator(operator, true);
+    }
+
+    function test_performSwapV2() public {
+        vm.prank(deployer);
+        smartWallet.setOperator(operator, true);
+
+        vm.startPrank(deployer);
+        tokenA.approve(address(smartWallet), 100);
+        smartWallet.deposit(address(tokenA), 100);
+        vm.stopPrank();
+
+        vm.prank(operator);
+        smartWallet.performSwapV2(address(mockUniswapV2Router02), address(tokenA), address(tokenB), 300, 400);
+    }
+
+    function test_performSwapV2ShouldFailIfNotOperator() public {
+        vm.prank(deployer);
+        smartWallet.setOperator(operator, true);
+
+        vm.startPrank(deployer);
+        tokenA.approve(address(smartWallet), 100);
+        smartWallet.deposit(address(tokenA), 100);
+        vm.stopPrank();
+
+        vm.prank(user1);
+        vm.expectRevert(SmartWallet.SmartWallet__NotOperator.selector);
+        smartWallet.performSwapV2(address(mockUniswapV2Router02), address(tokenA), address(tokenB), 300, 400);
     }
 }

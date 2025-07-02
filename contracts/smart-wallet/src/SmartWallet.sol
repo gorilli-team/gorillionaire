@@ -24,10 +24,13 @@ contract SmartWallet {
     error SmartWallet__InsufficientBalance();
     error SmartWallet__NoTokensToWithdraw();
     error SmartWallet__NotOperator();
+    error SmartWallet__InvalidRouterAddress();
+    error SmartWallet__TokensMustBeDifferent();
 
     address public s_owner;
     uint256 public s_tokenCounter;
     mapping(address => bool) public s_isOperator;
+    mapping(address => bool) public s_isWhitelistedRouter;
 
     mapping(address token => uint256 amount) public s_balances;
     mapping(uint256 index => address token) public s_tokens;
@@ -133,6 +136,22 @@ contract SmartWallet {
         external
         onlyOperator
     {
+        if(router == address(0) || !s_isWhitelistedRouter[router]) {
+            revert SmartWallet__InvalidRouterAddress();
+        }
+
+        if(tokenIn == address(0) || tokenOut == address(0)) {
+            revert SmartWallet__InvalidTokenAddress();
+        }
+
+        if(tokenIn == tokenOut) {
+            revert SmartWallet__TokensMustBeDifferent();
+        }
+
+        if(amountIn <= 0) {
+            revert SmartWallet__InvalidAmount();
+        }
+
         uint256 currentAllowance = IERC20(tokenIn).allowance(address(this), router);
         if (currentAllowance < amountIn) {
             IERC20(tokenIn).approve(router, 0);
@@ -164,5 +183,9 @@ contract SmartWallet {
 
     function getTokenByIndex(uint256 index) public view returns (address) {
         return s_tokens[index];
+    }
+
+    function checkIsOperator(address _operator) public view returns (bool) {
+        return s_isOperator[_operator];
     }
 }
