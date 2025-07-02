@@ -228,11 +228,38 @@ contract SmartWalletTest is Test {
         smartWallet.setOperator(operator, true);
     }
 
-    function test_performSwapV2() public {
+    function test_setOperatorShouldFailIfOperatorAddressIsAddressZero() public {
         vm.prank(deployer);
-        smartWallet.setOperator(operator, true);
+        vm.expectRevert(SmartWallet.SmartWallet__InvalidOperatorAddress.selector);
+        smartWallet.setOperator(address(0), true);
+    }
 
+    function test_setWhitelistedRouter() public {
+        vm.prank(deployer);
+        smartWallet.setWhitelistedRouter(address(mockUniswapV2Router02), true);
+
+        bool isWhitelistedRouter = smartWallet.checkIsWhitelistedRouter(address(mockUniswapV2Router02));
+
+        assertEq(isWhitelistedRouter, true);
+    }
+
+    function test_setWhitelistedRouterShouldFailIfAddressZero() public {
+        vm.prank(deployer);
+        vm.expectRevert(SmartWallet.SmartWallet__InvalidRouterAddress.selector);
+        smartWallet.setWhitelistedRouter(address(0), true);
+    }
+
+    function test_setWhitelistedRouterShouldFailIfNotOwner() public {
+        vm.prank(user1);
+        vm.expectRevert(SmartWallet.SmartWallet__NotOwner.selector);
+        smartWallet.setWhitelistedRouter(address(mockUniswapV2Router02), true);
+    }
+
+    function test_performSwapV2() public {
         vm.startPrank(deployer);
+        smartWallet.setOperator(operator, true);
+        smartWallet.setWhitelistedRouter(address(mockUniswapV2Router02), true);
+
         tokenA.approve(address(smartWallet), 100);
         smartWallet.deposit(address(tokenA), 100);
         vm.stopPrank();
@@ -242,10 +269,10 @@ contract SmartWalletTest is Test {
     }
 
     function test_performSwapV2ShouldFailIfNotOperator() public {
-        vm.prank(deployer);
-        smartWallet.setOperator(operator, true);
-
         vm.startPrank(deployer);
+        smartWallet.setOperator(operator, true);
+        smartWallet.setWhitelistedRouter(address(mockUniswapV2Router02), true);
+
         tokenA.approve(address(smartWallet), 100);
         smartWallet.deposit(address(tokenA), 100);
         vm.stopPrank();
@@ -253,5 +280,100 @@ contract SmartWalletTest is Test {
         vm.prank(user1);
         vm.expectRevert(SmartWallet.SmartWallet__NotOperator.selector);
         smartWallet.performSwapV2(address(mockUniswapV2Router02), address(tokenA), address(tokenB), 300, 400);
+    }
+
+    function test_performSwapV2ShouldFailIfNotWhitelistedRouter() public {
+        vm.startPrank(deployer);
+        smartWallet.setOperator(operator, true);
+
+        tokenA.approve(address(smartWallet), 100);
+        smartWallet.deposit(address(tokenA), 100);
+        vm.stopPrank();
+
+        vm.prank(operator);
+        vm.expectRevert(SmartWallet.SmartWallet__InvalidRouterAddress.selector);
+        smartWallet.performSwapV2(address(mockUniswapV2Router02), address(tokenA), address(tokenB), 300, 400);
+    }
+
+    function test_performSwapV2ShouldFailIfRouterAddressIsAddressZero() public {
+        vm.startPrank(deployer);
+        smartWallet.setOperator(operator, true);
+
+        tokenA.approve(address(smartWallet), 100);
+        smartWallet.deposit(address(tokenA), 100);
+        vm.stopPrank();
+
+        vm.prank(operator);
+        vm.expectRevert(SmartWallet.SmartWallet__InvalidRouterAddress.selector);
+        smartWallet.performSwapV2(address(0), address(tokenA), address(tokenB), 300, 400);
+    }
+
+    function test_performSwapV2ShouldFailIfIdenticalTokens() public {
+        vm.startPrank(deployer);
+        smartWallet.setOperator(operator, true);
+        smartWallet.setWhitelistedRouter(address(mockUniswapV2Router02), true);
+
+        tokenA.approve(address(smartWallet), 100);
+        smartWallet.deposit(address(tokenA), 100);
+        vm.stopPrank();
+
+        vm.prank(operator);
+        vm.expectRevert(SmartWallet.SmartWallet__TokensMustBeDifferent.selector);
+        smartWallet.performSwapV2(address(mockUniswapV2Router02), address(tokenA), address(tokenA), 300, 400);
+    }
+
+    function test_performSwapV2ShouldFailIfAmountTokenInIsZero() public {
+        vm.startPrank(deployer);
+        smartWallet.setOperator(operator, true);
+        smartWallet.setWhitelistedRouter(address(mockUniswapV2Router02), true);
+
+        tokenA.approve(address(smartWallet), 100);
+        smartWallet.deposit(address(tokenA), 100);
+        vm.stopPrank();
+
+        vm.prank(operator);
+        vm.expectRevert(SmartWallet.SmartWallet__InvalidAmount.selector);
+        smartWallet.performSwapV2(address(mockUniswapV2Router02), address(tokenA), address(tokenB), 0, 400);
+    }
+
+    function test_performSwapV2ShouldAllowAmountOutMinToBeZero() public {
+        vm.startPrank(deployer);
+        smartWallet.setOperator(operator, true);
+        smartWallet.setWhitelistedRouter(address(mockUniswapV2Router02), true);
+
+        tokenA.approve(address(smartWallet), 100);
+        smartWallet.deposit(address(tokenA), 100);
+        vm.stopPrank();
+
+        vm.prank(operator);
+        smartWallet.performSwapV2(address(mockUniswapV2Router02), address(tokenA), address(tokenB), 300, 0);
+    }
+
+    function test_performSwapV2ShouldFailIfTokenInIsAddressZero() public {
+        vm.startPrank(deployer);
+        smartWallet.setOperator(operator, true);
+        smartWallet.setWhitelistedRouter(address(mockUniswapV2Router02), true);
+
+        tokenA.approve(address(smartWallet), 100);
+        smartWallet.deposit(address(tokenA), 100);
+        vm.stopPrank();
+
+        vm.prank(operator);
+        vm.expectRevert(SmartWallet.SmartWallet__InvalidTokenAddress.selector);
+        smartWallet.performSwapV2(address(mockUniswapV2Router02), address(0), address(tokenB), 300, 400);
+    }
+
+    function test_performSwapV2ShouldFailIfTokenOutIsAddressZero() public {
+        vm.startPrank(deployer);
+        smartWallet.setOperator(operator, true);
+        smartWallet.setWhitelistedRouter(address(mockUniswapV2Router02), true);
+
+        tokenA.approve(address(smartWallet), 100);
+        smartWallet.deposit(address(tokenA), 100);
+        vm.stopPrank();
+
+        vm.prank(operator);
+        vm.expectRevert(SmartWallet.SmartWallet__InvalidTokenAddress.selector);
+        smartWallet.performSwapV2(address(mockUniswapV2Router02), address(tokenA), address(0), 300, 400);
     }
 }

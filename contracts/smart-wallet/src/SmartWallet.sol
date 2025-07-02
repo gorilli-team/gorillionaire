@@ -26,6 +26,7 @@ contract SmartWallet {
     error SmartWallet__NotOperator();
     error SmartWallet__InvalidRouterAddress();
     error SmartWallet__TokensMustBeDifferent();
+    error SmartWallet__InvalidOperatorAddress();
 
     address public s_owner;
     uint256 public s_tokenCounter;
@@ -136,7 +137,7 @@ contract SmartWallet {
         external
         onlyOperator
     {
-        if(router == address(0) || !s_isWhitelistedRouter[router]) {
+        if(!s_isWhitelistedRouter[router]) {
             revert SmartWallet__InvalidRouterAddress();
         }
 
@@ -169,8 +170,18 @@ contract SmartWallet {
         emit Swap(msg.sender, tokenIn, tokenOut, amountIn, amountOutMin, amounts[amounts.length - 1]);
     }
 
-    function setOperator(address operator, bool authorized) external onlyOwner {
-        s_isOperator[operator] = authorized;
+    function setOperator(address _operator, bool authorized) external onlyOwner {
+        if(_operator == address(0)) {
+            revert SmartWallet__InvalidOperatorAddress();
+        }
+        s_isOperator[_operator] = authorized;
+    }
+
+    function setWhitelistedRouter(address _router, bool whitelisted) external onlyOwner {
+        if(_router == address(0)) {
+            revert SmartWallet__InvalidRouterAddress();
+        }
+        s_isWhitelistedRouter[_router] = whitelisted;
     }
 
     function getTokenBalance(address _token) public view returns (uint256) {
@@ -187,5 +198,9 @@ contract SmartWallet {
 
     function checkIsOperator(address _operator) public view returns (bool) {
         return s_isOperator[_operator];
+    }
+
+    function checkIsWhitelistedRouter(address _router) public view returns(bool) {
+        return s_isWhitelistedRouter[_router];
     }
 }
