@@ -98,7 +98,6 @@ contract SmartWallet {
 
         IERC20 token = IERC20(_token);
         bool success = token.transfer(msg.sender, amount);
-
         if (!success) {
             revert SmartWallet__TransferFailed();
         }
@@ -106,6 +105,10 @@ contract SmartWallet {
         emit Withdraw(_token, amount);
     }
 
+    /**
+     * @dev resets the indexes for previously deposited tokens
+     * @dev skips the transfer of tokens whose index is stored in s_tokens but have a balance of 0
+     */
     function withdrawAll() public onlyOwner {
         if (s_tokenCounter == 0) {
             revert SmartWallet__NoTokensToWithdraw();

@@ -28,6 +28,10 @@ contract SmartWalletTest is Test {
         vm.stopPrank();
     }
 
+    //////////////////////////////////////////
+    /////////////// DEPOSIT //////////////////
+    //////////////////////////////////////////
+
     function test_deposit() public {
         vm.startPrank(deployer);
         tokenA.approve(address(smartWallet), 100);
@@ -91,6 +95,10 @@ contract SmartWalletTest is Test {
         smartWallet.deposit(address(0), 100);
     }
 
+    //////////////////////////////////////////
+    ///////////////// WITHDRAW ///////////////
+    //////////////////////////////////////////
+
     function test_withdraw() public {
         vm.startPrank(deployer);
         tokenA.approve(address(smartWallet), 100);
@@ -107,6 +115,25 @@ contract SmartWalletTest is Test {
         uint256 tokenABalanceAfter = smartWallet.getTokenBalance(address(tokenA));
 
         assertEq(tokenABalanceAfter, 50);
+    }
+
+    function test_isTokenInWalletShouldUpdateToFalseIfRemainingTokenBalanceIsZero() public {
+        vm.startPrank(deployer);
+        tokenA.approve(address(smartWallet), 100);
+        smartWallet.deposit(address(tokenA), 100);
+        vm.stopPrank();
+
+        vm.prank(deployer);
+        smartWallet.withdraw(address(tokenA), 50);
+
+        bool isTokenAInWalletBefore = smartWallet.checkIfTokenInWallet(address(tokenA));
+        assertEq(isTokenAInWalletBefore, true);
+
+        vm.prank(deployer);
+        smartWallet.withdraw(address(tokenA), 50);
+
+        bool isTokenAInWalletAfter = smartWallet.checkIfTokenInWallet(address(tokenA));
+        assertEq(isTokenAInWalletAfter, false);
     }
 
     function test_withdrawShouldFailIfNotOwner() public {
@@ -164,6 +191,10 @@ contract SmartWalletTest is Test {
         smartWallet.withdraw(address(tokenA), 200);
     }
 
+    //////////////////////////////////////////
+    /////////////// WITHDRAW ALL /////////////
+    //////////////////////////////////////////
+
     function test_withdrawAll() public {
         vm.startPrank(deployer);
         tokenA.approve(address(smartWallet), 100);
@@ -194,6 +225,34 @@ contract SmartWalletTest is Test {
         assertEq(smartWallet.s_tokenCounter(), 0);
     }
 
+    function test_withdrawAllShouldSkipTransferOfTokensWithZeroBalance() public {
+        vm.startPrank(deployer);
+        tokenA.approve(address(smartWallet), 100);
+        tokenB.approve(address(smartWallet), 100);
+        tokenC.approve(address(smartWallet), 100);
+        smartWallet.deposit(address(tokenA), 100);
+        smartWallet.deposit(address(tokenB), 100);
+        smartWallet.deposit(address(tokenC), 100);
+        vm.stopPrank();
+
+        vm.prank(deployer);
+        smartWallet.withdraw(address(tokenB), 100);
+
+        uint256 tokenBBalance = smartWallet.getTokenBalance(address(tokenB));
+        address tokenBByIndexBefore = smartWallet.getTokenByIndex(1);
+        assertEq(tokenBBalance, 0);
+        assertEq(tokenBByIndexBefore, address(tokenB));
+
+        // we expect the function to skip the transfer of tokens with the index
+        // still stored in s_tokens, but with 0 balance
+        vm.prank(deployer);
+        smartWallet.withdrawAll();
+
+        // after withdrawing all the tokens should reset all token indexes
+        address tokenBByIndexAfter = smartWallet.getTokenByIndex(1);
+        assertEq(tokenBByIndexAfter, address(0));
+    }
+
     function test_withdrawAllShouldFailIfNotOwner() public {
         vm.startPrank(deployer);
         tokenA.approve(address(smartWallet), 100);
@@ -212,6 +271,10 @@ contract SmartWalletTest is Test {
         vm.expectRevert(SmartWallet.SmartWallet__NoTokensToWithdraw.selector);
         smartWallet.withdrawAll();
     }
+
+    //////////////////////////////////////////
+    ////////////// SET OPERATOR //////////////
+    //////////////////////////////////////////
 
     function test_setOperator() public {
         vm.prank(deployer);
@@ -234,6 +297,10 @@ contract SmartWalletTest is Test {
         smartWallet.setOperator(address(0), true);
     }
 
+    //////////////////////////////////////////
+    ///////// SET WHITELISTED ROUTER /////////
+    //////////////////////////////////////////
+
     function test_setWhitelistedRouter() public {
         vm.prank(deployer);
         smartWallet.setWhitelistedRouter(address(mockUniswapV2Router02), true);
@@ -254,6 +321,10 @@ contract SmartWalletTest is Test {
         vm.expectRevert(SmartWallet.SmartWallet__NotOwner.selector);
         smartWallet.setWhitelistedRouter(address(mockUniswapV2Router02), true);
     }
+
+    //////////////////////////////////////////
+    ///////////// PERFORM SWAP V2 ////////////
+    //////////////////////////////////////////
 
     function test_performSwapV2() public {
         vm.startPrank(deployer);
