@@ -5,6 +5,21 @@ import { Providers } from "./providers";
 import Script from "next/script";
 import ReferralBanner from "./components/ReferralBanner";
 
+//Import Mixpanel SDK
+import mixpanel from "mixpanel-browser";
+
+if (
+  process.env.NEXT_PUBLIC_MIXPANEL_TOKEN &&
+  process.env.NODE_ENV === "production"
+) {
+  // Near entry of your product, init Mixpanel
+  mixpanel.init(process.env.NEXT_PUBLIC_MIXPANEL_TOKEN, {
+    debug: true,
+    track_pageview: true,
+    persistence: "localStorage",
+  });
+}
+
 export const metadata: Metadata = {
   title: "Gorillionaire – AI-Powered Crypto Signals & Gamified Trading",
   description:
