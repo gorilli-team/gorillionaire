@@ -386,7 +386,9 @@ const WeeklyLeaderboardComponent = () => {
                   <span className="font-bold text-violet-600">50 MON each</span>{" "}
                   to{" "}
                   <span className="font-bold text-violet-600">5 winners</span>{" "}
-                  this week, based on percentage chance.
+                  this week, based on percentage chance. Plus we reward{" "}
+                  <span className="font-bold text-green-600">top 3 users</span>{" "}
+                  with guaranteed prizes.
                 </p>
                 <p className="text-xs text-gray-500 mt-1">
                   💡 Points and referrals shown are for this week only
@@ -454,9 +456,18 @@ const WeeklyLeaderboardComponent = () => {
                             <td className="py-3 h-14 text-violet-700 pr-2 pl-4">
                               <div className="flex items-center">
                                 {myTrader.rank <= 3 ? (
-                                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full mr-2 bg-amber-100 text-amber-800 font-bold">
-                                    {myTrader.rank}
-                                  </span>
+                                  <div className="flex items-center gap-2">
+                                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full mr-2 bg-amber-100 text-amber-800 font-bold">
+                                      {myTrader.rank}
+                                    </span>
+                                    <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 border border-green-200">
+                                      {myTrader.rank === 1
+                                        ? "130 MON chance"
+                                        : myTrader.rank === 2
+                                        ? "75 MON chance"
+                                        : "45 MON chance"}
+                                    </span>
+                                  </div>
                                 ) : (
                                   <span className="font-bold">
                                     {myTrader.rank}
@@ -583,9 +594,18 @@ const WeeklyLeaderboardComponent = () => {
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
                             {myTrader.rank <= 3 ? (
-                              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-100 text-amber-800 font-bold text-sm">
-                                {myTrader.rank}
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-100 text-amber-800 font-bold text-sm">
+                                  {myTrader.rank}
+                                </span>
+                                <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 border border-green-200">
+                                  {myTrader.rank === 1
+                                    ? "130 MON chance"
+                                    : myTrader.rank === 2
+                                    ? "75 MON chance"
+                                    : "45 MON chance"}
+                                </span>
+                              </div>
                             ) : (
                               <span className="text-violet-700 font-bold text-sm">
                                 {myTrader.rank}
@@ -716,9 +736,18 @@ const WeeklyLeaderboardComponent = () => {
                         <td className="py-4 h-16 text-gray-700 pr-2 pl-4">
                           <div className="flex items-center">
                             {trader.rank <= 3 ? (
-                              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full mr-2 bg-amber-100 text-amber-800 font-bold">
-                                {trader.rank}
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full mr-2 bg-amber-100 text-amber-800 font-bold">
+                                  {trader.rank}
+                                </span>
+                                <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 border border-green-200">
+                                  {trader.rank === 1
+                                    ? "130 MON chance"
+                                    : trader.rank === 2
+                                    ? "75 MON chance"
+                                    : "45 MON chance"}
+                                </span>
+                              </div>
                             ) : (
                               <span>{trader.rank}</span>
                             )}
@@ -842,9 +871,18 @@ const WeeklyLeaderboardComponent = () => {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           {trader.rank <= 3 ? (
-                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-100 text-amber-800 font-bold text-sm">
-                              {trader.rank}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-100 text-amber-800 font-bold text-sm">
+                                {trader.rank}
+                              </span>
+                              <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 border border-green-200">
+                                {trader.rank === 1
+                                  ? "130 MON chance"
+                                  : trader.rank === 2
+                                  ? "75 MON chance"
+                                  : "45 MON chance"}
+                              </span>
+                            </div>
                           ) : (
                             <span className="text-gray-700 font-medium text-sm">
                               {trader.rank}
