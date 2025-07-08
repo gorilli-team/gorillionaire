@@ -39,11 +39,6 @@ export default function Header() {
       : "0x0000000000000000000000000000000000000000"
   );
 
-  // Debug log for troubleshooting
-  useEffect(() => {
-    console.log("Header nadProfile:", nadProfile, "address:", address);
-  }, [nadProfile, address]);
-
   // Update address when user changes
   useEffect(() => {
     if (!authenticated) {

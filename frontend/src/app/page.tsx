@@ -1,13 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "./components/sidebar/index";
 import Header from "./components/header/index";
 import Main from "./components/main/index";
+import mixpanel from "mixpanel-browser";
 
 export default function AppLayout() {
   const [selectedPage, setSelectedPage] = useState("Signals");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    mixpanel.init("519618776e9d2c52e9b4a4c02ae75267", {
+      debug: true,
+      track_pageview: true,
+      persistence: "localStorage",
+    });
+  }, []);
 
   return (
     <div className="flex h-screen bg-gray-100 text-gray-800">
@@ -40,7 +49,11 @@ export default function AppLayout() {
       <div
         className={`
           fixed lg:relative
-          ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+          ${
+            isMobileMenuOpen
+              ? "translate-x-0"
+              : "-translate-x-full lg:translate-x-0"
+          }
           transition-transform duration-300 ease-in-out
           z-30 lg:z-0
           bg-white
@@ -65,10 +78,7 @@ export default function AppLayout() {
       {/* Main content */}
       <div className="flex-1 flex flex-col h-full">
         <Header />
-        <Main
-          selectedPage={selectedPage}
-          setSelectedPage={setSelectedPage}
-        />
+        <Main selectedPage={selectedPage} setSelectedPage={setSelectedPage} />
       </div>
     </div>
   );

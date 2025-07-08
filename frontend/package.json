@@ -13,6 +13,7 @@
     "@nadnameservice/nns-viem-sdk": "^1.1.0",
     "@nadnameservice/nns-wagmi-hooks": "^1.1.0",
     "@privy-io/react-auth": "^2.6.2",
+    "@types/mixpanel-browser": "^2.60.0",
     "axios": "^1.8.3",
     "ethers": "^6.13.5",
     "flowbite-react": "^0.10.2",
@@ -31,7 +32,6 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@types/js-cookie": "^3.0.6",
-    "@types/mixpanel-browser": "^2.60.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
