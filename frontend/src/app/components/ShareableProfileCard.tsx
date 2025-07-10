@@ -220,12 +220,15 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
         `🏆 Rank: ${userProfile.rank}${getOrdinalSuffix(userProfile.rank)}\n` +
         `💎 Points: ${userProfile.points.toLocaleString()}\n` +
         `💰 Volume: $${formatNumber(userProfile.dollarValue)}`;
+      if (totalTransactions && typeof totalTransactions === "number") {
+        shareText += `\n📈 Transactions: ${totalTransactions.toLocaleString()}`;
+      }
       if (referralStats?.referralCode) {
         shareText += `\n🎯 Referral Code: ${referralStats.referralCode}`;
       }
       shareText +=
         `\n\nJoin me on Gorillionaire! 🦍\n` +
-        `${window.location.origin}/users/${userProfile.address}`;
+        `${window.location.origin}/users/${userProfile.address}\n\n@gorillionaireai`;
       // Download the image for manual sharing
       const link = document.createElement("a");
       link.href = imageDataUrl;
