@@ -343,6 +343,35 @@ router.post("/trade-points", async (req, res) => {
   }
 });
 
+// Update profile background image
+router.post("/profile-bg", async (req, res) => {
+  try {
+    const { address, profileBgImage } = req.body;
+    const isValidImageUrl = (url) =>
+      /^https:\/\/.+\.(jpg|jpeg|png|webp|gif)$/i.test(url);
+    if (!address || typeof profileBgImage !== "string") {
+      return res
+        .status(400)
+        .json({ error: "Address and profileBgImage are required." });
+    }
+    if (!isValidImageUrl(profileBgImage)) {
+      return res.status(400).json({ error: "Invalid image URL." });
+    }
+    const user = await UserActivity.findOneAndUpdate(
+      { address: address.toLowerCase() },
+      { $set: { profileBgImage } },
+      { new: true }
+    );
+    if (!user) {
+      return res.status(404).json({ error: "User not found." });
+    }
+    res.json({ success: true, profileBgImage: user.profileBgImage });
+  } catch (error) {
+    console.error("Error updating profile background image:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // Get user points
 router.get("/points", async (req, res) => {
   try {
@@ -677,6 +706,7 @@ router.get("/me", async (req, res) => {
         points: 1,
         address: 1,
         createdAt: 1,
+        profileBgImage: 1,
       }
     )
       .sort({ "activitiesList.date": -1 })
@@ -737,6 +767,7 @@ router.get("/me", async (req, res) => {
           limit,
           totalPages: Math.ceil(totalCount / limit),
         },
+        profileBgImage: result.profileBgImage || null,
       },
     });
   } catch (error) {

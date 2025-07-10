@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import Image from "next/image";
 import html2canvas from "html2canvas";
 import { getLevelInfo } from "../utils/xp";
@@ -21,6 +21,7 @@ interface ShareableProfileCardProps {
   } | null;
   totalTransactions?: number;
   isOwnProfile?: boolean;
+  backgroundImage?: string; // new optional prop
 }
 
 const CARD_SIZE = 800; // 1:1 aspect ratio
@@ -30,10 +31,34 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
   referralStats,
   totalTransactions,
   isOwnProfile,
+  backgroundImage, // new prop
 }) => {
   const exportRef = useRef<HTMLDivElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
+  const [bgInput, setBgInput] = useState("");
+  const [bgError, setBgError] = useState<string | null>(null);
+  const [bgLoading, setBgLoading] = useState(false);
+  const [proxiedBg, setProxiedBg] = useState<string | undefined>(
+    backgroundImage
+  );
+  const [showBgModal, setShowBgModal] = useState(false);
+
+  useEffect(() => {
+    if (backgroundImage) {
+      // If the background image is a full URL, proxy it
+      if (/^https?:\/\//.test(backgroundImage)) {
+        const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(
+          backgroundImage
+        )}`;
+        setProxiedBg(proxyUrl);
+      } else {
+        setProxiedBg(backgroundImage);
+      }
+    } else {
+      setProxiedBg(undefined);
+    }
+  }, [backgroundImage]);
 
   const formatNumber = (num: number): string => {
     if (num === 0) return "0.00";
@@ -54,6 +79,54 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
 
   const formatAddress = (address: string) => {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  };
+
+  const isValidImageUrl = (url: string) =>
+    /^https:\/\/.+\.(jpg|jpeg|png|webp|gif)$/i.test(url);
+
+  const handleBgSave = async () => {
+    setBgError(null);
+    if (!isValidImageUrl(bgInput)) {
+      setBgError(
+        "Please enter a valid https image URL (.jpg, .jpeg, .png, .webp, .gif)"
+      );
+      return;
+    }
+    setBgLoading(true);
+    try {
+      const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(bgInput)}`;
+      // Try to fetch the image via proxy to check validity
+      const res = await fetch(proxyUrl);
+      if (!res.ok) {
+        setBgError("Could not load image from URL.");
+        setBgLoading(false);
+        return;
+      }
+      // Save to backend
+      const saveRes = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/activity/track/profile-bg`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            address: userProfile.address,
+            profileBgImage: bgInput,
+          }),
+        }
+      );
+      if (!saveRes.ok) {
+        setBgError("Failed to save background. Try again.");
+        setBgLoading(false);
+        return;
+      }
+      setProxiedBg(proxyUrl);
+      setBgInput("");
+      setShowBgModal(false);
+    } catch {
+      setBgError("Unexpected error. Try again.");
+    } finally {
+      setBgLoading(false);
+    }
   };
 
   // Export logic uses the hidden exportRef
@@ -136,7 +209,6 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
       style={{
         width: `${CARD_SIZE}px`,
         height: `${CARD_SIZE}px`,
-        background: "#f5f7ff",
         borderRadius: 32,
         display: "flex",
         flexDirection: "column",
@@ -152,6 +224,9 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
         zIndex: -1,
         overflow: "hidden",
         transform: "translateZ(0)",
+        background: proxiedBg
+          ? `url(${proxiedBg}) center/cover no-repeat`
+          : "#f5f7ff",
       }}
     >
       {/* Top Section - Avatar and Name */}
@@ -205,9 +280,6 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
               display: "block",
               background: "#f7f8fa",
             }}
-            onError={(e) => {
-              e.currentTarget.style.display = "none";
-            }}
           />
         </div>
 
@@ -221,6 +293,8 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
               lineHeight: 1.1,
               wordBreak: "break-word",
               marginBottom: 8,
+              textShadow:
+                "2px 2px 4px rgba(255,255,255,0.8), -2px -2px 4px rgba(255,255,255,0.8), 2px -2px 4px rgba(255,255,255,0.8), -2px 2px 4px rgba(255,255,255,0.8)",
             }}
           >
             {userProfile.nadName || formatAddress(userProfile.address)}
@@ -228,8 +302,10 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
           <div
             style={{
               fontSize: 22,
-              color: "#6b7280",
+              color: "#222",
               fontFamily: "monospace",
+              textShadow:
+                "2px 2px 4px rgba(255,255,255,0.8), -2px -2px 4px rgba(255,255,255,0.8), 2px -2px 4px rgba(255,255,255,0.8), -2px 2px 4px rgba(255,255,255,0.8)",
             }}
           >
             {formatAddress(userProfile.address)}
@@ -278,6 +354,8 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
               fontSize: 22,
               padding: "8px 24px",
               textAlign: "center",
+              textShadow:
+                "2px 2px 4px rgba(255,255,255,0.8), -2px -2px 4px rgba(255,255,255,0.8), 2px -2px 4px rgba(255,255,255,0.8), -2px 2px 4px rgba(255,255,255,0.8)",
             }}
           >
             Level {getLevelInfo(userProfile.points).level}
@@ -305,6 +383,8 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
               color: "#222",
               lineHeight: 1.2,
               marginBottom: 8,
+              textShadow:
+                "2px 2px 4px rgba(255,255,255,0.8), -2px -2px 4px rgba(255,255,255,0.8), 2px -2px 4px rgba(255,255,255,0.8), -2px 2px 4px rgba(255,255,255,0.8)",
             }}
           >
             {userProfile.rank}
@@ -317,8 +397,10 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
           <div
             style={{
               fontSize: 18,
-              color: "#6b7280",
+              color: "#222",
               fontWeight: 500,
+              textShadow:
+                "2px 2px 4px rgba(255,255,255,0.8), -2px -2px 4px rgba(255,255,255,0.8), 2px -2px 4px rgba(255,255,255,0.8), -2px 2px 4px rgba(255,255,255,0.8)",
             }}
           >
             Global Rank
@@ -334,6 +416,8 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
               color: "#222",
               lineHeight: 1.2,
               marginBottom: 8,
+              textShadow:
+                "2px 2px 4px rgba(255,255,255,0.8), -2px -2px 4px rgba(255,255,255,0.8), 2px -2px 4px rgba(255,255,255,0.8), -2px 2px 4px rgba(255,255,255,0.8)",
             }}
           >
             {userProfile.points.toLocaleString()}
@@ -341,8 +425,10 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
           <div
             style={{
               fontSize: 18,
-              color: "#6b7280",
+              color: "#222",
               fontWeight: 500,
+              textShadow:
+                "2px 2px 4px rgba(255,255,255,0.8), -2px -2px 4px rgba(255,255,255,0.8), 2px -2px 4px rgba(255,255,255,0.8), -2px 2px 4px rgba(255,255,255,0.8)",
             }}
           >
             Points
@@ -358,6 +444,8 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
               color: "#222",
               lineHeight: 1.2,
               marginBottom: 8,
+              textShadow:
+                "2px 2px 4px rgba(255,255,255,0.8), -2px -2px 4px rgba(255,255,255,0.8), 2px -2px 4px rgba(255,255,255,0.8), -2px 2px 4px rgba(255,255,255,0.8)",
             }}
           >
             ${formatNumber(userProfile.dollarValue)}
@@ -365,8 +453,10 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
           <div
             style={{
               fontSize: 18,
-              color: "#6b7280",
+              color: "#222",
               fontWeight: 500,
+              textShadow:
+                "2px 2px 4px rgba(255,255,255,0.8), -2px -2px 4px rgba(255,255,255,0.8), 2px -2px 4px rgba(255,255,255,0.8), -2px 2px 4px rgba(255,255,255,0.8)",
             }}
           >
             Volume
@@ -383,6 +473,8 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
                 color: "#222",
                 lineHeight: 1.2,
                 marginBottom: 8,
+                textShadow:
+                  "2px 2px 4px rgba(255,255,255,0.8), -2px -2px 4px rgba(255,255,255,0.8), 2px -2px 4px rgba(255,255,255,0.8), -2px 2px 4px rgba(255,255,255,0.8)",
               }}
             >
               {totalTransactions.toLocaleString()}
@@ -390,8 +482,10 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
             <div
               style={{
                 fontSize: 18,
-                color: "#6b7280",
+                color: "#222",
                 fontWeight: 500,
+                textShadow:
+                  "2px 2px 4px rgba(255,255,255,0.8), -2px -2px 4px rgba(255,255,255,0.8), 2px -2px 4px rgba(255,255,255,0.8), -2px 2px 4px rgba(255,255,255,0.8)",
               }}
             >
               Transactions
@@ -424,13 +518,103 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
   // --- Responsive Preview (visible) ---
   return (
     <div className="">
+      {/* Debug info - remove after testing */}
+      {isOwnProfile && (
+        <div
+          style={{
+            padding: 8,
+            background: "#f0f0f0",
+            marginBottom: 8,
+            fontSize: 12,
+          }}
+        >
+          Debug: backgroundImage = {backgroundImage || "null"}, proxiedBg ={" "}
+          {proxiedBg || "null"}
+        </div>
+      )}
+
       {/* Hidden export card for image generation */}
       {ExportCard}
+
+      {/* Background Modal */}
+      {showBgModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-bold mb-4">Set Background Image</h3>
+            <input
+              type="text"
+              placeholder="Paste image URL (https, jpg/png/webp/gif)"
+              value={bgInput}
+              onChange={(e) => setBgInput(e.target.value)}
+              style={{
+                padding: 12,
+                borderRadius: 8,
+                border: "1px solid #ccc",
+                width: "100%",
+                fontSize: 16,
+                marginBottom: 16,
+              }}
+              disabled={bgLoading}
+            />
+            {bgError && (
+              <div style={{ color: "#b91c1c", marginBottom: 16 }}>
+                {bgError}
+              </div>
+            )}
+            <div className="flex gap-2">
+              <button
+                onClick={handleBgSave}
+                disabled={bgLoading}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: 8,
+                  background: "#8b5cf6",
+                  color: "#fff",
+                  fontWeight: 700,
+                  fontSize: 16,
+                  border: "none",
+                  cursor: "pointer",
+                  opacity: bgLoading ? 0.6 : 1,
+                  flex: 1,
+                }}
+              >
+                {bgLoading ? "Saving..." : "Save Background"}
+              </button>
+              <button
+                onClick={() => {
+                  setShowBgModal(false);
+                  setBgInput("");
+                  setBgError(null);
+                }}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: 8,
+                  background: "#6b7280",
+                  color: "#fff",
+                  fontWeight: 700,
+                  fontSize: 16,
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Visible preview */}
       <div className="bg-white rounded-lg shadow-lg">
         <div className="flex justify-center">
-          <div className="w-full max-w-xl bg-gradient-to-br from-violet-50 via-indigo-50 to-purple-50 rounded-xl shadow-lg flex flex-col justify-between py-6 px-4 min-h-[320px]">
+          <div
+            className="w-full max-w-xl rounded-xl shadow-lg flex flex-col justify-between py-6 px-4 min-h-[320px]"
+            style={{
+              background: proxiedBg
+                ? `url(${proxiedBg}) center/cover no-repeat`
+                : "linear-gradient(to bottom right, #f5f7ff, #e0e7ff, #c7d2fe)",
+            }}
+          >
             {/* Referral and Level badges side by side */}
             <div className="flex flex-row items-center justify-between w-full mb-3">
               {referralStats?.referralCode && (
@@ -504,21 +688,21 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
         </div>
         {isOwnProfile && (
           <>
-            <div className="flex flex-col sm:flex-row gap-2 p-2">
+            <div className="flex flex-wrap gap-1 p-2 mt-2">
               <button
                 onClick={shareOnX}
                 disabled={isSharing || isGenerating}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-black text-white rounded-lg font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 min-w-[100px] flex items-center justify-center gap-1 px-2 py-1.5 bg-black text-white rounded-lg font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-xs"
               >
                 {isSharing ? (
                   <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <div className="w-2.5 h-2.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                     Sharing...
                   </>
                 ) : (
                   <>
                     <svg
-                      className="w-5 h-5"
+                      className="w-3 h-3"
                       fill="currentColor"
                       viewBox="0 0 24 24"
                     >
@@ -531,17 +715,17 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
               <button
                 onClick={downloadCard}
                 disabled={isGenerating}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-lg font-medium hover:bg-violet-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 min-w-[100px] flex items-center justify-center gap-1 px-2 py-1.5 bg-violet-600 text-white rounded-lg font-medium hover:bg-violet-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-xs"
               >
                 {isGenerating ? (
                   <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <div className="w-2.5 h-2.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                     Generating...
                   </>
                 ) : (
                   <>
                     <svg
-                      className="w-5 h-5"
+                      className="w-3 h-3"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -556,6 +740,25 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
                     Download Card
                   </>
                 )}
+              </button>
+              <button
+                onClick={() => setShowBgModal(true)}
+                className="flex-1 min-w-[100px] flex items-center justify-center gap-1 px-2 py-1.5 bg-gray-600 text-white rounded-lg font-medium hover:bg-gray-700 transition-colors text-xs"
+              >
+                <svg
+                  className="w-3 h-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
+                </svg>
+                Set Background
               </button>
             </div>
             <p className="text-xs text-gray-500 text-center p-2">

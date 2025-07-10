@@ -95,6 +95,7 @@ interface UserProfile {
     totalPages: number;
   };
   hasV2NFT?: boolean;
+  profileBgImage?: string;
 }
 
 interface Quest {
@@ -400,6 +401,7 @@ const UserProfilePage = () => {
           dollarValue: data.userActivity?.dollarValue ?? 0,
           pagination: data.userActivity?.pagination,
           hasV2NFT: Number(v2NFTBalance) > 0,
+          profileBgImage: data.userActivity?.profileBgImage || null,
         });
       } catch (error) {
         console.error("Error fetching user profile:", error);
@@ -1243,7 +1245,16 @@ const UserProfilePage = () => {
                     referralStats={referralStats}
                     totalTransactions={userProfile.pagination?.total}
                     isOwnProfile={isOwnProfile}
+                    backgroundImage={userProfile.profileBgImage}
                   />
+                  {/* Debug log */}
+                  {(() => {
+                    console.log(
+                      "UserProfilePage - Passing backgroundImage:",
+                      userProfile.profileBgImage
+                    );
+                    return null;
+                  })()}
                 </div>
                 {/* )} */}
               </div>
