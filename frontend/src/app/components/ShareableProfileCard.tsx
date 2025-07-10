@@ -62,12 +62,16 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
     setIsGenerating(true);
     try {
       const canvas = await html2canvas(exportRef.current, {
-        backgroundColor: "#fff",
+        backgroundColor: "#f5f7ff",
         scale: 2,
         useCORS: true,
         allowTaint: true,
         width: CARD_SIZE,
         height: CARD_SIZE,
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: CARD_SIZE,
+        windowHeight: CARD_SIZE,
       });
       return canvas.toDataURL("image/png");
     } finally {
@@ -137,8 +141,8 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        justifyContent: "flex-start",
-        padding: 0,
+        justifyContent: "space-between",
+        padding: "48px 32px 32px 32px",
         boxSizing: "border-box",
         color: "#222",
         fontFamily: "Inter, sans-serif",
@@ -147,139 +151,140 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
         top: 0,
         zIndex: -1,
         overflow: "hidden",
+        transform: "translateZ(0)",
       }}
     >
-      {/* Avatar */}
+      {/* Top Section - Avatar and Name */}
       <div
         style={{
-          marginTop: 48,
-          marginBottom: 32,
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
+          flex: 1,
         }}
       >
+        {/* Avatar */}
         <div
           style={{
-            width: 144,
-            height: 144,
+            width: 112,
+            height: 112,
             borderRadius: "50%",
-            border: "8px solid #fff",
-            boxShadow: "0 4px 24px #0001",
-            overflow: "hidden",
+            background: "#f7f8fa",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            background: "#e0e7ef",
+            margin: "0 auto 24px auto",
+            border: "8px solid #fff",
+            boxShadow: "0 2px 12px #0001",
           }}
         >
-          {(() => {
-            let avatarSrc = "";
-            if (userProfile.nadAvatar) {
-              if (/^https?:\/\//.test(userProfile.nadAvatar)) {
-                avatarSrc = `/api/proxy-image?url=${encodeURIComponent(
-                  userProfile.nadAvatar
-                )}`;
+          <Image
+            src={(() => {
+              let avatarSrc = "";
+              if (userProfile.nadAvatar) {
+                if (/^https?:\/\//.test(userProfile.nadAvatar)) {
+                  avatarSrc = `/api/proxy-image?url=${encodeURIComponent(
+                    userProfile.nadAvatar
+                  )}`;
+                } else {
+                  avatarSrc = userProfile.nadAvatar;
+                }
               } else {
-                avatarSrc = userProfile.nadAvatar;
+                avatarSrc = `/avatar_${parseInt(userProfile.rank) % 6}.png`;
               }
-            } else {
-              avatarSrc = `/avatar_${parseInt(userProfile.rank) % 6}.png`;
-            }
-            return (
-              <Image
-                src={avatarSrc}
-                alt="Profile"
-                width={144}
-                height={144}
-                style={{
-                  width: 144,
-                  height: 144,
-                  objectFit: "cover",
-                  display: "block",
-                }}
-                onError={(e) => {
-                  e.currentTarget.style.display = "none";
-                }}
-              />
-            );
-          })()}
+              return avatarSrc;
+            })()}
+            alt="Profile"
+            width={88}
+            height={88}
+            style={{
+              width: 88,
+              height: 88,
+              borderRadius: "50%",
+              objectFit: "cover",
+              display: "block",
+              background: "#f7f8fa",
+            }}
+            onError={(e) => {
+              e.currentTarget.style.display = "none";
+            }}
+          />
         </div>
-      </div>
 
-      {/* Name & Address */}
-      <div style={{ textAlign: "center", marginBottom: 24, width: "100%" }}>
-        <div
-          style={{
-            fontSize: 44,
-            fontWeight: 800,
-            color: "#222",
-            lineHeight: 1.1,
-            wordBreak: "break-word",
-            marginBottom: 8,
-          }}
-        >
-          {userProfile.nadName || formatAddress(userProfile.address)}
-        </div>
-        <div
-          style={{
-            fontSize: 22,
-            color: "#6b7280",
-            fontFamily: "monospace",
-          }}
-        >
-          {formatAddress(userProfile.address)}
-        </div>
-      </div>
-
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 16,
-          marginBottom: 40,
-          width: "100%",
-        }}
-      >
-        {referralStats?.referralCode && (
+        {/* Name & Address */}
+        <div style={{ textAlign: "center", marginBottom: 24, width: "100%" }}>
           <div
             style={{
-              background: "#8b5cf6",
-              color: "#fff",
-              borderRadius: 20,
-              padding: "14px 32px",
-              fontWeight: 700,
-              fontSize: 28,
-              letterSpacing: 1,
-              boxShadow: "0 2px 12px #8b5cf655",
-              maxWidth: "90%",
-              textAlign: "center",
-              overflowWrap: "break-word",
+              fontSize: 44,
+              fontWeight: 800,
+              color: "#222",
+              lineHeight: 1.1,
+              wordBreak: "break-word",
+              marginBottom: 8,
             }}
           >
-            Referral Code: {referralStats.referralCode}
+            {userProfile.nadName || formatAddress(userProfile.address)}
           </div>
-        )}
+          <div
+            style={{
+              fontSize: 22,
+              color: "#6b7280",
+              fontFamily: "monospace",
+            }}
+          >
+            {formatAddress(userProfile.address)}
+          </div>
+        </div>
 
-        {/* User Level Badge */}
+        {/* Referral Code and Level Badge */}
         <div
           style={{
-            background: "#fff",
-            color: "#8b5cf6",
-            border: "2px solid #8b5cf6",
-            borderRadius: 16,
-            fontWeight: 700,
-            fontSize: 22,
-            padding: "8px 24px",
-            textAlign: "center",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 16,
+            width: "100%",
           }}
         >
-          Level {getLevelInfo(userProfile.points).level}
+          {referralStats?.referralCode && (
+            <div
+              style={{
+                background: "#8b5cf6",
+                color: "#fff",
+                borderRadius: 20,
+                padding: "14px 32px",
+                fontWeight: 700,
+                fontSize: 28,
+                letterSpacing: 1,
+                boxShadow: "0 2px 12px #8b5cf655",
+                maxWidth: "90%",
+                textAlign: "center",
+                overflowWrap: "break-word",
+              }}
+            >
+              Referral Code: {referralStats.referralCode}
+            </div>
+          )}
+
+          {/* User Level Badge */}
+          <div
+            style={{
+              background: "#fff",
+              color: "#8b5cf6",
+              border: "2px solid #8b5cf6",
+              borderRadius: 16,
+              fontWeight: 700,
+              fontSize: 22,
+              padding: "8px 24px",
+              textAlign: "center",
+            }}
+          >
+            Level {getLevelInfo(userProfile.points).level}
+          </div>
         </div>
       </div>
 
-      {/* Stats Row - Fixed alignment */}
+      {/* Stats Row */}
       <div
         style={{
           display: "flex",
@@ -287,7 +292,7 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
           alignItems: "center",
           gap: 56,
           width: "100%",
-          marginBottom: 48,
+          marginBottom: 32,
         }}
       >
         {/* Rank */}
@@ -397,7 +402,7 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
       {/* Footer Bar */}
       <div
         style={{
-          width: "92%",
+          width: "100%",
           background: "linear-gradient(90deg, #8b5cf6 0%, #6366f1 100%)",
           color: "#fff",
           borderRadius: 24,
@@ -407,8 +412,6 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
           alignItems: "center",
           fontSize: 20,
           fontWeight: 700,
-          marginTop: "auto",
-          marginBottom: 32,
         }}
       >
         <span>Join the Gorillionaire community!</span>
