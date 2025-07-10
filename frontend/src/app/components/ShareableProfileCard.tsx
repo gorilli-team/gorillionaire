@@ -164,6 +164,27 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
     if (!exportRef.current) return;
     setIsGenerating(true);
     try {
+      // Small delay to ensure DOM is fully rendered
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Wait for images to load before generating canvas
+      const images = exportRef.current.querySelectorAll("img");
+      await Promise.all(
+        Array.from(images).map(
+          (img) =>
+            new Promise((resolve) => {
+              if (img.complete && img.naturalWidth > 0) {
+                resolve(null);
+              } else {
+                img.onload = () => resolve(null);
+                img.onerror = () => resolve(null);
+                // Timeout after 5 seconds
+                setTimeout(() => resolve(null), 5000);
+              }
+            })
+        )
+      );
+
       const canvas = await html2canvas(exportRef.current, {
         backgroundColor: "#f5f7ff",
         scale: 2,
@@ -175,8 +196,13 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
         scrollY: 0,
         windowWidth: CARD_SIZE,
         windowHeight: CARD_SIZE,
+        logging: false, // Disable logging in production
+        imageTimeout: 5000, // 5 second timeout for images
       });
       return canvas.toDataURL("image/png");
+    } catch (error) {
+      console.error("Error generating card image:", error);
+      return null;
     } finally {
       setIsGenerating(false);
     }
@@ -282,7 +308,7 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
             boxShadow: "0 2px 12px #0001",
           }}
         >
-          <Image
+          <img
             src={(() => {
               let avatarSrc = "";
               if (userProfile.nadAvatar) {
@@ -299,8 +325,6 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
               return avatarSrc;
             })()}
             alt="Profile"
-            width={140}
-            height={140}
             style={{
               width: 140,
               height: 140,
@@ -308,6 +332,13 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
               objectFit: "cover",
               display: "block",
               background: "#f7f8fa",
+            }}
+            crossOrigin="anonymous"
+            onError={(e) => {
+              // Fallback to default avatar if image fails to load
+              e.currentTarget.src = `/avatar_${
+                parseInt(userProfile.rank) % 6
+              }.png`;
             }}
           />
         </div>
