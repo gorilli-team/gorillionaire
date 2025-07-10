@@ -29,17 +29,58 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.className}>
       <head>
-        <link
-          rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.1/css/all.min.css"
-          integrity="sha512-5Hs3dF2AEPkpNAR7UiOHba+lRSJNeM2ECkwxUIxC1Q/FLycGTbNapWXB4tP889k5T5Ju8fs4b1P5z/iB4nMfSQ=="
-          crossOrigin="anonymous"
-        />
+        {/* Preload critical resources */}
         <link
           rel="preconnect"
           href="https://fonts.googleapis.com"
           crossOrigin="anonymous"
         />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preconnect"
+          href="https://cdnjs.cloudflare.com"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preconnect"
+          href="https://s3.tradingview.com"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preconnect"
+          href="https://cloud.umami.is"
+          crossOrigin="anonymous"
+        />
+
+        {/* DNS prefetch for external domains */}
+        <link rel="dns-prefetch" href="//fonts.googleapis.com" />
+        <link rel="dns-prefetch" href="//cdnjs.cloudflare.com" />
+        <link rel="dns-prefetch" href="//s3.tradingview.com" />
+        <link rel="dns-prefetch" href="//cloud.umami.is" />
+
+        {/* Preload critical CSS */}
+        <link
+          rel="preload"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.1/css/all.min.css"
+          as="style"
+          onLoad={(e) => {
+            const target = e.target as HTMLLinkElement;
+            target.onload = null;
+            target.rel = "stylesheet";
+          }}
+        />
+        <noscript>
+          <link
+            rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.1/css/all.min.css"
+            integrity="sha512-5Hs3dF2AEPkpNAR7UiOHba+lRSJNeM2ECkwxUIxC1Q/FLycGTbNapWXB4tP889k5T5Ju8fs4b1P5z/iB4nMfSQ=="
+            crossOrigin="anonymous"
+          />
+        </noscript>
         <Script
           src="https://s3.tradingview.com/tv.js"
           strategy="afterInteractive"

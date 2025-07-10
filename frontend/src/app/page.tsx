@@ -5,10 +5,14 @@ import Sidebar from "./components/sidebar/index";
 import Header from "./components/header/index";
 import Main from "./components/main/index";
 import mixpanel from "mixpanel-browser";
+import { usePerformance } from "./hooks/usePerformance";
 
 export default function AppLayout() {
   const [selectedPage, setSelectedPage] = useState("Signals");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Initialize performance monitoring
+  usePerformance();
 
   useEffect(() => {
     mixpanel.init("519618776e9d2c52e9b4a4c02ae75267", {
