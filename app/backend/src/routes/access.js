@@ -34,7 +34,7 @@ router.post("/verify", async (req, res) => {
         });
       } else {
         // Enable V2 access if not already enabled
-        if (!userActivity.v2Access.enabled) {
+        if (!userActivity.v2Access || !userActivity.v2Access.enabled) {
           userActivity.v2Access = {
             enabled: true,
             enabledAt: new Date(),
@@ -49,6 +49,7 @@ router.post("/verify", async (req, res) => {
         success: true,
         message: "V2 access granted",
         v2Enabled: true,
+        accessCodeUsed: "DIRECT_ACCESS",
       });
     }
 
@@ -107,7 +108,7 @@ router.post("/verify", async (req, res) => {
       isNewV2Access = true;
     } else {
       // Enable V2 access if not already enabled
-      if (!userActivity.v2Access.enabled) {
+      if (!userActivity.v2Access || !userActivity.v2Access.enabled) {
         userActivity.v2Access = {
           enabled: true,
           enabledAt: new Date(),
@@ -133,6 +134,7 @@ router.post("/verify", async (req, res) => {
       success: true,
       message: "Access code redeemed successfully",
       v2Enabled: true,
+      accessCodeUsed: code.toUpperCase(),
     });
   } catch (error) {
     console.error("Error verifying access code:", error);
