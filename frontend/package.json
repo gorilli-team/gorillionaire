@@ -36,6 +36,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/recharts": "^1.8.29",
+    "@next/bundle-analyzer": "^13.1.1",
     "eslint": "^9",
     "eslint-config-next": "15.1.6",
     "postcss": "^8",
