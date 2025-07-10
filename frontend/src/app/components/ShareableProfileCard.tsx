@@ -688,7 +688,7 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
                     {getOrdinalSuffix(userProfile.rank)}
                   </span>
                 </div>
-                <div className="text-xs font-semibold text-gray-600 [text-shadow:_3px_3px_6px_rgba(255,255,255,0.8),_-3px_-3px_6px_rgba(255,255,255,0.8),3px_-3px_6px_rgba(255,255,255,0.8),_-3px_3px_6px_rgba(255,255,255,0.8)]">
+                <div className="text-xs font-semibold text-gray-900 [text-shadow:_3px_3px_6px_rgba(255,255,255,0.8),_-3px_-3px_6px_rgba(255,255,255,0.8),3px_-3px_6px_rgba(255,255,255,0.8),_-3px_3px_6px_rgba(255,255,255,0.8)]">
                   Global Rank
                 </div>
               </div>
@@ -696,7 +696,7 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
                 <div className="text-lg font-bold text-gray-900 mb-0.5 [text-shadow:_3px_3px_6px_rgba(255,255,255,0.8),_-3px_-3px_6px_rgba(255,255,255,0.8),3px_-3px_6px_rgba(255,255,255,0.8),_-3px_3px_6px_rgba(255,255,255,0.8)]">
                   {userProfile.points.toLocaleString()}
                 </div>
-                <div className="text-xs font-semibold text-gray-600 [text-shadow:_3px_3px_6px_rgba(255,255,255,0.8),_-3px_-3px_6px_rgba(255,255,255,0.8),3px_-3px_6px_rgba(255,255,255,0.8),_-3px_3px_6px_rgba(255,255,255,0.8)]">
+                <div className="text-xs font-semibold text-gray-900 [text-shadow:_3px_3px_6px_rgba(255,255,255,0.8),_-3px_-3px_6px_rgba(255,255,255,0.8),3px_-3px_6px_rgba(255,255,255,0.8),_-3px_3px_6px_rgba(255,255,255,0.8)]">
                   Points
                 </div>
               </div>
@@ -704,7 +704,7 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
                 <div className="text-lg font-bold text-gray-900 mb-0.5 [text-shadow:_3px_3px_6px_rgba(255,255,255,0.8),_-3px_-3px_6px_rgba(255,255,255,0.8),3px_-3px_6px_rgba(255,255,255,0.8),_-3px_3px_6px_rgba(255,255,255,0.8)]">
                   ${formatNumber(userProfile.dollarValue)}
                 </div>
-                <div className="text-xs font-semibold text-gray-600 [text-shadow:_3px_3px_6px_rgba(255,255,255,0.8),_-3px_-3px_6px_rgba(255,255,255,0.8),3px_-3px_6px_rgba(255,255,255,0.8),_-3px_3px_6px_rgba(255,255,255,0.8)]">
+                <div className="text-xs font-semibold text-gray-900 [text-shadow:_3px_3px_6px_rgba(255,255,255,0.8),_-3px_-3px_6px_rgba(255,255,255,0.8),3px_-3px_6px_rgba(255,255,255,0.8),_-3px_3px_6px_rgba(255,255,255,0.8)]">
                   Volume
                 </div>
               </div>
@@ -713,7 +713,7 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
                   <div className="text-lg font-bold text-gray-900 mb-0.5 [text-shadow:_3px_3px_6px_rgba(255,255,255,0.8),_-3px_-3px_6px_rgba(255,255,255,0.8),3px_-3px_6px_rgba(255,255,255,0.8),_-3px_3px_6px_rgba(255,255,255,0.8)]">
                     {totalTransactions.toLocaleString()}
                   </div>
-                  <div className="text-xs font-semibold text-gray-600 [text-shadow:_3px_3px_6px_rgba(255,255,255,0.8),_-3px_-3px_6px_rgba(255,255,255,0.8),3px_-3px_6px_rgba(255,255,255,0.8),_-3px_3px_6px_rgba(255,255,255,0.8)]">
+                  <div className="text-xs font-semibold text-gray-900 [text-shadow:_3px_3px_6px_rgba(255,255,255,0.8),_-3px_-3px_6px_rgba(255,255,255,0.8),3px_-3px_6px_rgba(255,255,255,0.8),_-3px_3px_6px_rgba(255,255,255,0.8)]">
                     Transactions
                   </div>
                 </div>
