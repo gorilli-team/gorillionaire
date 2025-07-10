@@ -670,11 +670,11 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
                 height={80}
                 className="rounded-full border-4 border-white shadow-lg mb-2"
               />
-              <h2 className="text-xl font-bold text-gray-900 mt-1 mb-1">
+              <h2 className="text-xl font-bold text-gray-900 mt-1 mb-1 [text-shadow:_3px_3px_6px_rgba(255,255,255,0.8),_-3px_-3px_6px_rgba(255,255,255,0.8),3px_-3px_6px_rgba(255,255,255,0.8),_-3px_3px_6px_rgba(255,255,255,0.8)]">
                 {userProfile.nadName || formatAddress(userProfile.address)}
               </h2>
               {userProfile.nadName && (
-                <p className="text-gray-600 text-xs font-mono mb-1">
+                <p className="text-gray-600 text-xs font-mono mb-1 [text-shadow:_3px_3px_6px_rgba(255,255,255,0.8),_-3px_-3px_6px_rgba(255,255,255,0.8),3px_-3px_6px_rgba(255,255,255,0.8),_-3px_3px_6px_rgba(255,255,255,0.8)]">
                   {formatAddress(userProfile.address)}
                 </p>
               )}
@@ -682,32 +682,40 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
             {/* Stats row */}
             <div className="flex justify-center gap-6 pb-3 pt-2">
               <div className="text-center">
-                <div className="text-lg font-bold text-gray-900 mb-0.5">
+                <div className="text-lg font-bold text-gray-900 mb-0.5 [text-shadow:_3px_3px_6px_rgba(255,255,255,0.8),_-3px_-3px_6px_rgba(255,255,255,0.8),3px_-3px_6px_rgba(255,255,255,0.8),_-3px_3px_6px_rgba(255,255,255,0.8)]">
                   {userProfile.rank}
                   <span className="text-xs">
                     {getOrdinalSuffix(userProfile.rank)}
                   </span>
                 </div>
-                <div className="text-xs text-gray-600">Global Rank</div>
+                <div className="text-xs text-gray-600 [text-shadow:_3px_3px_6px_rgba(255,255,255,0.8),_-3px_-3px_6px_rgba(255,255,255,0.8),3px_-3px_6px_rgba(255,255,255,0.8),_-3px_3px_6px_rgba(255,255,255,0.8)]">
+                  Global Rank
+                </div>
               </div>
               <div className="text-center">
-                <div className="text-lg font-bold text-gray-900 mb-0.5">
+                <div className="text-lg font-bold text-gray-900 mb-0.5 [text-shadow:_3px_3px_6px_rgba(255,255,255,0.8),_-3px_-3px_6px_rgba(255,255,255,0.8),3px_-3px_6px_rgba(255,255,255,0.8),_-3px_3px_6px_rgba(255,255,255,0.8)]">
                   {userProfile.points.toLocaleString()}
                 </div>
-                <div className="text-xs text-gray-600">Points</div>
+                <div className="text-xs text-gray-600 [text-shadow:_3px_3px_6px_rgba(255,255,255,0.8),_-3px_-3px_6px_rgba(255,255,255,0.8),3px_-3px_6px_rgba(255,255,255,0.8),_-3px_3px_6px_rgba(255,255,255,0.8)]">
+                  Points
+                </div>
               </div>
               <div className="text-center">
-                <div className="text-lg font-bold text-gray-900 mb-0.5">
+                <div className="text-lg font-bold text-gray-900 mb-0.5 [text-shadow:_3px_3px_6px_rgba(255,255,255,0.8),_-3px_-3px_6px_rgba(255,255,255,0.8),3px_-3px_6px_rgba(255,255,255,0.8),_-3px_3px_6px_rgba(255,255,255,0.8)]">
                   ${formatNumber(userProfile.dollarValue)}
                 </div>
-                <div className="text-xs text-gray-600">Volume</div>
+                <div className="text-xs text-gray-600 [text-shadow:_3px_3px_6px_rgba(255,255,255,0.8),_-3px_-3px_6px_rgba(255,255,255,0.8),3px_-3px_6px_rgba(255,255,255,0.8),_-3px_3px_6px_rgba(255,255,255,0.8)]">
+                  Volume
+                </div>
               </div>
               {typeof totalTransactions === "number" && (
                 <div className="text-center">
-                  <div className="text-lg font-bold text-gray-900 mb-0.5">
+                  <div className="text-lg font-bold text-gray-900 mb-0.5 [text-shadow:_3px_3px_6px_rgba(255,255,255,0.8),_-3px_-3px_6px_rgba(255,255,255,0.8),3px_-3px_6px_rgba(255,255,255,0.8),_-3px_3px_6px_rgba(255,255,255,0.8)]">
                     {totalTransactions.toLocaleString()}
                   </div>
-                  <div className="text-xs text-gray-600">Transactions</div>
+                  <div className="text-xs text-gray-600 [text-shadow:_3px_3px_6px_rgba(255,255,255,0.8),_-3px_-3px_6px_rgba(255,255,255,0.8),3px_-3px_6px_rgba(255,255,255,0.8),_-3px_3px_6px_rgba(255,255,255,0.8)]">
+                    Transactions
+                  </div>
                 </div>
               )}
             </div>
