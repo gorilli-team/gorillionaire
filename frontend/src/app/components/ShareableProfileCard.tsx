@@ -20,6 +20,7 @@ interface ShareableProfileCardProps {
     totalPointsEarned: number;
   } | null;
   totalTransactions?: number;
+  isOwnProfile?: boolean;
 }
 
 const CARD_SIZE = 800; // 1:1 aspect ratio
@@ -28,6 +29,7 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
   userProfile,
   referralStats,
   totalTransactions,
+  isOwnProfile,
 }) => {
   const exportRef = useRef<HTMLDivElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -422,8 +424,8 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
       {ExportCard}
 
       {/* Visible preview */}
-      <div className="bg-white rounded-lg shadow-lg p-3">
-        <div className="mb-2 flex justify-center">
+      <div className="bg-white rounded-lg shadow-lg">
+        <div className="flex justify-center">
           <div className="w-full max-w-xl bg-gradient-to-br from-violet-50 via-indigo-50 to-purple-50 rounded-xl shadow-lg flex flex-col justify-between py-6 px-4 min-h-[320px]">
             {/* Referral and Level badges side by side */}
             <div className="flex flex-row items-center justify-between w-full mb-3">
@@ -496,63 +498,67 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
             </div>
           </div>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <button
-            onClick={shareOnX}
-            disabled={isSharing || isGenerating}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-black text-white rounded-lg font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSharing ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                Sharing...
-              </>
-            ) : (
-              <>
-                <svg
-                  className="w-5 h-5"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                </svg>
-                Share on X
-              </>
-            )}
-          </button>
-          <button
-            onClick={downloadCard}
-            disabled={isGenerating}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-lg font-medium hover:bg-violet-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isGenerating ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                Generating...
-              </>
-            ) : (
-              <>
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                  />
-                </svg>
-                Download Card
-              </>
-            )}
-          </button>
-        </div>
-        <p className="text-xs text-gray-500 mt-2 text-center">
-          Share your achievements with the Gorillionaire community! 🦍
-        </p>
+        {isOwnProfile && (
+          <>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button
+                onClick={shareOnX}
+                disabled={isSharing || isGenerating}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-black text-white rounded-lg font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSharing ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Sharing...
+                  </>
+                ) : (
+                  <>
+                    <svg
+                      className="w-5 h-5"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                    </svg>
+                    Share on X
+                  </>
+                )}
+              </button>
+              <button
+                onClick={downloadCard}
+                disabled={isGenerating}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-lg font-medium hover:bg-violet-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isGenerating ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                      />
+                    </svg>
+                    Download Card
+                  </>
+                )}
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mt-2 text-center">
+              Share your achievements with the Gorillionaire community! 🦍
+            </p>
+          </>
+        )}
       </div>
     </div>
   );

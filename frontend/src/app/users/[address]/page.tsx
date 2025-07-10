@@ -1242,6 +1242,7 @@ const UserProfilePage = () => {
                     }}
                     referralStats={referralStats}
                     totalTransactions={userProfile.pagination?.total}
+                    isOwnProfile={isOwnProfile}
                   />
                 </div>
                 {/* )} */}
