@@ -1166,64 +1166,64 @@ const UserProfilePage = () => {
                         </div>
 
                         {/* Referred Users List - only show if toggled */}
-                        {showReferredUsers &&
-                          referralStats.referredUsers.length > 0 && (
-                            <div className="space-y-2">
-                              <h4 className="text-sm font-semibold text-gray-900">
-                                Referred Users
-                              </h4>
-                              <div className="max-h-48 overflow-y-auto space-y-2">
-                                {referralStats.referredUsers.map(
-                                  (user, index) => (
-                                    <Link
-                                      href={`/users/${user.address}`}
-                                      key={user.address}
-                                      className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                                    >
-                                      <div className="w-8 h-8 rounded-full overflow-hidden border border-gray-200">
-                                        <Image
-                                          src={
-                                            user.nadAvatar ||
-                                            `/avatar_${index % 6}.png`
-                                          }
-                                          alt="User Avatar"
-                                          width={32}
-                                          height={32}
-                                          className="w-full h-full object-cover"
-                                        />
-                                      </div>
-                                      <div className="flex-1 min-w-0">
-                                        <div className="text-sm font-medium text-gray-900 truncate">
-                                          {user.nadName ||
-                                            formatAddress(user.address)}
+                        {showReferredUsers && (
+                          <div className="space-y-2">
+                            {referralStats.referredUsers.length > 0 ? (
+                              <>
+                                <h4 className="text-sm font-semibold text-gray-900">
+                                  Referred Users
+                                </h4>
+                                <div className="max-h-48 overflow-y-auto space-y-2">
+                                  {referralStats.referredUsers.map(
+                                    (user, index) => (
+                                      <Link
+                                        href={`/users/${user.address}`}
+                                        key={user.address}
+                                        className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                                      >
+                                        <div className="w-8 h-8 rounded-full overflow-hidden border border-gray-200">
+                                          <Image
+                                            src={
+                                              user.nadAvatar ||
+                                              `/avatar_${index % 6}.png`
+                                            }
+                                            alt="User Avatar"
+                                            width={32}
+                                            height={32}
+                                            className="w-full h-full object-cover"
+                                          />
                                         </div>
-                                        <div className="text-xs text-gray-500">
-                                          {user.totalPoints} pts • Joined{" "}
-                                          {formatDate(user.joinedAt)}
+                                        <div className="flex-1 min-w-0">
+                                          <div className="text-sm font-medium text-gray-900 truncate">
+                                            {user.nadName ||
+                                              formatAddress(user.address)}
+                                          </div>
+                                          <div className="text-xs text-gray-500">
+                                            {user.totalPoints} pts • Joined{" "}
+                                            {formatDate(user.joinedAt)}
+                                          </div>
                                         </div>
-                                      </div>
-                                      <div className="text-xs text-green-600 font-medium">
-                                        +{user.pointsEarned}
-                                      </div>
-                                    </Link>
-                                  )
-                                )}
+                                        <div className="text-xs text-green-600 font-medium">
+                                          +{user.pointsEarned}
+                                        </div>
+                                      </Link>
+                                    )
+                                  )}
+                                </div>
+                              </>
+                            ) : (
+                              <div className="text-center py-6 text-gray-500">
+                                <div className="text-4xl mb-2">🤝</div>
+                                <div className="text-sm font-medium mb-1">
+                                  No referrals yet
+                                </div>
+                                <div className="text-xs">
+                                  {isOwnProfile
+                                    ? "Share your referral code to start earning points!"
+                                    : "This user hasn't referred anyone yet"}
+                                </div>
                               </div>
-                            </div>
-                          )}
-
-                        {/* Empty State */}
-                        {referralStats.totalReferred === 0 && (
-                          <div className="text-center py-6 text-gray-500">
-                            <div className="text-4xl mb-2">🤝</div>
-                            <div className="text-sm font-medium mb-1">
-                              No referrals yet
-                            </div>
-                            <div className="text-xs">
-                              {isOwnProfile
-                                ? "Share your referral code to start earning points!"
-                                : "This user hasn't referred anyone yet"}
-                            </div>
+                            )}
                           </div>
                         )}
                       </div>

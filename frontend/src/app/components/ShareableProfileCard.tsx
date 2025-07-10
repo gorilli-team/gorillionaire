@@ -129,6 +129,36 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
     }
   };
 
+  const handleRemoveBg = async () => {
+    setBgLoading(true);
+    try {
+      // Save null to backend to remove background
+      const saveRes = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/activity/track/profile-bg`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            address: userProfile.address,
+            profileBgImage: null,
+          }),
+        }
+      );
+      if (!saveRes.ok) {
+        setBgError("Failed to remove background. Try again.");
+        setBgLoading(false);
+        return;
+      }
+      setProxiedBg(undefined);
+      setBgInput("");
+      setShowBgModal(false);
+    } catch {
+      setBgError("Unexpected error. Try again.");
+    } finally {
+      setBgLoading(false);
+    }
+  };
+
   // Export logic uses the hidden exportRef
   const generateCardImage = async () => {
     if (!exportRef.current) return;
@@ -209,7 +239,6 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
       style={{
         width: `${CARD_SIZE}px`,
         height: `${CARD_SIZE}px`,
-        borderRadius: 32,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -294,7 +323,7 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
               wordBreak: "break-word",
               marginBottom: 8,
               textShadow:
-                "2px 2px 4px rgba(255,255,255,0.8), -2px -2px 4px rgba(255,255,255,0.8), 2px -2px 4px rgba(255,255,255,0.8), -2px 2px 4px rgba(255,255,255,0.8)",
+                "3px 3px 6px rgba(255,255,255,0.8), -3px -3px 6px rgba(255,255,255,0.8), 3px -3px 6px rgba(255,255,255,0.8), -3px 3px 6px rgba(255,255,255,0.8)",
             }}
           >
             {userProfile.nadName || formatAddress(userProfile.address)}
@@ -305,7 +334,7 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
               color: "#222",
               fontFamily: "monospace",
               textShadow:
-                "2px 2px 4px rgba(255,255,255,0.8), -2px -2px 4px rgba(255,255,255,0.8), 2px -2px 4px rgba(255,255,255,0.8), -2px 2px 4px rgba(255,255,255,0.8)",
+                "3px 3px 6px rgba(255,255,255,0.8), -3px -3px 6px rgba(255,255,255,0.8), 3px -3px 6px rgba(255,255,255,0.8), -3px 3px 6px rgba(255,255,255,0.8)",
             }}
           >
             {formatAddress(userProfile.address)}
@@ -355,7 +384,7 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
               padding: "8px 24px",
               textAlign: "center",
               textShadow:
-                "2px 2px 4px rgba(255,255,255,0.8), -2px -2px 4px rgba(255,255,255,0.8), 2px -2px 4px rgba(255,255,255,0.8), -2px 2px 4px rgba(255,255,255,0.8)",
+                "3px 3px 6px rgba(255,255,255,0.8), -3px -3px 6px rgba(255,255,255,0.8), 3px -3px 6px rgba(255,255,255,0.8), -3px 3px 6px rgba(255,255,255,0.8)",
             }}
           >
             Level {getLevelInfo(userProfile.points).level}
@@ -384,7 +413,7 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
               lineHeight: 1.2,
               marginBottom: 8,
               textShadow:
-                "2px 2px 4px rgba(255,255,255,0.8), -2px -2px 4px rgba(255,255,255,0.8), 2px -2px 4px rgba(255,255,255,0.8), -2px 2px 4px rgba(255,255,255,0.8)",
+                "3px 3px 6px rgba(255,255,255,0.8), -3px -3px 6px rgba(255,255,255,0.8), 3px -3px 6px rgba(255,255,255,0.8), -3px 3px 6px rgba(255,255,255,0.8)",
             }}
           >
             {userProfile.rank}
@@ -400,7 +429,7 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
               color: "#222",
               fontWeight: 500,
               textShadow:
-                "2px 2px 4px rgba(255,255,255,0.8), -2px -2px 4px rgba(255,255,255,0.8), 2px -2px 4px rgba(255,255,255,0.8), -2px 2px 4px rgba(255,255,255,0.8)",
+                "3px 3px 6px rgba(255,255,255,0.8), -3px -3px 6px rgba(255,255,255,0.8), 3px -3px 6px rgba(255,255,255,0.8), -3px 3px 6px rgba(255,255,255,0.8)",
             }}
           >
             Global Rank
@@ -417,7 +446,7 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
               lineHeight: 1.2,
               marginBottom: 8,
               textShadow:
-                "2px 2px 4px rgba(255,255,255,0.8), -2px -2px 4px rgba(255,255,255,0.8), 2px -2px 4px rgba(255,255,255,0.8), -2px 2px 4px rgba(255,255,255,0.8)",
+                "3px 3px 6px rgba(255,255,255,0.8), -3px -3px 6px rgba(255,255,255,0.8), 3px -3px 6px rgba(255,255,255,0.8), -3px 3px 6px rgba(255,255,255,0.8)",
             }}
           >
             {userProfile.points.toLocaleString()}
@@ -428,7 +457,7 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
               color: "#222",
               fontWeight: 500,
               textShadow:
-                "2px 2px 4px rgba(255,255,255,0.8), -2px -2px 4px rgba(255,255,255,0.8), 2px -2px 4px rgba(255,255,255,0.8), -2px 2px 4px rgba(255,255,255,0.8)",
+                "3px 3px 6px rgba(255,255,255,0.8), -3px -3px 6px rgba(255,255,255,0.8), 3px -3px 6px rgba(255,255,255,0.8), -3px 3px 6px rgba(255,255,255,0.8)",
             }}
           >
             Points
@@ -445,7 +474,7 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
               lineHeight: 1.2,
               marginBottom: 8,
               textShadow:
-                "2px 2px 4px rgba(255,255,255,0.8), -2px -2px 4px rgba(255,255,255,0.8), 2px -2px 4px rgba(255,255,255,0.8), -2px 2px 4px rgba(255,255,255,0.8)",
+                "3px 3px 6px rgba(255,255,255,0.8), -3px -3px 6px rgba(255,255,255,0.8), 3px -3px 6px rgba(255,255,255,0.8), -3px 3px 6px rgba(255,255,255,0.8)",
             }}
           >
             ${formatNumber(userProfile.dollarValue)}
@@ -456,7 +485,7 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
               color: "#222",
               fontWeight: 500,
               textShadow:
-                "2px 2px 4px rgba(255,255,255,0.8), -2px -2px 4px rgba(255,255,255,0.8), 2px -2px 4px rgba(255,255,255,0.8), -2px 2px 4px rgba(255,255,255,0.8)",
+                "3px 3px 6px rgba(255,255,255,0.8), -3px -3px 6px rgba(255,255,255,0.8), 3px -3px 6px rgba(255,255,255,0.8), -3px 3px 6px rgba(255,255,255,0.8)",
             }}
           >
             Volume
@@ -474,7 +503,7 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
                 lineHeight: 1.2,
                 marginBottom: 8,
                 textShadow:
-                  "2px 2px 4px rgba(255,255,255,0.8), -2px -2px 4px rgba(255,255,255,0.8), 2px -2px 4px rgba(255,255,255,0.8), -2px 2px 4px rgba(255,255,255,0.8)",
+                  "3px 3px 6px rgba(255,255,255,0.8), -3px -3px 6px rgba(255,255,255,0.8), 3px -3px 6px rgba(255,255,255,0.8), -3px 3px 6px rgba(255,255,255,0.8)",
               }}
             >
               {totalTransactions.toLocaleString()}
@@ -485,7 +514,7 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
                 color: "#222",
                 fontWeight: 500,
                 textShadow:
-                  "2px 2px 4px rgba(255,255,255,0.8), -2px -2px 4px rgba(255,255,255,0.8), 2px -2px 4px rgba(255,255,255,0.8), -2px 2px 4px rgba(255,255,255,0.8)",
+                  "3px 3px 6px rgba(255,255,255,0.8), -3px -3px 6px rgba(255,255,255,0.8), 3px -3px 6px rgba(255,255,255,0.8), -3px 3px 6px rgba(255,255,255,0.8)",
               }}
             >
               Transactions
@@ -518,21 +547,6 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
   // --- Responsive Preview (visible) ---
   return (
     <div className="">
-      {/* Debug info - remove after testing */}
-      {isOwnProfile && (
-        <div
-          style={{
-            padding: 8,
-            background: "#f0f0f0",
-            marginBottom: 8,
-            fontSize: 12,
-          }}
-        >
-          Debug: backgroundImage = {backgroundImage || "null"}, proxiedBg ={" "}
-          {proxiedBg || "null"}
-        </div>
-      )}
-
       {/* Hidden export card for image generation */}
       {ExportCard}
 
@@ -579,6 +593,23 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
                 }}
               >
                 {bgLoading ? "Saving..." : "Save Background"}
+              </button>
+              <button
+                onClick={handleRemoveBg}
+                disabled={bgLoading}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: 8,
+                  background: "#dc2626",
+                  color: "#fff",
+                  fontWeight: 700,
+                  fontSize: 16,
+                  border: "none",
+                  cursor: "pointer",
+                  opacity: bgLoading ? 0.6 : 1,
+                }}
+              >
+                {bgLoading ? "Removing..." : "Remove Background"}
               </button>
               <button
                 onClick={() => {

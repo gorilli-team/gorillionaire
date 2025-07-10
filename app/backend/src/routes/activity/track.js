@@ -349,12 +349,15 @@ router.post("/profile-bg", async (req, res) => {
     const { address, profileBgImage } = req.body;
     const isValidImageUrl = (url) =>
       /^https:\/\/.+\.(jpg|jpeg|png|webp|gif)$/i.test(url);
-    if (!address || typeof profileBgImage !== "string") {
+    if (
+      !address ||
+      (profileBgImage !== null && typeof profileBgImage !== "string")
+    ) {
       return res
         .status(400)
         .json({ error: "Address and profileBgImage are required." });
     }
-    if (!isValidImageUrl(profileBgImage)) {
+    if (profileBgImage !== null && !isValidImageUrl(profileBgImage)) {
       return res.status(400).json({ error: "Invalid image URL." });
     }
     const user = await UserActivity.findOneAndUpdate(
