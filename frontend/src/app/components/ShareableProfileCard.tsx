@@ -259,6 +259,8 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
   };
 
   // --- Export Card Layout (hidden) ---
+  console.log("Export card - userProfile.nadAvatar:", userProfile.nadAvatar);
+  console.log("Export card - userProfile.rank:", userProfile.rank);
   const ExportCard = (
     <div
       ref={exportRef}
@@ -272,7 +274,8 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
         padding: "48px 32px 32px 32px",
         boxSizing: "border-box",
         color: "#222",
-        fontFamily: "Inter, sans-serif",
+        fontFamily:
+          "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
         position: "absolute",
         left: "-9999px",
         top: 0,
@@ -281,7 +284,13 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
         transform: "translateZ(0)",
         background: proxiedBg
           ? `url(${proxiedBg}) center/cover no-repeat`
-          : "#f5f7ff",
+          : "linear-gradient(to bottom right, #f5f7ff, #e0e7ff, #c7d2fe)",
+        // CSS Reset for export card
+        margin: 0,
+        border: 0,
+        outline: 0,
+        textDecoration: "none",
+        listStyle: "none",
       }}
     >
       {/* Top Section - Avatar and Name */}
@@ -312,15 +321,20 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
             src={(() => {
               let avatarSrc = "";
               if (userProfile.nadAvatar) {
+                // If it's an external URL, proxy it for the export card
                 if (/^https?:\/\//.test(userProfile.nadAvatar)) {
                   avatarSrc = `/api/proxy-image?url=${encodeURIComponent(
                     userProfile.nadAvatar
                   )}`;
+                  console.log("Export card - proxied avatar URL:", avatarSrc);
                 } else {
+                  // For relative paths, use directly
                   avatarSrc = userProfile.nadAvatar;
+                  console.log("Export card - direct avatar URL:", avatarSrc);
                 }
               } else {
                 avatarSrc = `/avatar_${parseInt(userProfile.rank) % 6}.png`;
+                console.log("Export card - fallback avatar URL:", avatarSrc);
               }
               return avatarSrc;
             })()}
@@ -334,7 +348,14 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
               background: "#f7f8fa",
             }}
             crossOrigin="anonymous"
+            onLoad={(e) => {
+              console.log("Export card image loaded:", e.currentTarget.src);
+            }}
             onError={(e) => {
+              console.error(
+                "Export card image failed to load:",
+                e.currentTarget.src
+              );
               // Fallback to default avatar if image fails to load
               e.currentTarget.src = `/avatar_${
                 parseInt(userProfile.rank) % 6

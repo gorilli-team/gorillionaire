@@ -1,7 +1,8 @@
 import { NextRequest } from "next/server";
 
 const isValidImageUrl = (url: string) =>
-  /^https:\/\/.+\.(jpg|jpeg|png|webp|gif)$/i.test(url);
+  /^https:\/\/.+\.(jpg|jpeg|png|webp|gif)$/i.test(url) ||
+  /^https:\/\/.+\.(com|net|org|io|co|app|dev|tech|ai|re)\/.+/i.test(url);
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
