@@ -3,6 +3,7 @@
 import React, { useRef, useState } from "react";
 import Image from "next/image";
 import html2canvas from "html2canvas";
+import { getLevelInfo } from "../utils/xp";
 
 interface ShareableProfileCardProps {
   userProfile: {
@@ -18,6 +19,7 @@ interface ShareableProfileCardProps {
     totalReferred: number;
     totalPointsEarned: number;
   } | null;
+  totalTransactions?: number;
 }
 
 const CARD_SIZE = 800; // 1:1 aspect ratio
@@ -25,6 +27,7 @@ const CARD_SIZE = 800; // 1:1 aspect ratio
 const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
   userProfile,
   referralStats,
+  totalTransactions,
 }) => {
   const exportRef = useRef<HTMLDivElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -148,7 +151,7 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
       <div
         style={{
           marginTop: 48,
-          marginBottom: 24,
+          marginBottom: 32,
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
@@ -201,8 +204,9 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
           })()}
         </div>
       </div>
+
       {/* Name & Address */}
-      <div style={{ textAlign: "center", marginBottom: 8, width: "100%" }}>
+      <div style={{ textAlign: "center", marginBottom: 24, width: "100%" }}>
         <div
           style={{
             fontSize: 44,
@@ -210,6 +214,7 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
             color: "#222",
             lineHeight: 1.1,
             wordBreak: "break-word",
+            marginBottom: 8,
           }}
         >
           {userProfile.nadName || formatAddress(userProfile.address)}
@@ -219,121 +224,175 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
             fontSize: 22,
             color: "#6b7280",
             fontFamily: "monospace",
-            marginTop: 6,
           }}
         >
           {formatAddress(userProfile.address)}
         </div>
       </div>
-      {/* Referral Code */}
-      {referralStats?.referralCode && (
+
+      {/* Referral Code + Level Badge Container */}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 16,
+          marginBottom: 40,
+          width: "100%",
+        }}
+      >
+        {referralStats?.referralCode && (
+          <div
+            style={{
+              background: "#8b5cf6",
+              color: "#fff",
+              borderRadius: 20,
+              padding: "14px 32px",
+              fontWeight: 700,
+              fontSize: 28,
+              letterSpacing: 1,
+              boxShadow: "0 2px 12px #8b5cf655",
+              maxWidth: "90%",
+              textAlign: "center",
+              overflowWrap: "break-word",
+            }}
+          >
+            Referral Code: {referralStats.referralCode}
+          </div>
+        )}
+
+        {/* User Level Badge */}
         <div
           style={{
-            margin: "28px 0 0 0",
-            background: "#8b5cf6",
-            color: "#fff",
-            borderRadius: 20,
-            padding: "14px 32px",
+            background: "#fff",
+            color: "#8b5cf6",
+            border: "2px solid #8b5cf6",
+            borderRadius: 16,
             fontWeight: 700,
-            fontSize: 28,
-            display: "inline-block",
-            letterSpacing: 1,
-            boxShadow: "0 2px 12px #8b5cf655",
-            maxWidth: "90%",
+            fontSize: 22,
+            padding: "8px 24px",
             textAlign: "center",
-            overflowWrap: "break-word",
           }}
         >
-          Referral Code: {referralStats.referralCode}
+          Level {getLevelInfo(userProfile.points).level}
         </div>
-      )}
-      {/* Stats Row */}
+      </div>
+
+      {/* Stats Row - Fixed alignment */}
       <div
         style={{
           display: "flex",
           justifyContent: "center",
-          alignItems: "flex-end",
-          gap: 48,
-          marginTop: 36,
-          marginBottom: 0,
+          alignItems: "center",
+          gap: 56,
           width: "100%",
+          marginBottom: 48,
         }}
       >
         {/* Rank */}
-        <div style={{ textAlign: "center", minWidth: 100 }}>
+        <div style={{ textAlign: "center", minWidth: 120 }}>
           <div
             style={{
-              fontSize: 36,
+              fontSize: 40,
               fontWeight: 700,
               color: "#222",
-              lineHeight: 1,
+              lineHeight: 1.2,
+              marginBottom: 8,
             }}
           >
             {userProfile.rank}
             <span
-              style={{ fontSize: 18, verticalAlign: "super", marginLeft: 2 }}
+              style={{ fontSize: 20, verticalAlign: "super", marginLeft: 2 }}
             >
               {getOrdinalSuffix(userProfile.rank)}
             </span>
           </div>
           <div
             style={{
-              fontSize: 16,
+              fontSize: 18,
               color: "#6b7280",
               fontWeight: 500,
-              marginTop: 6,
             }}
           >
             Global Rank
           </div>
         </div>
+
         {/* Points */}
-        <div style={{ textAlign: "center", minWidth: 100 }}>
+        <div style={{ textAlign: "center", minWidth: 120 }}>
           <div
             style={{
-              fontSize: 36,
+              fontSize: 40,
               fontWeight: 700,
               color: "#222",
-              lineHeight: 1,
+              lineHeight: 1.2,
+              marginBottom: 8,
             }}
           >
             {userProfile.points.toLocaleString()}
           </div>
           <div
             style={{
-              fontSize: 16,
+              fontSize: 18,
               color: "#6b7280",
               fontWeight: 500,
-              marginTop: 6,
             }}
           >
             Points
           </div>
         </div>
+
         {/* Volume */}
-        <div style={{ textAlign: "center", minWidth: 100 }}>
+        <div style={{ textAlign: "center", minWidth: 120 }}>
           <div
             style={{
-              fontSize: 36,
+              fontSize: 40,
               fontWeight: 700,
               color: "#222",
-              lineHeight: 1,
+              lineHeight: 1.2,
+              marginBottom: 8,
             }}
           >
             ${formatNumber(userProfile.dollarValue)}
           </div>
           <div
             style={{
-              fontSize: 16,
+              fontSize: 18,
               color: "#6b7280",
               fontWeight: 500,
-              marginTop: 6,
             }}
           >
             Volume
           </div>
         </div>
+
+        {/* Transactions */}
+        {typeof totalTransactions === "number" && (
+          <div style={{ textAlign: "center", minWidth: 120 }}>
+            <div
+              style={{
+                fontSize: 40,
+                fontWeight: 700,
+                color: "#222",
+                lineHeight: 1.2,
+                marginBottom: 8,
+              }}
+            >
+              {totalTransactions.toLocaleString()}
+            </div>
+            <div
+              style={{
+                fontSize: 18,
+                color: "#6b7280",
+                fontWeight: 500,
+              }}
+            >
+              Transactions
+            </div>
+          </div>
+        )}
       </div>
+
       {/* Footer Bar */}
       <div
         style={{
@@ -362,71 +421,88 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
     <div className="space-y-4">
       {/* Hidden export card for image generation */}
       {ExportCard}
-      {/* Visible preview (optional: keep simple, or match export) */}
-      <div className="bg-white rounded-lg shadow-lg p-4">
-        <h3 className="text-lg font-semibold mb-4">Share Your Profile</h3>
-        <div className="mb-4 flex justify-center">
-          <div className="w-full max-w-xl bg-gradient-to-br from-violet-50 via-indigo-50 to-purple-50 rounded-xl shadow-lg flex flex-col justify-between py-10 px-6 min-h-[420px]">
-            {/* You can add a simple preview here, or match the export card for consistency */}
-            <div className="flex flex-col items-center justify-center flex-1">
+
+      {/* Visible preview */}
+      <div className="bg-white rounded-lg shadow-lg p-3">
+        <h3 className="text-lg font-semibold mb-2">Share Your Profile</h3>
+        <div className="mb-2 flex justify-center">
+          <div className="w-full max-w-xl bg-gradient-to-br from-violet-50 via-indigo-50 to-purple-50 rounded-xl shadow-lg flex flex-col justify-between py-6 px-4 min-h-[320px]">
+            {/* Referral and Level badges side by side */}
+            <div className="flex flex-row items-center justify-between w-full mb-3">
+              {referralStats?.referralCode && (
+                <div className="px-4 py-2 bg-violet-500 text-white rounded-lg font-semibold">
+                  Referral Code: {referralStats.referralCode}
+                </div>
+              )}
+              <div className="flex-1" />
+              <div className="px-4 py-2 bg-white text-violet-600 border-2 border-violet-600 rounded-lg font-semibold">
+                Level {getLevelInfo(userProfile.points).level}
+              </div>
+            </div>
+            {/* Avatar and name section */}
+            <div className="flex flex-col items-center justify-center flex-1 mb-2">
               <Image
                 src={
                   userProfile.nadAvatar ||
                   `/avatar_${parseInt(userProfile.rank) % 6}.png`
                 }
                 alt="Profile"
-                width={96}
-                height={96}
-                className="rounded-full border-4 border-white shadow-lg"
+                width={80}
+                height={80}
+                className="rounded-full border-4 border-white shadow-lg mb-2"
               />
-              <h2 className="text-2xl font-bold text-gray-900 mt-4">
+              <h2 className="text-xl font-bold text-gray-900 mt-1 mb-1">
                 {userProfile.nadName || formatAddress(userProfile.address)}
               </h2>
               {userProfile.nadName && (
-                <p className="text-gray-600 text-sm font-mono">
+                <p className="text-gray-600 text-xs font-mono mb-1">
                   {formatAddress(userProfile.address)}
                 </p>
               )}
-              {referralStats?.referralCode && (
-                <div className="mt-4 px-4 py-2 bg-violet-500 text-white rounded-lg font-semibold">
-                  Referral Code: {referralStats.referralCode}
-                </div>
-              )}
             </div>
-            <div className="flex justify-center gap-8 pb-6 pt-4">
+            {/* Stats row */}
+            <div className="flex justify-center gap-6 pb-3 pt-2">
               <div className="text-center">
-                <div className="text-xl font-bold text-gray-900">
+                <div className="text-lg font-bold text-gray-900 mb-0.5">
                   {userProfile.rank}
-                  <span className="text-base">
+                  <span className="text-xs">
                     {getOrdinalSuffix(userProfile.rank)}
                   </span>
                 </div>
                 <div className="text-xs text-gray-600">Global Rank</div>
               </div>
               <div className="text-center">
-                <div className="text-xl font-bold text-gray-900">
+                <div className="text-lg font-bold text-gray-900 mb-0.5">
                   {userProfile.points.toLocaleString()}
                 </div>
                 <div className="text-xs text-gray-600">Points</div>
               </div>
               <div className="text-center">
-                <div className="text-xl font-bold text-gray-900">
+                <div className="text-lg font-bold text-gray-900 mb-0.5">
                   ${formatNumber(userProfile.dollarValue)}
                 </div>
                 <div className="text-xs text-gray-600">Volume</div>
               </div>
+              {typeof totalTransactions === "number" && (
+                <div className="text-center">
+                  <div className="text-lg font-bold text-gray-900 mb-0.5">
+                    {totalTransactions.toLocaleString()}
+                  </div>
+                  <div className="text-xs text-gray-600">Transactions</div>
+                </div>
+              )}
             </div>
-            <div className="w-full bg-gradient-to-r from-violet-500 to-indigo-600 text-white py-2 px-4 flex justify-between rounded-b-xl text-xs font-semibold mt-2">
+            <div className="w-full bg-gradient-to-r from-violet-500 to-indigo-600 text-white py-2 px-4 flex justify-between rounded-b-xl text-xs font-semibold mt-1">
               <span>Join the Gorillionaire community!</span>
               <span>gorillionaire.com</span>
             </div>
           </div>
         </div>
-        <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex flex-col sm:flex-row gap-2">
           <button
             onClick={shareOnX}
             disabled={isSharing || isGenerating}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-black text-white rounded-lg font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-black text-white rounded-lg font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSharing ? (
               <>
@@ -449,7 +525,7 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
           <button
             onClick={downloadCard}
             disabled={isGenerating}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-violet-600 text-white rounded-lg font-medium hover:bg-violet-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-lg font-medium hover:bg-violet-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isGenerating ? (
               <>
@@ -476,7 +552,7 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
             )}
           </button>
         </div>
-        <p className="text-xs text-gray-500 mt-3 text-center">
+        <p className="text-xs text-gray-500 mt-2 text-center">
           Share your achievements with the Gorillionaire community! 🦍
         </p>
       </div>

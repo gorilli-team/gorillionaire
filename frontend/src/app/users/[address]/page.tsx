@@ -986,6 +986,7 @@ const UserProfilePage = () => {
                       dollarValue: userProfile.dollarValue,
                     }}
                     referralStats={referralStats}
+                    totalTransactions={userProfile.pagination?.total}
                   />
                 </div>
                 {/* )} */}
