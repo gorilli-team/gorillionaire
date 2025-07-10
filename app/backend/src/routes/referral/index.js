@@ -269,12 +269,63 @@ router.get("/check-referrer/:address", async (req, res) => {
       "referredUsers.address": address.toLowerCase(),
     });
 
+    if (!referral) {
+      return res.json({
+        hasReferrer: false,
+        referrerAddress: null,
+        joinedAt: null,
+      });
+    }
+
+    // Find the specific referred user to get their join date
+    const referredUser = referral.referredUsers.find(
+      (user) => user.address === address.toLowerCase()
+    );
+
     res.json({
-      hasReferrer: !!referral,
-      referrerAddress: referral ? referral.referrerAddress : null,
+      hasReferrer: true,
+      referrerAddress: referral.referrerAddress,
+      joinedAt: referredUser ? referredUser.joinedAt : null,
     });
   } catch (error) {
     console.error("Error checking referrer status:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Check if a user is eligible to enter a referral code
+router.get("/check-eligibility/:address", async (req, res) => {
+  try {
+    const { address } = req.params;
+
+    if (!address) {
+      return res.status(400).json({ error: "Address is required" });
+    }
+
+    // Check if user has been referred by someone else
+    const referral = await Referral.findOne({
+      "referredUsers.address": address.toLowerCase(),
+    });
+
+    // Get user activity to check activities count
+    const UserActivity = require("../../models/UserActivity");
+    const userActivity = await UserActivity.findOne({
+      address: address.toLowerCase(),
+    });
+
+    const activitiesCount = userActivity
+      ? userActivity.activitiesList.length
+      : 0;
+    const hasReferrer = !!referral;
+    const isEligible = !hasReferrer && activitiesCount < 3;
+
+    res.json({
+      hasReferrer,
+      activitiesCount,
+      isEligible,
+    });
+  } catch (error) {
+    console.error("Error checking referral eligibility:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });

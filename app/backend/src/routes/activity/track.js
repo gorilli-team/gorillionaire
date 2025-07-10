@@ -204,9 +204,53 @@ router.post("/trade-points", async (req, res) => {
     }
 
     //add the txHash to the userActivity.activitiesList
-    const points = Math.ceil(intent.usdValue);
+    let points = Math.ceil(intent.usdValue);
+
+    // Check if user has been referred and is within 7 days of being referred
+    let is2xXpActive = false;
+
+    // Check if user has been referred by looking at the Referral collection
+    const Referral = require("../../models/Referral");
+    const userReferral = await Referral.findOne({
+      "referredUsers.address": address.toLowerCase(),
+    });
+
+    if (userReferral) {
+      // Find the specific referred user to get their join date
+      const referredUser = userReferral.referredUsers.find(
+        (user) => user.address === address.toLowerCase()
+      );
+
+      if (referredUser && referredUser.joinedAt) {
+        const referredAt = new Date(referredUser.joinedAt);
+        const now = new Date();
+        const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
+        const timeDiff = now.getTime() - referredAt.getTime();
+        const isWithinFirstWeek = timeDiff <= sevenDaysInMs;
+
+        // console.log("Referral check:", {
+        //   referredAt: referredAt.toISOString(),
+        //   now: now.toISOString(),
+        //   timeDiff: timeDiff,
+        //   sevenDaysInMs: sevenDaysInMs,
+        //   isWithinFirstWeek: isWithinFirstWeek,
+        // });
+
+        if (isWithinFirstWeek) {
+          points = points * 2; // 2x XP for first week
+          is2xXpActive = true;
+          console.log(
+            "2x XP activated! Original points:",
+            Math.ceil(intent.usdValue),
+            "Final points:",
+            points
+          );
+        }
+      }
+    }
+
     userActivity.activitiesList.push({
-      name: "Trade",
+      name: is2xXpActive ? "Trade (2x XP)" : "Trade",
       points: points,
       date: new Date(),
       intentId: intentId,
@@ -220,7 +264,12 @@ router.post("/trade-points", async (req, res) => {
     // Invalidate weekly cache since new activity was added
     invalidateWeeklyCache();
 
-    await trackOnDiscordXpGained("Trade", address, points, totalPoints);
+    await trackOnDiscordXpGained(
+      is2xXpActive ? "Trade (2x XP)" : "Trade",
+      address,
+      points,
+      totalPoints
+    );
 
     // Check if user has a referrer and award referral bonus
     const referral = await Referral.findOne({
@@ -228,7 +277,9 @@ router.post("/trade-points", async (req, res) => {
     });
 
     if (referral) {
-      const referralBonus = Math.ceil(points * 0.1); // 10% of trade points
+      // Use original points (before 2x multiplier) for referral bonus calculation
+      const originalPoints = Math.ceil(intent.usdValue);
+      const referralBonus = Math.ceil(originalPoints * 0.1); // 10% of original trade points
 
       // Award points to the referrer
       const referrerActivity = await UserActivity.findOne({
