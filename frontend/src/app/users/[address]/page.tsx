@@ -16,14 +16,14 @@ import { LoadingOverlay } from "@/app/components/ui/LoadingSpinner";
 import { CountdownTimer } from "@/app/components/CountdownTimer";
 import ShareableProfileCard from "@/app/components/ShareableProfileCard";
 
-// const formatNumber = (num: number): string => {
-//   if (num === 0) return "0.00";
-//   if (num < 0.000001) return num.toExponential(6);
-//   if (num < 0.01) return num.toFixed(8);
-//   if (num < 1) return num.toFixed(6);
-//   if (num < 100) return num.toFixed(4);
-//   return num.toFixed(2);
-// };
+const formatNumber = (num: number): string => {
+  if (num === 0) return "0.00";
+  if (num < 0.000001) return num.toExponential(6);
+  if (num < 0.01) return num.toFixed(8);
+  if (num < 1) return num.toFixed(6);
+  if (num < 100) return num.toFixed(4);
+  return num.toFixed(2);
+};
 
 const formatDate = (dateString: string): string => {
   const date = new Date(dateString);
@@ -1257,6 +1257,324 @@ const UserProfilePage = () => {
                   })()}
                 </div>
                 {/* )} */}
+
+                {/* Latest Activities */}
+                <div className="bg-white rounded-lg shadow-lg transform transition-all duration-300 hover:shadow-xl">
+                  <div className="bg-white rounded-xl p-4">
+                    <div className="flex justify-between items-center mb-3">
+                      <h2 className="text-base font-bold text-gray-900">
+                        Latest Activities
+                      </h2>
+                      <a
+                        href={`/transactions/${params.address}`}
+                        className="text-violet-600 hover:text-violet-800 text-xs font-medium flex items-center gap-1"
+                      >
+                        See more
+                        <svg
+                          className="w-3 h-3"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M9 5l7 7-7 7"
+                          />
+                        </svg>
+                      </a>
+                    </div>
+                    {userProfile.activitiesList.length > 0 ? (
+                      <div className="space-y-3">
+                        {userProfile.activitiesList
+                          .slice(0, 5)
+                          .map((activity, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center bg-white rounded-xl border border-gray-100 px-4 py-3 shadow-sm hover:shadow-md transition-all duration-200"
+                            >
+                              <div
+                                className="shrink-0 flex items-center justify-center w-10 h-10 rounded-full mr-4"
+                                style={{
+                                  backgroundColor:
+                                    activity?.intentId?.action === "buy"
+                                      ? "#E9F9EE"
+                                      : activity?.intentId?.action === "sell"
+                                      ? "#FDECEC"
+                                      : "#F3F4F6",
+                                }}
+                              >
+                                {activity?.intentId?.action === "buy" ? (
+                                  <svg
+                                    className="w-5 h-5 text-green-500"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth="2"
+                                      d="M5 10l7-7m0 0l7 7m-7-7v18"
+                                    />
+                                  </svg>
+                                ) : activity?.intentId?.action === "sell" ? (
+                                  <svg
+                                    className="w-5 h-5 text-red-500"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth="2"
+                                      d="M19 14l-7 7m0 0l-7-7m7 7V3"
+                                    />
+                                  </svg>
+                                ) : activity.name === "Signal Refused" ? (
+                                  <svg
+                                    className="w-5 h-5 text-gray-500"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth="2"
+                                      d="M6 18L18 6M6 6l12 12"
+                                    />
+                                  </svg>
+                                ) : activity.name === "Discord Connected" ? (
+                                  <svg
+                                    className="w-5 h-5 text-indigo-500"
+                                    viewBox="0 -28.5 256 256"
+                                    fill="currentColor"
+                                  >
+                                    <path d="M216.856339,16.5966031 C200.285002,8.84328665 182.566144,3.2084988 164.041564,0 C161.766523,4.11318106 159.108624,9.64549908 157.276099,14.0464379 C137.583995,11.0849896 118.072967,11.0849896 98.7430163,14.0464379 C96.9108417,9.64549908 94.1925838,4.11318106 91.8971895,0 C73.3526068,3.2084988 55.6133949,8.86399117 39.0420583,16.6376612 C5.61752293,67.146514 -3.4433191,116.400813 1.08711069,164.955721 C23.2560196,181.510915 44.7403634,191.567697 65.8621325,198.148576 C71.0772151,190.971126 75.7283628,183.341335 79.7352139,175.300261 C72.104019,172.400575 64.7949724,168.822202 57.8887866,164.667963 C59.7209612,163.310589 61.5131304,161.891452 63.2445898,160.431257 C105.36741,180.133187 151.134928,180.133187 192.754523,160.431257 C194.506336,161.891452 196.298154,163.310589 198.110326,164.667963 C191.183787,168.842556 183.854737,172.420929 176.223542,175.320965 C180.230393,183.341335 184.861538,190.991831 190.096624,198.16893 C211.238746,191.588051 232.743023,181.531619 254.911949,164.955721 C260.227747,108.668201 245.831087,59.8662432 216.856339,16.5966031 Z M85.4738752,135.09489 C72.8290281,135.09489 62.4592217,123.290155 62.4592217,108.914901 C62.4592217,94.5396472 72.607595,82.7145587 85.4738752,82.7145587 C98.3405064,82.7145587 108.709962,94.5189427 108.488529,108.914901 C108.508531,123.290155 98.3405064,135.09489 85.4738752,135.09489 Z M170.525237,135.09489 C157.88039,135.09489 147.510584,123.290155 147.510584,108.914901 C147.510584,94.5396472 157.658606,82.7145587 170.525237,82.7145587 C183.391518,82.7145587 193.761324,94.5189427 193.539891,108.914901 C193.539891,123.290155 183.391518,135.09489 170.525237,135.09489 Z" />
+                                  </svg>
+                                ) : activity.name.includes("Quest") ? (
+                                  <svg
+                                    className="w-5 h-5 text-violet-500"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth="2"
+                                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                    />
+                                  </svg>
+                                ) : activity.name === "Referral Trade Bonus" ? (
+                                  <svg
+                                    className="w-5 h-5 text-green-500"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth="2"
+                                      d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"
+                                    />
+                                  </svg>
+                                ) : (
+                                  <svg
+                                    className="w-5 h-5 text-gray-500"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth="2"
+                                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                    />
+                                  </svg>
+                                )}
+                              </div>
+
+                              <div className="flex-1 min-w-0">
+                                {/* Trading Activity */}
+                                {activity?.intentId?.tokenSymbol && (
+                                  <>
+                                    <div className="flex items-center gap-3 mb-1">
+                                      <Image
+                                        src={`/tokens/${activity.intentId.tokenSymbol.toLowerCase()}.png`}
+                                        alt={activity.intentId.tokenSymbol}
+                                        width={24}
+                                        height={24}
+                                        className="rounded-full"
+                                        onError={(e) => {
+                                          (
+                                            e.currentTarget as HTMLImageElement
+                                          ).style.display = "none";
+                                        }}
+                                        unoptimized
+                                      />
+                                      <span className="font-semibold text-gray-900">
+                                        {activity.intentId.tokenAmount.toLocaleString()}{" "}
+                                        {activity.intentId.tokenSymbol}
+                                      </span>
+                                      <span
+                                        className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                          activity.intentId.tokenPrice > 1
+                                            ? "bg-pink-100 text-pink-600"
+                                            : "bg-orange-100 text-orange-600"
+                                        }`}
+                                      >
+                                        {activity.intentId.tokenPrice > 1
+                                          ? "V2"
+                                          : "V1"}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                                      <span>
+                                        $
+                                        {formatNumber(
+                                          activity.intentId.tokenPrice
+                                        )}
+                                      </span>
+                                      <span>•</span>
+                                      <span>
+                                        $
+                                        {formatNumber(
+                                          activity.intentId.tokenAmount *
+                                            activity.intentId.tokenPrice
+                                        )}
+                                      </span>
+                                    </div>
+                                  </>
+                                )}
+
+                                {/* Non-Trading Activity */}
+                                {!activity?.intentId?.tokenSymbol && (
+                                  <div className="font-semibold text-gray-900">
+                                    {activity.name}
+                                  </div>
+                                )}
+
+                                {/* Referral Trade Bonus Details */}
+                                {activity.name === "Referral Trade Bonus" && (
+                                  <div className="space-y-2">
+                                    <div className="text-sm text-gray-600">
+                                      Earned from{" "}
+                                      {activity.referredUserAddress
+                                        ? formatAddress(
+                                            activity.referredUserAddress
+                                          )
+                                        : "referred user"}
+                                      &apos;s trade
+                                    </div>
+                                    {activity.originalTradePoints && (
+                                      <div className="text-xs text-gray-500">
+                                        Original trade:{" "}
+                                        {activity.originalTradePoints} points
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* Trading Details */}
+                                {activity.name === "trade" &&
+                                  activity?.intentId && (
+                                    <div className="mt-2 flex flex-wrap gap-2">
+                                      <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg text-xs">
+                                        <span className="text-gray-500">
+                                          Type:
+                                        </span>
+                                        <span
+                                          className={`font-medium ${
+                                            activity.intentId.action === "buy"
+                                              ? "text-green-600"
+                                              : "text-red-600"
+                                          }`}
+                                        >
+                                          {activity.intentId.action.toUpperCase()}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg text-xs">
+                                        <span className="text-gray-500">
+                                          Token:
+                                        </span>
+                                        <span className="font-medium text-gray-900">
+                                          {activity.intentId.tokenSymbol}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg text-xs">
+                                        <span className="text-gray-500">
+                                          Amount:
+                                        </span>
+                                        <span className="font-medium text-gray-900">
+                                          {formatNumber(
+                                            activity.intentId.tokenAmount
+                                          )}
+                                        </span>
+                                      </div>
+                                      {activity.intentId.txHash && (
+                                        <a
+                                          href={`https://testnet.monadexplorer.com/tx/${activity.intentId.txHash}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="flex items-center gap-1.5 px-2 py-1 bg-violet-50 rounded-lg text-xs text-violet-600 hover:bg-violet-100 transition-colors"
+                                        >
+                                          <svg
+                                            className="w-3 h-3"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                          >
+                                            <path
+                                              strokeLinecap="round"
+                                              strokeLinejoin="round"
+                                              strokeWidth="2"
+                                              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                                            />
+                                          </svg>
+                                          View TX
+                                        </a>
+                                      )}
+                                    </div>
+                                  )}
+                              </div>
+
+                              <div className="flex flex-col items-end gap-1 ml-4">
+                                <span className="inline-flex items-center gap-1 text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded-md">
+                                  <svg
+                                    className="w-3 h-3"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth="2"
+                                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                    />
+                                  </svg>
+                                  {formatDate(activity.date)}
+                                </span>
+                                <span className="px-2 py-0.5 rounded-md bg-violet-50 text-violet-700 text-xs font-semibold">
+                                  +{activity.points} pts
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    ) : (
+                      <div className="text-center p-6 text-gray-400 text-sm">
+                        No recent activities.
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </div>

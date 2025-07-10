@@ -12,7 +12,12 @@ export const metadata: Metadata = {
   description:
     "Stay ahead in the crypto market with AI-driven trading signals. Receive real-time BUY/SELL alerts, trade seamlessly using 0x Swap API, and climb the leaderboard in a gamified trading experience. Built for speed and efficiency on Monad.",
   icons: {
-    icon: "fav.png",
+    icon: [
+      { url: "/fav.png", type: "image/png" },
+      { url: "/fav_gorillionaire.png", type: "image/png" },
+    ],
+    shortcut: "/fav.png",
+    apple: "/fav.png",
   },
 };
 
@@ -29,6 +34,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.className}>
       <head>
+        <link rel="icon" type="image/png" sizes="32x32" href="/fav.png" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/fav.png" />
+        <link rel="shortcut icon" href="/fav.png" />
+        <link rel="apple-touch-icon" href="/fav.png" />
         <link
           rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.1/css/all.min.css"
