@@ -166,15 +166,15 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
         {/* Avatar */}
         <div
           style={{
-            width: 112,
-            height: 112,
+            width: 160,
+            height: 160,
             borderRadius: "50%",
             background: "#f7f8fa",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            margin: "0 auto 24px auto",
-            border: "8px solid #fff",
+            margin: "0 auto 32px auto",
+            border: "10px solid #fff",
             boxShadow: "0 2px 12px #0001",
           }}
         >
@@ -195,11 +195,11 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
               return avatarSrc;
             })()}
             alt="Profile"
-            width={88}
-            height={88}
+            width={140}
+            height={140}
             style={{
-              width: 88,
-              height: 88,
+              width: 140,
+              height: 140,
               borderRadius: "50%",
               objectFit: "cover",
               display: "block",
@@ -251,15 +251,16 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
               style={{
                 background: "#8b5cf6",
                 color: "#fff",
-                borderRadius: 20,
-                padding: "14px 32px",
+                borderRadius: 14,
+                padding: "10px 24px",
                 fontWeight: 700,
-                fontSize: 28,
+                fontSize: 20,
                 letterSpacing: 1,
                 boxShadow: "0 2px 12px #8b5cf655",
                 maxWidth: "90%",
                 textAlign: "center",
                 overflowWrap: "break-word",
+                marginBottom: 12,
               }}
             >
               Referral Code: {referralStats.referralCode}
