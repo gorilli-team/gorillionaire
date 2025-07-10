@@ -5,8 +5,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IUniswapV2Router02} from "./interfaces/IUniswapV2Router02.sol";
 
 contract SmartWallet {
-    event Deposit(address indexed token, uint256 indexed amount);
-    event Withdraw(address indexed token, uint256 indexed amount);
+    event DepositUSDC(address indexed usdc, uint256 indexed amount);
+    event WithdrawUSDC(address indexed usdc, uint256 indexed amount);
     event Swap(
         address indexed operator,
         address indexed tokenIn,
@@ -27,7 +27,10 @@ contract SmartWallet {
     error SmartWallet__InvalidRouterAddress();
     error SmartWallet__TokensMustBeDifferent();
     error SmartWallet__InvalidOperatorAddress();
+    error SmartWallet__InsufficientUSDCBalance();
+    error SmartWallet__EmptyUSDCBalance();
 
+    address public immutable i_usdc;
     address public s_owner;
     uint256 public s_tokenCounter;
     mapping(address => bool) public s_isOperator;
@@ -37,8 +40,9 @@ contract SmartWallet {
     mapping(uint256 index => address token) public s_tokens;
     mapping(address token => bool inWallet) public s_isTokenInWallet;
 
-    constructor(address user) {
+    constructor(address user, address usdc) {
         s_owner = user;
+        i_usdc = usdc;
     }
 
     modifier onlyOwner() {
@@ -65,75 +69,58 @@ contract SmartWallet {
         _;
     }
 
-    function deposit(address _token, uint256 amount) public onlyOwner onlyValidParams(_token, amount) {
-        s_balances[_token] += amount;
-        if (s_isTokenInWallet[_token] == false) {
-            s_tokens[s_tokenCounter] = _token;
-            s_tokenCounter += 1;
-            s_isTokenInWallet[_token] = true;
+    function depositUSDC(uint256 amount) public onlyOwner {
+        if (amount <= 0) {
+            revert SmartWallet__InvalidAmount();
         }
 
-        IERC20 token = IERC20(_token);
-        bool success = token.transferFrom(msg.sender, address(this), amount);
+        IERC20 usdc = IERC20(i_usdc);
+        bool success = usdc.transferFrom(msg.sender, address(this), amount);
         if (!success) {
             revert SmartWallet__TransferFailed();
         }
 
-        emit Deposit(_token, amount);
+        emit DepositUSDC(address(usdc), amount);
     }
 
-    function withdraw(address _token, uint256 amount) public onlyOwner onlyValidParams(_token, amount) {
-        if (s_isTokenInWallet[_token] == false) {
-            revert SmartWallet__TokenNotInWallet();
+    function withdrawUSDC(uint256 amount) public onlyOwner {
+        if (amount <= 0) {
+            revert SmartWallet__InvalidAmount();
         }
 
-        if (s_balances[_token] < amount) {
-            revert SmartWallet__InsufficientBalance();
+        IERC20 usdc = IERC20(i_usdc);
+        uint256 usdcBalance = usdc.balanceOf(msg.sender);
+
+        if (usdcBalance == 0) {
+            revert SmartWallet__EmptyUSDCBalance();
         }
 
-        s_balances[_token] -= amount;
-        if (s_balances[_token] == 0) {
-            s_isTokenInWallet[_token] = false;
+        if (usdcBalance < amount) {
+            revert SmartWallet__InsufficientUSDCBalance();
         }
 
-        IERC20 token = IERC20(_token);
-        bool success = token.transfer(msg.sender, amount);
+        bool success = usdc.transfer(msg.sender, amount);
         if (!success) {
             revert SmartWallet__TransferFailed();
         }
 
-        emit Withdraw(_token, amount);
+        emit WithdrawUSDC(address(usdc), amount);
     }
 
-    /**
-     * @dev resets the indexes for previously deposited tokens
-     * @dev skips the transfer of tokens whose index is stored in s_tokens but have a balance of 0
-     */
-    function withdrawAll() public onlyOwner {
-        if (s_tokenCounter == 0) {
-            revert SmartWallet__NoTokensToWithdraw();
-        }
-        for (uint256 i = 0; i < s_tokenCounter; i++) {
-            IERC20 token = IERC20(s_tokens[i]);
-            uint256 amountToWithdraw = s_balances[address(token)];
+    function withdrawAllUSDC() public onlyOwner {
+        IERC20 usdc = IERC20(i_usdc);
+        uint256 usdcBalance = usdc.balanceOf(msg.sender);
 
-            if (amountToWithdraw == 0) {
-                delete s_tokens[i];
-                continue;
-            }
-
-            delete s_balances[address(token)];
-            delete s_tokens[i];
-            s_isTokenInWallet[address(token)] = false;
-
-            bool success = token.transfer(msg.sender, amountToWithdraw);
-            if (!success) {
-                revert SmartWallet__TransferFailed();
-            }
-            emit Withdraw(address(token), amountToWithdraw);
+        if (usdcBalance == 0) {
+            revert SmartWallet__EmptyUSDCBalance();
         }
 
-        s_tokenCounter = 0;
+        bool success = usdc.transfer(msg.sender, usdcBalance);
+        if (!success) {
+            revert SmartWallet__TransferFailed();
+        }
+
+        emit WithdrawUSDC(address(usdc), usdcBalance);
     }
 
     function performSwapV2(address router, address tokenIn, address tokenOut, uint256 amountIn, uint256 amountOutMin)
