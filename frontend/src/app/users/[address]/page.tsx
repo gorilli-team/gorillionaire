@@ -578,7 +578,7 @@ const UserProfilePage = () => {
         <Header />
         <div className="flex-1 overflow-y-auto">
           <div className="w-full px-2 sm:px-4 pt-2 sm:pt-4 pb-4 sm:pb-8">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 sm:gap-3">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 sm:gap-3 items-stretch">
               <div className="lg:col-span-2 space-y-2 sm:space-y-3">
                 <div className="bg-white rounded-lg shadow-lg p-4 sm:p-8 transform transition-all duration-300 hover:shadow-xl">
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
@@ -972,24 +972,23 @@ const UserProfilePage = () => {
                 </div>
               </div>
 
-              <div className="lg:col-span-1">
+              <div className="lg:col-span-1 flex flex-col h-full">
                 {/* Share Profile Card - Only show for own profile */}
-                {isOwnProfile && (
-                  <div className="bg-white rounded-lg shadow-lg transform transition-all duration-300 hover:shadow-xl mb-3">
-                    <ShareableProfileCard
-                      userProfile={{
-                        address: userProfile.address,
-                        nadName: userProfile.nadName,
-                        nadAvatar: userProfile.nadAvatar,
-                        points: userProfile.points,
-                        rank: userProfile.rank,
-                        dollarValue: userProfile.dollarValue,
-                      }}
-                      referralStats={referralStats}
-                      isOwnProfile={isOwnProfile}
-                    />
-                  </div>
-                )}
+                {/* {isOwnProfile && ( */}
+                <div className="bg-white rounded-lg shadow-lg transform transition-all duration-300 hover:shadow-xl mb-3">
+                  <ShareableProfileCard
+                    userProfile={{
+                      address: userProfile.address,
+                      nadName: userProfile.nadName,
+                      nadAvatar: userProfile.nadAvatar,
+                      points: userProfile.points,
+                      rank: userProfile.rank,
+                      dollarValue: userProfile.dollarValue,
+                    }}
+                    referralStats={referralStats}
+                  />
+                </div>
+                {/* )} */}
 
                 {/* Referral Visualization - Moved to top */}
                 {referralStats && (
