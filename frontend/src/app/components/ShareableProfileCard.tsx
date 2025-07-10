@@ -230,7 +230,6 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
         </div>
       </div>
 
-      {/* Referral Code + Level Badge Container */}
       <div
         style={{
           display: "flex",
@@ -411,31 +410,30 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
         }}
       >
         <span>Join the Gorillionaire community!</span>
-        <span>gorillionaire.com</span>
+        <span>app.gorillionai.re</span>
       </div>
     </div>
   );
 
   // --- Responsive Preview (visible) ---
   return (
-    <div className="space-y-4">
+    <div className="">
       {/* Hidden export card for image generation */}
       {ExportCard}
 
       {/* Visible preview */}
       <div className="bg-white rounded-lg shadow-lg p-3">
-        <h3 className="text-lg font-semibold mb-2">Share Your Profile</h3>
         <div className="mb-2 flex justify-center">
           <div className="w-full max-w-xl bg-gradient-to-br from-violet-50 via-indigo-50 to-purple-50 rounded-xl shadow-lg flex flex-col justify-between py-6 px-4 min-h-[320px]">
             {/* Referral and Level badges side by side */}
             <div className="flex flex-row items-center justify-between w-full mb-3">
               {referralStats?.referralCode && (
-                <div className="px-4 py-2 bg-violet-500 text-white rounded-lg font-semibold">
+                <div className="px-2 py-1 bg-violet-500 text-white rounded text-sm font-medium">
                   Referral Code: {referralStats.referralCode}
                 </div>
               )}
               <div className="flex-1" />
-              <div className="px-4 py-2 bg-white text-violet-600 border-2 border-violet-600 rounded-lg font-semibold">
+              <div className="px-2 py-1 bg-white text-violet-600 border border-violet-600 rounded text-sm font-medium">
                 Level {getLevelInfo(userProfile.points).level}
               </div>
             </div>
@@ -494,7 +492,7 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
             </div>
             <div className="w-full bg-gradient-to-r from-violet-500 to-indigo-600 text-white py-2 px-4 flex justify-between rounded-b-xl text-xs font-semibold mt-1">
               <span>Join the Gorillionaire community!</span>
-              <span>gorillionaire.com</span>
+              <span>app.gorillionai.re</span>
             </div>
           </div>
         </div>
