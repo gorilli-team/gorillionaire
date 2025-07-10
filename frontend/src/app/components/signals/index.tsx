@@ -28,7 +28,8 @@ import { nnsClient } from "@/app/providers";
 import { HexString } from "@/app/types";
 import { getTokenImage } from "@/app/utils/tokens";
 import Link from "next/link";
-import DexModal from "../ui/DexModal";
+import dynamic from "next/dynamic";
+const DexModal = dynamic(() => import("../ui/DexModal"), { ssr: false });
 
 type Token = {
   symbol: string;

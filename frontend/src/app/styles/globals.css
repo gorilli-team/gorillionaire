@@ -2,10 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-body{
-    font-family: "Inter", sans-serif;
-}
-
 [aria-current='page'] {
     background-color: #3b82f6 !important;
     color: white !important;

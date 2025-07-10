@@ -2,13 +2,8 @@
 
 import React, { useLayoutEffect, useRef, useState, useEffect } from "react";
 import dynamic from "next/dynamic";
-import {
-  IChartApi,
-  createChart,
-  ColorType,
-  AreaSeries,
-  Time,
-} from "lightweight-charts";
+import type { Time } from "lightweight-charts";
+let createChart: unknown, ColorType: unknown, AreaSeries: unknown;
 
 interface PriceData {
   time: Time;
@@ -29,7 +24,7 @@ interface PriceStats {
 
 const PriceChart: React.FC<PriceChartProps> = ({ data, tokenSymbol }) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<IChartApi | null>(null);
+  const chartRef = useRef<unknown>(null);
   const [isClient, setIsClient] = useState(false);
   const [timeRange, setTimeRange] = useState<"1d" | "7d" | "30d" | "all">(
     "all"
@@ -42,6 +37,14 @@ const PriceChart: React.FC<PriceChartProps> = ({ data, tokenSymbol }) => {
 
   useLayoutEffect(() => {
     setIsClient(true);
+    if (typeof window !== "undefined") {
+      import("lightweight-charts").then((mod) => {
+        createChart = mod.createChart;
+        ColorType = mod.ColorType;
+        AreaSeries = mod.AreaSeries;
+        // Removed IChartApi and Time as they are not used
+      });
+    }
   }, []);
 
   // Calculate price statistics
@@ -139,9 +142,15 @@ const PriceChart: React.FC<PriceChartProps> = ({ data, tokenSymbol }) => {
 
     try {
       // Initialize chart
-      const chart = createChart(chartContainerRef.current, {
+      const chart = (
+        createChart as typeof import("lightweight-charts").createChart
+      )(chartContainerRef.current, {
         layout: {
-          background: { type: ColorType.Solid, color: "white" },
+          background: {
+            type: (ColorType as typeof import("lightweight-charts").ColorType)
+              .Solid,
+            color: "white",
+          },
           textColor: "black",
         },
         width: chartContainerRef.current.clientWidth,
@@ -168,19 +177,22 @@ const PriceChart: React.FC<PriceChartProps> = ({ data, tokenSymbol }) => {
       });
 
       // Create the line series
-      const lineSeries = chart.addSeries(AreaSeries, {
-        lineColor: "#2962FF",
-        topColor: "#2962FF",
-        bottomColor: "rgba(41, 98, 255, 0.28)",
-        priceFormat: {
-          type: "price",
-          precision: 6,
-          minMove: 0.000001,
-        },
-        // Enable markers for this series
-        lastValueVisible: true,
-        crosshairMarkerVisible: true,
-      });
+      const lineSeries = chart.addSeries(
+        AreaSeries as typeof import("lightweight-charts").AreaSeries,
+        {
+          lineColor: "#2962FF",
+          topColor: "#2962FF",
+          bottomColor: "rgba(41, 98, 255, 0.28)",
+          priceFormat: {
+            type: "price",
+            precision: 6,
+            minMove: 0.000001,
+          },
+          // Enable markers for this series
+          lastValueVisible: true,
+          crosshairMarkerVisible: true,
+        }
+      );
 
       // Transform data to ensure proper time format and unique ascending timestamps
       const formattedData = data
@@ -456,7 +468,9 @@ const PriceChart: React.FC<PriceChartProps> = ({ data, tokenSymbol }) => {
   return (
     <div className="w-full p-4 bg-white rounded-lg shadow-md">
       <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-4">
-        <h3 className="text-lg font-semibold mb-2 md:mb-0">{tokenSymbol} Price Chart</h3>
+        <h3 className="text-lg font-semibold mb-2 md:mb-0">
+          {tokenSymbol} Price Chart
+        </h3>
 
         {priceStats && (
           <div className="flex flex-wrap gap-4 md:gap-4 md:justify-end mt-1 md:mt-0">
