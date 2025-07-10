@@ -9,14 +9,23 @@ import { toast } from "react-toastify";
 import { MONAD_CHAIN_ID } from "../utils/constants";
 import { usePrivy } from "@privy-io/react-auth";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 const V2Page = () => {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Add your form submission logic here
+    console.log("Form submitted");
+  };
   const { address, isConnected } = useAccount();
   const { login } = usePrivy();
   const [selectedPage, setSelectedPage] = useState("V2");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { writeContract } = useWriteContract();
   const [tokenId, setTokenId] = useState<number | null>(null);
+  const [accessCode, setAccessCode] = useState<string>("");
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
   // NFT Contract
   const firstNFT = {
@@ -200,95 +209,211 @@ const V2Page = () => {
         <div className="flex-1 overflow-y-auto">
           <div className="w-full max-w-5xl mx-auto p-4 md:p-6">
             {alreadyMinted && tokenId !== null ? (
-              <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
-                <div className="bg-gradient-to-r from-purple-600 to-purple-700 p-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-white text-2xl">🎫</span>
-                    <h1 className="text-xl font-bold text-white">
-                      Your V2 Access NFT
-                    </h1>
+              <>
+                <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
+                  <div className="bg-gradient-to-r from-purple-600 to-purple-700 p-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-white text-2xl">🎫</span>
+                      <h1 className="text-xl font-bold text-white">
+                        Your V2 Access NFT
+                      </h1>
+                    </div>
                   </div>
-                </div>
 
-                <div className="p-6">
-                  <div className="flex flex-col-reverse md:flex-row gap-6">
-                    {/* NFT Details */}
-                    <div className="w-full md:w-1/2">
-                      <div className="space-y-4">
-                        <div>
-                          <h3 className="text-sm font-medium text-gray-500">
-                            Collection
-                          </h3>
-                          <p className="text-lg font-semibold">
-                            {nameData || "Gorillionaire V2"}
-                          </p>
-                          <a
-                            href="https://testnet.monadexplorer.com/address/0xD0f38A3Fb0F71e3d2B60e90327afde25618e1150"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm text-purple-600 hover:text-purple-700 underline"
-                          >
-                            View on Explorer
-                          </a>
-                        </div>
+                  <div className="p-6">
+                    <div className="flex flex-col-reverse md:flex-row gap-6">
+                      {/* NFT Details */}
+                      <div className="w-full md:w-1/2">
+                        <div className="space-y-4">
+                          <div>
+                            <h3 className="text-sm font-medium text-gray-500">
+                              Collection
+                            </h3>
+                            <p className="text-lg font-semibold">
+                              {nameData || "Gorillionaire V2"}
+                            </p>
+                            <a
+                              href="https://testnet.monadexplorer.com/address/0xD0f38A3Fb0F71e3d2B60e90327afde25618e1150"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sm text-purple-600 hover:text-purple-700 underline"
+                            >
+                              View on Explorer
+                            </a>
+                          </div>
 
-                        <div>
-                          <h3 className="text-sm font-medium text-gray-500">
-                            Token ID
-                          </h3>
-                          <p className="text-lg font-semibold">
-                            #{tokenId} <span className="text-gray-400">OF</span>{" "}
-                            #{totalSupplyData ? Number(totalSupplyData) : "..."}
-                          </p>
-                        </div>
+                          <div>
+                            <h3 className="text-sm font-medium text-gray-500">
+                              Token ID
+                            </h3>
+                            <p className="text-lg font-semibold">
+                              #{tokenId} <span className="text-gray-400">OF</span>{" "}
+                              #{totalSupplyData ? Number(totalSupplyData) : "..."}
+                            </p>
+                          </div>
 
-                        <div>
-                          <h3 className="text-sm font-medium text-gray-500">
-                            Owner
-                          </h3>
-                          <a
-                            href={`https://testnet.monadexplorer.com/address/${address}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-lg font-medium text-purple-600 hover:text-purple-700 truncate block"
-                          >
-                            {address}
-                          </a>
-                        </div>
+                          <div>
+                            <h3 className="text-sm font-medium text-gray-500">
+                              Owner
+                            </h3>
+                            <a
+                              href={`https://testnet.monadexplorer.com/address/${address}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-lg font-medium text-purple-600 hover:text-purple-700 truncate block"
+                            >
+                              {address}
+                            </a>
+                          </div>
 
-                        <div className="pt-4">
-                          <div className="bg-purple-50 rounded-lg p-4">
-                            <div className="flex items-center">
-                              <div className="w-2 h-2 bg-purple-400 rounded-full mr-2"></div>
-                              <p className="text-sm text-purple-700">
-                                You are on the V2 waitlist! Stay tuned for
-                                updates.
-                              </p>
+                          <div className="pt-4">
+                            <div className="bg-purple-50 rounded-lg p-4">
+                              <div className="flex items-center">
+                                <div className="w-2 h-2 bg-purple-400 rounded-full mr-2"></div>
+                                <p className="text-sm text-purple-700">
+                                  You are on the V2 waitlist! Stay tuned for
+                                  updates.
+                                </p>
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* NFT Image */}
-                    <div className="w-full md:w-1/3">
-                      <div className="aspect-square w-full bg-gradient-to-br from-purple-100 to-indigo-100 rounded-lg flex border-2 border-purple-200 overflow-hidden">
-                        <Image
-                          src="/earlygorilla.jpg"
-                          alt="Your V2 Access NFT"
-                          width={800}
-                          height={800}
-                          className="w-full h-full object-cover"
-                          priority
-                        />
+                      {/* NFT Image */}
+                      <div className="w-full md:w-1/3">
+                        <div className="aspect-square w-full bg-gradient-to-br from-purple-100 to-indigo-100 rounded-lg flex border-2 border-purple-200 overflow-hidden">
+                          <Image
+                            src="/earlygorilla.jpg"
+                            alt="Your V2 Access NFT"
+                            width={800}
+                            height={800}
+                            className="w-full h-full object-cover"
+                            priority
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
+
+                {/* Access Code Form */}
+                <div className="max-w-7xl w-full mx-auto flex flex-col md:flex-row gap-8 mb-6">
+                  {/* Access Code Form */}
+                  <div className="flex-1 bg-white rounded-xl shadow-lg p-6">
+                    <div className="text-center mb-8">
+                      <h2 className="text-xl font-bold text-gray-900">
+                        Have an access code?
+                      </h2>
+                    <form onSubmit={(e) => handleSubmit(e)} className="space-y-4">
+                        <p>Enter it below to get immediate access to V2</p>
+                    </form>
+                    </div>
+
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                      <div>
+                        <label
+                          htmlFor="accessCode"
+                          className="block text-sm font-medium text-gray-700 mb-2"
+                        >
+                          V2 Access Code
+                        </label>
+                        <input
+                          type="text"
+                          id="accessCode"
+                          value={accessCode}
+                          onChange={(e) => setAccessCode(e.target.value)}
+                          placeholder="Enter your access code"
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
+                          disabled={isLoading}
+                        />
+                      </div>
+
+                      {error && (
+                        <div className="text-red-600 text-sm bg-red-50 p-3 rounded-lg">
+                          {isLoading && (
+                            <div className="text-red-600 text-sm bg-red-50 p-3 rounded-lg">
+                              An error occurred. Please try again.
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      <button
+                        type="submit"
+                        disabled={isLoading}
+                        className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 px-4 rounded-lg font-medium hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isLoading ? (
+                          <div className="flex items-center justify-center">
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                            Verifying...
+                          </div>
+                        ) : (
+                          "Verify Access"
+                        )}
+                      </button>
+                    </form>
+                  </div>
+
+                  {/* Steps */}
+                  <div className="flex-1 bg-white rounded-xl shadow-lg p-6">
+                    <h3 className="font-semibold text-lg mb-2">
+                      Didn't get your access code yet?
+                    </h3>
+                    <p className="text-gray-600 mb-4">
+                      Follow these simple steps to be among the first users to get
+                      access to Gorillionaire V2
+                    </p>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between bg-gray-50 rounded-md px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <span className="w-6 h-6 flex items-center justify-center rounded-full bg-purple-100 text-purple-600 font-bold">
+                            1
+                          </span>
+                          <span>Join our Discord Server</span>
+                        </div>
+                        <a
+                          href="https://discord.gg/yYtgzHywRF"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-4 py-1 border border-purple-500 text-purple-600 rounded-md font-medium hover:bg-purple-50 transition text-sm w-24 text-center"
+                        >
+                          Join Server
+                        </a>
+                      </div>
+                      <div className="flex items-center justify-between bg-gray-50 rounded-md px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <span className="w-6 h-6 flex items-center justify-center rounded-full bg-purple-100 text-purple-600 font-bold">
+                            2
+                          </span>
+                          <span>
+                            Drop your wallet address in the "V2 Shortlist" channel
+                          </span>
+                        </div>
+                        <a
+                          href="https://discord.gg/yYtgzHywRF"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-4 py-1 border border-purple-500 text-purple-600 rounded-md font-medium hover:bg-purple-50 transition text-sm w-24 text-center"
+                        >
+                          Drop It
+                        </a>
+                      </div>
+                      <div className="flex items-center justify-between bg-gray-50 rounded-md px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <span className="w-6 h-6 flex items-center justify-center rounded-full bg-purple-100 text-purple-600 font-bold">
+                            3
+                          </span>
+                          <span>Redeem your code and start using Gorillionaire V2!</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </>
             ) : (
               <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
-                {/* Purple gradient header */}
                 <div className="bg-gradient-to-r from-purple-600 to-purple-700 p-4">
                   <div className="flex items-center gap-2">
                     <span className="text-white text-2xl">🦍</span>
@@ -300,7 +425,6 @@ const V2Page = () => {
 
                 <div className="p-6">
                   <div className="flex flex-col-reverse md:flex-row gap-6">
-                    {/* Info Section */}
                     <div className="w-full">
                       <div className="bg-indigo-50 p-4 rounded-lg mb-6">
                         <p className="text-indigo-800 font-medium">
