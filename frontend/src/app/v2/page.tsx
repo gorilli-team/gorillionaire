@@ -11,11 +11,6 @@ import { usePrivy } from "@privy-io/react-auth";
 import Image from "next/image";
 
 const V2Page = () => {
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Add your form submission logic here
-    console.log("Form submitted");
-  };
   const { address, isConnected } = useAccount();
   const { login } = usePrivy();
   const [selectedPage, setSelectedPage] = useState("V2");
@@ -23,6 +18,9 @@ const V2Page = () => {
   const { writeContract } = useWriteContract();
   const [tokenId, setTokenId] = useState<number | null>(null);
   const [accessCode, setAccessCode] = useState<string>("");
+  const [isAuthorized, setIsAuthorized] = useState<boolean>(false);
+  const [accessCodeUsed, setAccessCodeUsed] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   // NFT Contract
   const firstNFT = {
@@ -67,6 +65,70 @@ const V2Page = () => {
       setTokenId(Number(effectiveTokenId));
     }
   }, [alreadyMinted, effectiveTokenId]);
+
+  // Check V2 access status
+  useEffect(() => {
+    const checkAccessStatus = async () => {
+      if (!address) return;
+      
+      setIsLoading(true);
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/access/status/${address.toLowerCase()}`);
+        const data = await response.json();
+        
+        if (data.success) {
+          setIsAuthorized(data.v2Enabled);
+          if (data.accessCodeUsed) {
+            setAccessCodeUsed(data.accessCodeUsed);
+          }
+        }
+      } catch (error) {
+        console.error("Error checking access status:", error);
+        toast.error("Error checking access status");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkAccessStatus();
+  }, [address]);
+
+  // Handle access code verification
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!address) {
+      toast.error("Please connect your wallet first");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/access/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          code: accessCode, 
+          address: address.toLowerCase() 
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setIsAuthorized(true);
+        setAccessCodeUsed(data.accessCodeUsed || "DIRECT_ACCESS");
+        toast.success("Access verified successfully!");
+      } else {
+        toast.error(data.message || "Verification error");
+      }
+    } catch (error) {
+      console.error("Error verifying access code:", error);
+      toast.error("Server connection error");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const onClick = useCallback(async () => {
     if (alreadyMinted) return;
@@ -205,7 +267,11 @@ const V2Page = () => {
         <Header />
         <div className="flex-1 overflow-y-auto">
           <div className="w-full max-w-5xl mx-auto p-4 md:p-6">
-            {alreadyMinted && tokenId !== null ? (
+            {isLoading ? (
+              <div className="flex justify-center items-center h-64">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+              </div>
+            ) : alreadyMinted && tokenId !== null ? (
               <>
                 <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
                   <div className="bg-gradient-to-r from-purple-600 to-purple-700 p-4">
@@ -294,98 +360,124 @@ const V2Page = () => {
                   </div>
                 </div>
 
-                {/* Access Code Form */}
+                {/* Access Code Section */}
                 <div className="max-w-7xl w-full mx-auto flex flex-col md:flex-row gap-8 mb-6">
-                  {/* Access Code Form */}
-                  <div className="flex-1 bg-white rounded-xl shadow-lg p-6">
-                    <div className="text-center mb-8">
-                      <h2 className="text-xl font-bold text-gray-900">
-                        Have an access code?
-                      </h2>
-                      <p>Enter it below to get immediate access to V2</p>
+                  {!isAuthorized ? (
+                    <>
+                      <div className="flex-1 bg-white rounded-xl shadow-lg p-6">
+                        <div className="text-center mb-8">
+                          <h2 className="text-xl font-bold text-gray-900">
+                            Have an access code?
+                          </h2>
+                          <p>Enter it below to get immediate access to V2</p>
+                        </div>
+
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                          <div>
+                            <label
+                              htmlFor="accessCode"
+                              className="block text-sm font-medium text-gray-700 mb-2"
+                            >
+                              V2 Access Code
+                            </label>
+                            <input
+                              type="text"
+                              id="accessCode"
+                              value={accessCode}
+                              onChange={(e) => setAccessCode(e.target.value)}
+                              placeholder="Enter your access code"
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
+                              disabled={isLoading}
+                            />
+                          </div>
+
+                          <button
+                            type="submit"
+                            className={`w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 px-4 rounded-lg font-medium hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            disabled={isLoading}
+                          >
+                            {isLoading ? 'Verifying...' : 'Verify Access'}
+                          </button>
+                        </form>
+                      </div>
+
+                      <div className="flex-1 bg-white rounded-xl shadow-lg p-6">
+                        <h3 className="font-semibold text-lg mb-2">
+                          Didn&apos;t get your access code yet?
+                        </h3>
+                        <p className="text-gray-600 mb-4">
+                          Follow these simple steps to be among the first users to get
+                          access to Gorillionaire V2
+                        </p>
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between bg-gray-50 rounded-md px-4 py-3">
+                            <div className="flex items-center gap-3">
+                              <span className="w-6 h-6 flex items-center justify-center rounded-full bg-purple-100 text-purple-600 font-bold">
+                                1
+                              </span>
+                              <span>Join our Discord Server</span>
+                            </div>
+                            <a
+                              href="https://discord.gg/yYtgzHywRF"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-4 py-1 border border-purple-500 text-purple-600 rounded-md font-medium hover:bg-purple-50 transition text-sm w-24 text-center"
+                            >
+                              Join Server
+                            </a>
+                          </div>
+                          <div className="flex items-center justify-between bg-gray-50 rounded-md px-4 py-3">
+                            <div className="flex items-center gap-3">
+                              <span className="w-6 h-6 flex items-center justify-center rounded-full bg-purple-100 text-purple-600 font-bold">
+                                2
+                              </span>
+                              <span>
+                                Drop your wallet address in the &quot;V2 Shortlist&quot; channel
+                              </span>
+                            </div>
+                            <a
+                              href="https://discord.gg/yYtgzHywRF"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-4 py-1 border border-purple-500 text-purple-600 rounded-md font-medium hover:bg-purple-50 transition text-sm w-24 text-center"
+                            >
+                              Drop It
+                            </a>
+                          </div>
+                          <div className="flex items-center justify-between bg-gray-50 rounded-md px-4 py-3">
+                            <div className="flex items-center gap-3">
+                              <span className="w-6 h-6 flex items-center justify-center rounded-full bg-purple-100 text-purple-600 font-bold">
+                                3
+                              </span>
+                              <span>Redeem your code and start using Gorillionaire V2!</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="w-full bg-white rounded-xl shadow-lg p-6">
+                      <div className="text-center p-8">
+                        <div className="mx-auto w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                          <span className="text-3xl">🎉</span>
+                        </div>
+                        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                          Welcome to Gorillionaire V2!
+                        </h2>
+                        <p className="text-gray-600 mb-6">
+                          You now have full access to all V2 features and benefits.
+                        </p>
+                        <button
+                          onClick={() => {
+                            // Add navigation to V2 features here
+                          }}
+                          className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-2 px-6 rounded-lg font-medium hover:from-purple-700 hover:to-indigo-700 transition-all duration-200"
+                        >
+                          Explore V2 Features
+                        </button>
+                      </div>
                     </div>
-
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                      <div>
-                        <label
-                          htmlFor="accessCode"
-                          className="block text-sm font-medium text-gray-700 mb-2"
-                        >
-                          V2 Access Code
-                        </label>
-                        <input
-                          type="text"
-                          id="accessCode"
-                          value={accessCode}
-                          onChange={(e) => setAccessCode(e.target.value)}
-                          placeholder="Enter your access code"
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
-                        />
-                      </div>
-
-                      <button
-                        type="submit"
-                        className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 px-4 rounded-lg font-medium hover:from-purple-700 hover:to-indigo-700 transition-all duration-200"
-                      >
-                        Verify Access
-                      </button>
-                    </form>
-                  </div>
-
-                  {/* Steps */}
-                  <div className="flex-1 bg-white rounded-xl shadow-lg p-6">
-                    <h3 className="font-semibold text-lg mb-2">
-                      Didn&apos;t get your access code yet?
-                    </h3>
-                    <p className="text-gray-600 mb-4">
-                      Follow these simple steps to be among the first users to get
-                      access to Gorillionaire V2
-                    </p>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between bg-gray-50 rounded-md px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <span className="w-6 h-6 flex items-center justify-center rounded-full bg-purple-100 text-purple-600 font-bold">
-                            1
-                          </span>
-                          <span>Join our Discord Server</span>
-                        </div>
-                        <a
-                          href="https://discord.gg/yYtgzHywRF"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-4 py-1 border border-purple-500 text-purple-600 rounded-md font-medium hover:bg-purple-50 transition text-sm w-24 text-center"
-                        >
-                          Join Server
-                        </a>
-                      </div>
-                      <div className="flex items-center justify-between bg-gray-50 rounded-md px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <span className="w-6 h-6 flex items-center justify-center rounded-full bg-purple-100 text-purple-600 font-bold">
-                            2
-                          </span>
-                          <span>
-                            Drop your wallet address in the &quot;V2 Shortlist&quot; channel
-                          </span>
-                        </div>
-                        <a
-                          href="https://discord.gg/yYtgzHywRF"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-4 py-1 border border-purple-500 text-purple-600 rounded-md font-medium hover:bg-purple-50 transition text-sm w-24 text-center"
-                        >
-                          Drop It
-                        </a>
-                      </div>
-                      <div className="flex items-center justify-between bg-gray-50 rounded-md px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <span className="w-6 h-6 flex items-center justify-center rounded-full bg-purple-100 text-purple-600 font-bold">
-                            3
-                          </span>
-                          <span>Redeem your code and start using Gorillionaire V2!</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  )}
                 </div>
               </>
             ) : (
