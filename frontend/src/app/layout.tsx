@@ -5,6 +5,7 @@ import { Providers } from "./providers";
 import Script from "next/script";
 import ReferralBanner from "./components/ReferralBanner";
 import { Inter } from "next/font/google";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export const metadata: Metadata = {
   title: "Gorillionaire – AI-Powered Crypto Signals & Gamified Trading",
@@ -64,6 +65,7 @@ export default function RootLayout({
           <ReferralBanner />
           {children}
         </Providers>
+        <SpeedInsights />
       </body>
     </html>
   );
