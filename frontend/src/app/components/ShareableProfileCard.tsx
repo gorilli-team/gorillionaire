@@ -500,7 +500,7 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
         </div>
         {isOwnProfile && (
           <>
-            <div className="flex flex-col sm:flex-row gap-2">
+            <div className="flex flex-col sm:flex-row gap-2 p-2">
               <button
                 onClick={shareOnX}
                 disabled={isSharing || isGenerating}
@@ -554,7 +554,7 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
                 )}
               </button>
             </div>
-            <p className="text-xs text-gray-500 mt-2 text-center">
+            <p className="text-xs text-gray-500 text-center p-2">
               Share your achievements with the Gorillionaire community! 🦍
             </p>
           </>
