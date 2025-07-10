@@ -14,6 +14,7 @@ import { NFT_ACCESS_ADDRESS } from "@/app/utils/constants";
 import { getLevelInfo, getXpProgress } from "@/app/utils/xp";
 import { LoadingOverlay } from "@/app/components/ui/LoadingSpinner";
 import { CountdownTimer } from "@/app/components/CountdownTimer";
+import ShareableProfileCard from "@/app/components/ShareableProfileCard";
 
 const formatNumber = (num: number): string => {
   if (num === 0) return "0.00";
@@ -972,6 +973,24 @@ const UserProfilePage = () => {
               </div>
 
               <div className="lg:col-span-1">
+                {/* Share Profile Card - Only show for own profile */}
+                {isOwnProfile && (
+                  <div className="bg-white rounded-lg shadow-lg transform transition-all duration-300 hover:shadow-xl mb-3">
+                    <ShareableProfileCard
+                      userProfile={{
+                        address: userProfile.address,
+                        nadName: userProfile.nadName,
+                        nadAvatar: userProfile.nadAvatar,
+                        points: userProfile.points,
+                        rank: userProfile.rank,
+                        dollarValue: userProfile.dollarValue,
+                      }}
+                      referralStats={referralStats}
+                      isOwnProfile={isOwnProfile}
+                    />
+                  </div>
+                )}
+
                 {/* Referral Visualization - Moved to top */}
                 {referralStats && (
                   <div
