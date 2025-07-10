@@ -9,7 +9,6 @@ import { toast } from "react-toastify";
 import { MONAD_CHAIN_ID } from "../utils/constants";
 import { usePrivy } from "@privy-io/react-auth";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 
 const V2Page = () => {
   const handleSubmit = (e: React.FormEvent) => {
@@ -24,8 +23,6 @@ const V2Page = () => {
   const { writeContract } = useWriteContract();
   const [tokenId, setTokenId] = useState<number | null>(null);
   const [accessCode, setAccessCode] = useState<string>("");
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
 
   // NFT Contract
   const firstNFT = {
@@ -113,7 +110,7 @@ const V2Page = () => {
       functionName: "mint",
       address: firstNFT.address,
     });
-  }, [writeContract, alreadyMinted, chainId, isConnected, login]);
+  }, [writeContract, alreadyMinted, chainId, isConnected, login, firstNFT.address]);
 
   // Get the current chain ID
   useEffect(() => {
@@ -305,9 +302,7 @@ const V2Page = () => {
                       <h2 className="text-xl font-bold text-gray-900">
                         Have an access code?
                       </h2>
-                    <form onSubmit={(e) => handleSubmit(e)} className="space-y-4">
-                        <p>Enter it below to get immediate access to V2</p>
-                    </form>
+                      <p>Enter it below to get immediate access to V2</p>
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-4">
@@ -325,33 +320,14 @@ const V2Page = () => {
                           onChange={(e) => setAccessCode(e.target.value)}
                           placeholder="Enter your access code"
                           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
-                          disabled={isLoading}
                         />
                       </div>
 
-                      {error && (
-                        <div className="text-red-600 text-sm bg-red-50 p-3 rounded-lg">
-                          {isLoading && (
-                            <div className="text-red-600 text-sm bg-red-50 p-3 rounded-lg">
-                              An error occurred. Please try again.
-                            </div>
-                          )}
-                        </div>
-                      )}
-
                       <button
                         type="submit"
-                        disabled={isLoading}
-                        className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 px-4 rounded-lg font-medium hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 px-4 rounded-lg font-medium hover:from-purple-700 hover:to-indigo-700 transition-all duration-200"
                       >
-                        {isLoading ? (
-                          <div className="flex items-center justify-center">
-                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                            Verifying...
-                          </div>
-                        ) : (
-                          "Verify Access"
-                        )}
+                        Verify Access
                       </button>
                     </form>
                   </div>
@@ -359,7 +335,7 @@ const V2Page = () => {
                   {/* Steps */}
                   <div className="flex-1 bg-white rounded-xl shadow-lg p-6">
                     <h3 className="font-semibold text-lg mb-2">
-                      Didn't get your access code yet?
+                      Didn&apos;t get your access code yet?
                     </h3>
                     <p className="text-gray-600 mb-4">
                       Follow these simple steps to be among the first users to get
@@ -388,7 +364,7 @@ const V2Page = () => {
                             2
                           </span>
                           <span>
-                            Drop your wallet address in the "V2 Shortlist" channel
+                            Drop your wallet address in the &quot;V2 Shortlist&quot; channel
                           </span>
                         </div>
                         <a
