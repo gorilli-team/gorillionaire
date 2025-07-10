@@ -185,7 +185,7 @@ const ShareableProfileCard: React.FC<ShareableProfileCardProps> = ({
               avatarSrc = `/avatar_${parseInt(userProfile.rank) % 6}.png`;
             }
             return (
-              <img
+              <Image
                 src={avatarSrc}
                 alt="Profile"
                 width={144}
