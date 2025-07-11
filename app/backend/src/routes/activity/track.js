@@ -100,6 +100,10 @@ router.post("/signin", async (req, res) => {
 
     if (!userActivity) {
       //create user activity
+      console.log("🆕 NEW USER CREATED for address:", address);
+      console.log("🔥 Initial streak set to: 1");
+      console.log("💰 Initial points: 50");
+
       const newUserActivity = new UserActivity({
         address: address.toLowerCase(),
         points: 50,
@@ -131,16 +135,25 @@ router.post("/signin", async (req, res) => {
       const timeDiffHours =
         (now.getTime() - lastSignIn.getTime()) / (1000 * 60 * 60);
 
+      console.log("🔥 STREAK CALCULATION DEBUG:");
+      console.log("📍 Address:", address);
+      console.log("⏰ Current time:", now.toISOString());
+      console.log("📅 Last signin:", lastSignIn.toISOString());
+      console.log("⏱️  Time difference (hours):", timeDiffHours.toFixed(1));
+      console.log("🔥 Current streak before calculation:", userActivity.streak);
+
       if (timeDiffHours > 48) {
         // More than 48 hours ago - reset streak to 1
+        const oldStreak = userActivity.streak;
         userActivity.streak = 1;
         console.log(
-          `Streak reset for ${address}: ${timeDiffHours.toFixed(
+          `🔄 STREAK RESET for ${address}: ${timeDiffHours.toFixed(
             1
-          )} hours since last signin`
+          )} hours since last signin (${oldStreak} → 1)`
         );
       } else if (timeDiffHours > 24) {
         // Between 24 and 48 hours ago - increment streak
+        const oldStreak = userActivity.streak;
         userActivity.streak += 1;
         userActivity.points += 10;
         userActivity.activitiesList.push({
@@ -149,16 +162,18 @@ router.post("/signin", async (req, res) => {
           date: now,
         });
         console.log(
-          `Streak extended for ${address}: ${userActivity.streak} days`
+          `📈 STREAK EXTENDED for ${address}: ${oldStreak} → ${userActivity.streak} days (+10 points)`
         );
       } else {
         // Less than 24 hours ago - keep same streak
         console.log(
-          `Streak maintained for ${address}: ${
+          `✅ STREAK MAINTAINED for ${address}: ${
             userActivity.streak
           } days (${timeDiffHours.toFixed(1)} hours since last signin)`
         );
       }
+
+      console.log("🔥 Final streak after calculation:", userActivity.streak);
 
       userActivity.lastSignIn = now;
       await userActivity.save();
@@ -297,6 +312,137 @@ router.post("/trade-points", async (req, res) => {
     });
     const totalPoints = userActivity.points + points;
     userActivity.points += points;
+
+    // 🔥 DAILY TRADE STREAK CALCULATION
+    console.log("🔥 DAILY TRADE STREAK CALCULATION DEBUG:");
+    console.log("📍 Address:", address);
+    console.log("💰 Trade points:", points);
+    console.log("🔥 Current streak before trade:", userActivity.streak);
+
+    // Get today's date (start of day)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Get yesterday's date (start of day)
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    // Count today's trades
+    const todayTrades = userActivity.activitiesList.filter((activity) => {
+      const activityDate = new Date(activity.date);
+      activityDate.setHours(0, 0, 0, 0);
+      return (
+        activityDate.getTime() === today.getTime() &&
+        (activity.name === "Trade" || activity.name === "Trade (2x XP)")
+      );
+    }).length;
+
+    // Count yesterday's trades
+    const yesterdayTrades = userActivity.activitiesList.filter((activity) => {
+      const activityDate = new Date(activity.date);
+      activityDate.setHours(0, 0, 0, 0);
+      return (
+        activityDate.getTime() === yesterday.getTime() &&
+        (activity.name === "Trade" || activity.name === "Trade (2x XP)")
+      );
+    }).length;
+
+    console.log("📊 Today's trades (including this one):", todayTrades);
+    console.log("📊 Yesterday's trades:", yesterdayTrades);
+    console.log("🔍 STREAK DECISION LOGIC:");
+    console.log(
+      "   - Is this the first trade of today?",
+      todayTrades === 1 ? "YES" : "NO"
+    );
+    console.log(
+      "   - Did user trade yesterday?",
+      yesterdayTrades > 0 ? "YES" : "NO"
+    );
+    console.log("   - Current streak before decision:", userActivity.streak);
+
+    // Streak logic based on daily trades
+    console.log("🎯 STREAK DECISION:");
+
+    if (todayTrades === 1 && yesterdayTrades > 0) {
+      // First trade of the day AND had trades yesterday = extend streak
+      const oldStreak = userActivity.streak;
+      userActivity.streak += 1;
+      userActivity.points += 10; // Bonus points for extending streak
+      userActivity.activitiesList.push({
+        name: "Daily Trade Streak Extended",
+        points: 10,
+        date: new Date(),
+      });
+      console.log(
+        `📈 STREAK EXTENDED: ${oldStreak} → ${userActivity.streak} days (+10 bonus points)`
+      );
+      console.log(
+        "   ✅ REASON: First trade of today + traded yesterday = extend streak"
+      );
+    } else if (todayTrades === 1 && yesterdayTrades === 0) {
+      // First trade of the day BUT no trades yesterday = start new streak at 1
+      const oldStreak = userActivity.streak;
+      userActivity.streak = 1;
+      console.log(
+        `🆕 NEW STREAK STARTED: ${oldStreak} → 1 (first trade after break)`
+      );
+      console.log(
+        "   ✅ REASON: First trade of today + no trades yesterday = start new streak"
+      );
+    } else if (todayTrades > 1) {
+      // Not the first trade of the day = maintain current streak
+      console.log(
+        `✅ STREAK MAINTAINED: ${userActivity.streak} days (not first trade of day)`
+      );
+      console.log(
+        "   ✅ REASON: Not the first trade of today = maintain current streak"
+      );
+    } else {
+      console.log("❓ UNEXPECTED CASE: No streak decision made");
+      console.log("   ❓ REASON: This should not happen - check logic");
+    }
+
+    console.log(
+      "🔥 Final streak after trade calculation:",
+      userActivity.streak
+    );
+
+    // Check if streak should be reset to 0 due to inactivity
+    console.log("⏰ STREAK EXPIRATION CHECK:");
+    const lastTradeDate = userActivity.activitiesList
+      .filter(
+        (activity) =>
+          activity.name === "Trade" || activity.name === "Trade (2x XP)"
+      )
+      .sort((a, b) => new Date(b.date) - new Date(a.date))[0]?.date;
+
+    if (lastTradeDate) {
+      const daysSinceLastTrade = Math.floor(
+        (new Date() - new Date(lastTradeDate)) / (1000 * 60 * 60 * 24)
+      );
+      console.log("   - Last trade date:", lastTradeDate.toISOString());
+      console.log("   - Days since last trade:", daysSinceLastTrade);
+      console.log("   - Current streak:", userActivity.streak);
+
+      if (daysSinceLastTrade > 1 && userActivity.streak > 0) {
+        // More than 1 day since last trade, reset streak to 0
+        const oldStreak = userActivity.streak;
+        userActivity.streak = 0;
+        console.log(
+          `⏰ STREAK EXPIRED: ${oldStreak} → 0 (${daysSinceLastTrade} days since last trade)`
+        );
+        console.log(
+          "   ✅ REASON: More than 1 day since last trade = expire streak"
+        );
+      } else {
+        console.log(
+          "   ✅ REASON: Streak is still valid (≤1 day since last trade or streak already 0)"
+        );
+      }
+    } else {
+      console.log("   ❓ REASON: No previous trades found");
+    }
+
     await userActivity.save();
 
     // Invalidate weekly cache since new activity was added

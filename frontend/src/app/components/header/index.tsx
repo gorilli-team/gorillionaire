@@ -193,14 +193,21 @@ export default function Header() {
   const fetchStreak = useCallback(async () => {
     if (!authenticated || !address) return;
 
+    console.log("🔍 Fetching streak data for address:", address);
+
     try {
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/activity/track/me?address=${address}`
       );
       const data = await response.json();
 
+      console.log("📊 Streak API response:", data);
+
       if (data.userActivity?.streak) {
+        console.log("🔥 Setting streak to:", data.userActivity.streak);
         setStreak(data.userActivity.streak);
+      } else {
+        console.log("❌ No streak data found in response");
       }
     } catch (error) {
       console.error("Error fetching streak data:", error);
@@ -260,13 +267,27 @@ export default function Header() {
 
   // Show streak extension notification
   useEffect(() => {
+    console.log("🎯 Streak check triggered - current streak value:", streak);
+
     if (streak > 0) {
       // Show a subtle notification when streak is active
       const streakMessage =
         streak === 1 ? "🔥 1 day streak!" : `🔥 ${streak} day streak!`;
+
+      console.log("📢 Streak message:", streakMessage);
+
       if (streak >= 3) {
+        console.log("🎉 Showing streak notification for streak >= 3");
         showCustomNotification(streakMessage, "Streak Active!");
+      } else {
+        console.log("📝 Streak < 3, no notification shown");
       }
+    } else if (streak === 0) {
+      console.log(
+        "💤 No active streak (streak = 0) - user didn't trade yesterday"
+      );
+    } else {
+      console.log("❓ Unexpected streak value:", streak);
     }
   }, [streak]);
 
