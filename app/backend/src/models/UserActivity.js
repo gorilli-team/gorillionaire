@@ -52,6 +52,20 @@ const userActivitySchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    v2Access: {
+      enabled: {
+        type: Boolean,
+        default: false,
+      },
+      enabledAt: {
+        type: Date,
+        default: null,
+      },
+      accessCodeUsed: {
+        type: String,
+        default: null,
+      },
+    },
   },
   {
     timestamps: true,
