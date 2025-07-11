@@ -3,17 +3,28 @@ pragma solidity ^0.8.20;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IUniswapV2Router02} from "./interfaces/IUniswapV2Router02.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract SmartWallet {
+    using SafeERC20 for IERC20;
+
     event DepositUSDC(address indexed usdc, uint256 indexed amount);
     event WithdrawUSDC(address indexed usdc, uint256 indexed amount);
-    event Swap(
+    event BuyTokens(
         address indexed operator,
         address indexed tokenIn,
         address indexed tokenOut,
         uint256 amountIn,
-        uint256 amountOutMin,
-        uint256 amountOut
+        uint256 amountOut,
+        uint256 amountInMax
+    );
+    event SellTokens(
+        address indexed operator,
+        address indexed tokenIn,
+        address indexed tokenOut,
+        uint256 amountIn,
+        uint256 amountOut,
+        uint256 amountOutMin
     );
 
     error SmartWallet__NotOwner();
@@ -29,6 +40,7 @@ contract SmartWallet {
     error SmartWallet__InvalidOperatorAddress();
     error SmartWallet__InsufficientUSDCBalance();
     error SmartWallet__EmptyUSDCBalance();
+    error SmartWallet__TokenInMustBeUSDC();
 
     address public immutable i_usdc;
     address public s_owner;
@@ -52,11 +64,16 @@ contract SmartWallet {
         _;
     }
 
-    modifier onlyValidParams(address _token, uint256 amount) {
-        if (_token == address(0)) {
+    modifier onlyValidSwapParameters(address _router, address _token, uint256 _amount) {
+        if(!s_isWhitelistedRouter[_router]) {
+            revert SmartWallet__InvalidRouterAddress();
+        }
+
+        if (_token == i_usdc || _token == address(0)) {
             revert SmartWallet__InvalidTokenAddress();
         }
-        if (amount <= 0) {
+
+        if(_amount == 0) {
             revert SmartWallet__InvalidAmount();
         }
         _;
@@ -123,41 +140,48 @@ contract SmartWallet {
         emit WithdrawUSDC(address(usdc), usdcBalance);
     }
 
-    function performSwapV2(address router, address tokenIn, address tokenOut, uint256 amountIn, uint256 amountOutMin)
-        external
-        onlyOperator
-    {
-        if(!s_isWhitelistedRouter[router]) {
-            revert SmartWallet__InvalidRouterAddress();
+    function buyTokens(address router, address tokenOut, uint256 amountOut, uint256 amountInMax) external onlyOperator onlyValidSwapParameters(router, tokenOut, amountOut) {
+        uint256 currentAllowance = IERC20(i_usdc).allowance(address(this), router);
+        if(currentAllowance < amountInMax) {
+            IERC20(i_usdc).approve(router, 0);
+            IERC20(i_usdc).approve(router, type(uint256).max);
         }
 
-        if(tokenIn == address(0) || tokenOut == address(0)) {
-            revert SmartWallet__InvalidTokenAddress();
-        }
+        address[] memory path = new address[](2);
+        path[0] = i_usdc;
+        path[1] = tokenOut;
 
-        if(tokenIn == tokenOut) {
-            revert SmartWallet__TokensMustBeDifferent();
-        }
+        uint256[] memory amounts = IUniswapV2Router02(router).swapTokensForExactTokens(
+            amountOut,
+            amountInMax,
+            path,
+            address(this),
+            block.timestamp + 60
+        );
 
-        if(amountIn <= 0) {
-            revert SmartWallet__InvalidAmount();
-        }
+        emit BuyTokens(msg.sender, i_usdc, tokenOut, amounts[0], amountOut, amountInMax);
+    }
 
+    function sellTokens(address router, address tokenIn, uint256 amountIn, uint256 amountOutMin) external onlyOperator onlyValidSwapParameters(router, tokenIn, amountIn) {
         uint256 currentAllowance = IERC20(tokenIn).allowance(address(this), router);
-        if (currentAllowance < amountIn) {
+        if(currentAllowance < amountIn) {
             IERC20(tokenIn).approve(router, 0);
-            IERC20(tokenIn).approve(router, amountIn);
+            IERC20(tokenIn).approve(router, type(uint256).max);
         }
 
         address[] memory path = new address[](2);
         path[0] = tokenIn;
-        path[1] = tokenOut;
+        path[1] = i_usdc;
 
         uint256[] memory amounts = IUniswapV2Router02(router).swapExactTokensForTokens(
-            amountIn, amountOutMin, path, address(this), block.timestamp + 60
+            amountIn,
+            amountOutMin,
+            path,
+            address(this),
+            block.timestamp + 60
         );
 
-        emit Swap(msg.sender, tokenIn, tokenOut, amountIn, amountOutMin, amounts[amounts.length - 1]);
+        emit SellTokens(msg.sender, tokenIn, i_usdc, amountIn, amounts[amounts.length - 1], amountOutMin);
     }
 
     function setOperator(address _operator, bool authorized) external onlyOwner {
