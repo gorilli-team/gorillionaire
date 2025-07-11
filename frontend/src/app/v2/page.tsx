@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useMemo, useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Sidebar from "@/app/components/sidebar";
 import Header from "@/app/components/header";
 import { useAccount, useReadContract, useWriteContract } from "wagmi";
@@ -13,6 +14,7 @@ import Image from "next/image";
 const V2Page = () => {
   const { address, isConnected } = useAccount();
   const { login } = usePrivy();
+  const router = useRouter();
   const [selectedPage, setSelectedPage] = useState("V2");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { writeContract } = useWriteContract();
@@ -123,6 +125,11 @@ const V2Page = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Handle navigation to signals page
+  const handleGoToSignals = () => {
+    router.push("/v2/signals");
   };
 
   const onClick = useCallback(async () => {
@@ -463,12 +470,10 @@ const V2Page = () => {
                           You now have full access to all V2 features and benefits.
                         </p>
                         <button
-                          onClick={() => {
-                            // Add navigation to V2 features here
-                          }}
+                          onClick={handleGoToSignals}
                           className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-2 px-6 rounded-lg font-medium hover:from-purple-700 hover:to-indigo-700 transition-all duration-200"
                         >
-                          Explore V2 Features
+                          Go to signals
                         </button>
                       </div>
                     </div>
