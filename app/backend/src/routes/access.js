@@ -99,36 +99,65 @@ router.post("/verify", async (req, res) => {
       // Create new user activity if doesn't exist
       userActivity = new UserActivity({
         address: address.toLowerCase(),
+        points: 100,
         v2Access: {
           enabled: true,
           enabledAt: new Date(),
           accessCodeUsed: code.toUpperCase(),
         },
+        activitiesList: [{
+          name: "V2 Access Granted",
+          points: 100,
+          date: new Date(),
+        }]
       });
       isNewV2Access = true;
     } else {
-      // Enable V2 access if not already enabled
+      // Check if user already has V2 access
       if (!userActivity.v2Access || !userActivity.v2Access.enabled) {
+        // Set v2Access object
         userActivity.v2Access = {
           enabled: true,
           enabledAt: new Date(),
           accessCodeUsed: code.toUpperCase(),
         };
+        
+        // Award 100 XP for new V2 access
+        userActivity.points = (userActivity.points || 0) + 100;
+        userActivity.activitiesList.push({
+          name: "V2 Access Granted",
+          points: 100,
+          date: new Date(),
+        });
+        
         isNewV2Access = true;
       }
     }
-
-    // Award 100 XP for new V2 access
-    if (isNewV2Access) {
-      userActivity.points += 100;
-      userActivity.activitiesList.push({
-        name: "V2 Access Granted",
-        points: 100,
-        date: new Date(),
-      });
-    }
-
+    
+    // Save the user activity
     await userActivity.save();
+    
+    // Verify the save worked by reading back from database
+    const verifyUser = await UserActivity.findOne({
+      address: address.toLowerCase(),
+    });
+    
+    // If for some reason the save didn't work, force update
+    if (!verifyUser.v2Access || !verifyUser.v2Access.enabled) {
+      
+      const forceUpdate = await UserActivity.findOneAndUpdate(
+        { address: address.toLowerCase() },
+        { 
+          $set: { 
+            "v2Access.enabled": true,
+            "v2Access.enabledAt": new Date(),
+            "v2Access.accessCodeUsed": code.toUpperCase()
+          } 
+        },
+        { new: true }
+      );
+
+    }
 
     res.json({
       success: true,
