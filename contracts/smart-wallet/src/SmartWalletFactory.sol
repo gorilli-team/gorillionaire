@@ -17,12 +17,12 @@ contract SmartWalletFactory is Ownable {
 
     constructor() Ownable(msg.sender) {}
 
-    function createSmartWallet() public returns(SmartWallet) {
+    function createSmartWallet(address _usdc) public returns(SmartWallet) {
         if(s_userToSmartWallets[msg.sender].length >= s_userWalletLimit) {
             revert SmartWalletFactory__ExceededWalletLimit();
         }
 
-        SmartWallet smartWallet = new SmartWallet(msg.sender);
+        SmartWallet smartWallet = new SmartWallet(msg.sender, _usdc);
         s_deployedSmartWallets.push(smartWallet);
         s_userToSmartWallets[msg.sender].push(smartWallet);
 

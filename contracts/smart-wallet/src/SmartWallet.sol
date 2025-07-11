@@ -3,11 +3,10 @@ pragma solidity ^0.8.20;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IUniswapV2Router02} from "./interfaces/IUniswapV2Router02.sol";
-import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract SmartWallet {
-    using SafeERC20 for IERC20;
-
+    event AuthorizeOperator(address indexed operator, bool indexed authorized);
+    event SetWhitelistedRouter(address indexed router, bool indexed whitelisted);
     event DepositUSDC(address indexed usdc, uint256 indexed amount);
     event WithdrawUSDC(address indexed usdc, uint256 indexed amount);
     event BuyTokens(
@@ -189,6 +188,8 @@ contract SmartWallet {
             revert SmartWallet__InvalidOperatorAddress();
         }
         s_isOperator[_operator] = authorized;
+
+        emit AuthorizeOperator(_operator, authorized);
     }
 
     function setWhitelistedRouter(address _router, bool whitelisted) external onlyOwner {
@@ -196,6 +197,8 @@ contract SmartWallet {
             revert SmartWallet__InvalidRouterAddress();
         }
         s_isWhitelistedRouter[_router] = whitelisted;
+
+        emit SetWhitelistedRouter(_router, whitelisted);
     }
 
     function getTokenBalance(address _token) public view returns (uint256) {
