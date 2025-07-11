@@ -19,7 +19,6 @@ const V2Page = () => {
   const [tokenId, setTokenId] = useState<number | null>(null);
   const [accessCode, setAccessCode] = useState<string>("");
   const [isAuthorized, setIsAuthorized] = useState<boolean>(false);
-  const [accessCodeUsed, setAccessCodeUsed] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   // NFT Contract
@@ -78,9 +77,6 @@ const V2Page = () => {
         
         if (data.success) {
           setIsAuthorized(data.v2Enabled);
-          if (data.accessCodeUsed) {
-            setAccessCodeUsed(data.accessCodeUsed);
-          }
         }
       } catch (error) {
         console.error("Error checking access status:", error);
@@ -117,7 +113,6 @@ const V2Page = () => {
       
       if (data.success) {
         setIsAuthorized(true);
-        setAccessCodeUsed(data.accessCodeUsed || "DIRECT_ACCESS");
         toast.success("Access verified successfully!");
       } else {
         toast.error(data.message || "Verification error");
