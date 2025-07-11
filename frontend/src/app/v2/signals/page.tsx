@@ -154,25 +154,28 @@ export default function SignalsPage() {
     for (const event of events) {
       try {
         const response = await apiClient.get({
-          url: ENDPOINTS.PRICE_DATA.replace(":id", event.token_id) + "?limit=500",
+          url:
+            ENDPOINTS.PRICE_DATA.replace(":id", event.token_id) + "?limit=500",
           auth: true,
         });
-        
+
         // Check if response.data has the expected structure
         if (!response.data) {
           console.warn("No data in response for token", event.token_id);
           continue;
         }
-        
+
         // Handle different possible response structures
         let chartData: ChartData[] = [];
-        
+
         if (Array.isArray(response.data)) {
           // If response.data is directly an array
-          chartData = response.data.map((item: { timestamp: string; close: number }) => ({
-            timestamp: item.timestamp,
-            price: item.close,
-          }));
+          chartData = response.data.map(
+            (item: { timestamp: string; close: number }) => ({
+              timestamp: item.timestamp,
+              price: item.close,
+            })
+          );
         } else if (
           response.data &&
           typeof response.data === "object" &&
@@ -180,27 +183,39 @@ export default function SignalsPage() {
           Array.isArray(response.data.data)
         ) {
           // If response.data.data is the array
-          chartData = response.data.data.map((item: { timestamp: string; close: number }) => ({
-            timestamp: item.timestamp,
-            price: item.close,
-          }));
+          chartData = response.data.data.map(
+            (item: { timestamp: string; close: number }) => ({
+              timestamp: item.timestamp,
+              price: item.close,
+            })
+          );
         } else {
-          console.warn("Unexpected response structure for token", event.token_id, ":", response.data);
+          console.warn(
+            "Unexpected response structure for token",
+            event.token_id,
+            ":",
+            response.data
+          );
           continue;
         }
-        
+
         chartData.sort(
           (a: ChartData, b: ChartData) =>
             new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
         );
-        
+
         setCharts((prev) => {
           const newCharts = new Map(prev);
           newCharts.set(event.token_id, chartData);
           return newCharts;
         });
       } catch (error) {
-        console.error("Error fetching chart data for token", event.token_id, ":", error);
+        console.error(
+          "Error fetching chart data for token",
+          event.token_id,
+          ":",
+          error
+        );
       }
     }
   }, []);
@@ -242,24 +257,28 @@ export default function SignalsPage() {
     switch (name) {
       case "RSI":
         return (
-          <span className="bg-blue-200 text-blue-800 px-2 py-1 rounded-md text-xs">
+          <span className="bg-violet-100 text-violet-800 px-2 py-1 rounded-md text-xs">
             {name}
           </span>
         );
       case "MACD":
         return (
-          <span className="bg-pink-200 text-pink-800 px-2 py-1 rounded-md text-xs">
+          <span className="bg-indigo-100 text-indigo-800 px-2 py-1 rounded-md text-xs">
             {name}
           </span>
         );
       case "ADX":
         return (
-          <span className="bg-orange-200 text-orange-800 px-2 py-1 rounded-md text-xs">
+          <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-md text-xs">
             {name}
           </span>
         );
       default:
-        return name;
+        return (
+          <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded-md text-xs">
+            {name}
+          </span>
+        );
     }
   };
 
@@ -326,17 +345,19 @@ export default function SignalsPage() {
           <Header />
           <div className="flex-1 overflow-y-auto">
             <div className="w-full max-w-7xl mx-auto p-4 md:p-6">
-              <div className="bg-white rounded-lg shadow-sm">
+              <div className="bg-white rounded-lg shadow-md border border-gray-100">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-bold px-4 py-2">V2 Signals</h2>
+                  <h2 className="text-xl font-bold px-4 py-2 text-gray-900">
+                    V2 Signals
+                  </h2>
                   <div className="flex items-center">
-                    <select className="border border-gray-300 rounded-md px-3 py-1 text-xs mr-2">
+                    <select className="border border-gray-300 rounded-md px-3 py-1 text-xs mr-2 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500">
                       <option value="">All Actions</option>
                       <option value="BUY">Buy</option>
                       <option value="SELL">Sell</option>
                     </select>
 
-                    <select className="border border-gray-300 rounded-md px-3 py-1 text-xs mr-2">
+                    <select className="border border-gray-300 rounded-md px-3 py-1 text-xs mr-2 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500">
                       <option value="">All Timeframes</option>
                       <option value="1h">1 Hour</option>
                       <option value="4h">4 Hours</option>
@@ -344,7 +365,7 @@ export default function SignalsPage() {
                       <option value="1w">1 Week</option>
                     </select>
 
-                    <select className="border border-gray-300 rounded-md px-3 py-1 text-xs">
+                    <select className="border border-gray-300 rounded-md px-3 py-1 text-xs bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500">
                       <option value="">All Signals</option>
                       <option value="PRICE_CHANGE">Price Change</option>
                       <option value="VOLUME_SPIKE">Volume Spike</option>
@@ -354,30 +375,32 @@ export default function SignalsPage() {
 
                     <div>
                       <div className="flex items-center space-x-2 ml-4 mr-4">
-                        <button
-                          className="w-20 px-3 py-1 text-xs rounded-md bg-white text-gray-500 hover:bg-gray-100 border border-gray-300"
-                          onClick={() => {
-                            /* TODO: Implement filter */
-                          }}
-                        >
-                          All
-                        </button>
-                        <button
-                          className="w-20 px-3 py-1 text-xs rounded-md bg-white text-gray-500 hover:bg-gray-100 border border-gray-300"
-                          onClick={() => {
-                            /* TODO: Implement filter */
-                          }}
-                        >
-                          Buy
-                        </button>
-                        <button
-                          className="w-20 px-3 py-1 text-xs rounded-md bg-white text-gray-500 hover:bg-gray-100 border border-gray-300"
-                          onClick={() => {
-                            /* TODO: Implement filter */
-                          }}
-                        >
-                          Sell
-                        </button>
+                        <div className="inline-flex rounded-full border border-gray-300 overflow-hidden">
+                          <button
+                            className="px-3 py-1 text-sm flex items-center justify-center w-16 bg-violet-700 text-white"
+                            onClick={() => {
+                              /* TODO: Implement filter */
+                            }}
+                          >
+                            All
+                          </button>
+                          <button
+                            className="px-3 py-1 text-sm flex items-center justify-center w-16 bg-white text-gray-500"
+                            onClick={() => {
+                              /* TODO: Implement filter */
+                            }}
+                          >
+                            Buy
+                          </button>
+                          <button
+                            className="px-3 py-1 text-sm flex items-center justify-center w-16 bg-white text-gray-500"
+                            onClick={() => {
+                              /* TODO: Implement filter */
+                            }}
+                          >
+                            Sell
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -388,16 +411,17 @@ export default function SignalsPage() {
                     <div>
                       <table className="w-full border-collapse hidden md:table">
                         <thead className="sticky top-0 bg-white z-10">
-                          <tr className="text-left text-xs text-gray-500 bg-gray-50">
-                            <th className="px-4 py-2 text-xs">ACTION</th>
-                            <th className="px-4 py-2 text-xs">SYMBOL</th>
-                            <th className="px-4 py-2 text-xs">PRICE</th>
-                            <th className="px-4 py-2 text-xs text-center">CHART</th>
-                            <th className="px-4 py-2 text-xs">SIGNAL</th>
-                            <th className="px-4 py-2 text-xs">TIMEFRAME</th>
-                            <th className="px-4 py-2 text-xs">CREATED</th>
-                            <th className="px-4 py-2 text-xs text-center">ACTIONS</th>
-                            <th className="px-4 py-2 text-xs text-center">
+                          <tr className="text-left text-sm text-gray-700 bg-violet-50 font-medium">
+                            <th className="px-4 py-2 text-sm">ACTION</th>
+                            <th className="px-4 py-2 text-sm">PAIR</th>
+                            <th className="px-4 py-2 text-sm">PRICE</th>
+                            <th className="px-4 py-2 text-sm text-center">
+                              CHART
+                            </th>
+                            <th className="px-4 py-2 text-sm">SIGNAL</th>
+                            <th className="px-4 py-2 text-sm">TIMEFRAME</th>
+                            <th className="px-4 py-2 text-sm">CREATED</th>
+                            <th className="px-4 py-2 text-sm text-center">
                               DECISION
                             </th>
                           </tr>
@@ -411,7 +435,7 @@ export default function SignalsPage() {
                             .map((event) => (
                               <tr
                                 key={event.id}
-                                className={`border-b border-gray-100 text-xs text-gray-500 transition-colors duration-1000 ${
+                                className={`border-b border-gray-100 text-sm transition-colors duration-1000 ${
                                   latestEventId === event.id
                                     ? event.action === "BUY"
                                       ? "bg-green-100"
@@ -419,21 +443,22 @@ export default function SignalsPage() {
                                     : ""
                                 }`}
                               >
-                                <td className="text-gray-500 px-4 py-2 text-xs">
+                                <td className="text-gray-900 px-4 py-2 text-sm">
                                   <div className="flex items-center">
                                     <div
-                                      className={`w-4 h-4 rounded-full mr-2 flex items-center justify-center ${
+                                      className={`w-5 h-5 rounded-full mr-2 flex items-center justify-center ${
                                         event.action === "BUY"
-                                          ? "bg-green-400"
-                                          : "bg-red-400"
+                                          ? "bg-green-500"
+                                          : "bg-red-500"
                                       }`}
                                     >
                                       <svg
                                         xmlns="http://www.w3.org/2000/svg"
-                                        className="w-3 h-4 text-white"
+                                        className="w-3 h-3 text-white"
                                         fill="none"
                                         viewBox="0 0 24 24"
                                         stroke="currentColor"
+                                        strokeWidth="2"
                                       >
                                         {event.action === "BUY" ? (
                                           <>
@@ -472,15 +497,15 @@ export default function SignalsPage() {
                                         )}
                                       </svg>
                                     </div>
-                                    <span className="text-xs">
+                                    <span className="text-sm font-medium text-gray-900">
                                       {event.action.charAt(0).toUpperCase() +
                                         event.action.slice(1).toLowerCase()}
                                     </span>
                                   </div>
                                 </td>
-                                <td className="text-gray-500 text-xs font-bold">
+                                <td className="text-gray-900 text-sm font-semibold">
                                   <a
-                                    className="text-xs cursor-pointer px-4 py-2 hover:underline"
+                                    className="text-sm font-semibold cursor-pointer px-4 py-2 hover:text-violet-600 transition-colors"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       navigateToSignalDetail(event.signal_id);
@@ -489,12 +514,12 @@ export default function SignalsPage() {
                                     {event.symbol}
                                   </a>
                                 </td>
-                                <td className="text-gray-500 px-4 py-2 text-xs">
+                                <td className="text-gray-900 px-4 py-2 text-sm font-medium">
                                   {event.price.toFixed(6)}
                                 </td>
-                                <td className="text-gray-500 px-4 py-2 text-xs">
+                                <td className="text-gray-900 px-4 py-2 text-sm">
                                   <a
-                                    className="cursor-pointer"
+                                    className="cursor-pointer hover:opacity-80 transition-opacity"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       navigateToSignalDetail(
@@ -505,33 +530,35 @@ export default function SignalsPage() {
                                     {chart(charts.get(event.token_id) || [])}
                                   </a>
                                 </td>
-                                <td className="text-gray-500 px-4 py-2 text-xs">
+                                <td className="text-gray-900 px-4 py-2 text-sm">
                                   {colorSignalName(
                                     signals.get(event.signal_id)?.name ||
                                       event.signal_id
                                   )}
                                 </td>
-                                <td className="text-gray-500 px-4 py-2 text-xs">
-                                  <span className="bg-gray-200 text-gray-800 px-2 py-1 rounded-md text-xs">
-                                    {signals.get(event.signal_id)?.timeframe || ""}
+                                <td className="text-gray-900 px-4 py-2 text-sm">
+                                  <span className="bg-violet-100 text-violet-800 px-2 py-1 rounded-md text-xs">
+                                    {signals.get(event.signal_id)?.timeframe ||
+                                      ""}
                                   </span>
                                 </td>
-                                <td className="px-4 py-2 text-xs">
+                                <td className="px-4 py-2 text-sm text-gray-600">
                                   {getTimeAgo(event.timestamp)}
                                 </td>
-                                <td className="px-4 py-2 text-xs"></td>
-                                <td className="px-4 py-2 text-xs flex justify-end items-center">
-                                  <button
-                                    className="text-xs cursor-pointer px-3 py-1 rounded-md bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 mr-2"
-                                    onClick={() => {
-                                      // TODO: Implement refuse
-                                    }}
-                                  >
-                                    Refuse
-                                  </button>
-                                  <button className="text-xs cursor-pointer px-3 py-1 rounded-md bg-purple-600 text-white hover:bg-purple-700">
-                                    Accept
-                                  </button>
+                                <td className="px-4 py-2 text-sm flex justify-end items-center">
+                                  <div className="inline-flex rounded-full border border-gray-300 overflow-hidden">
+                                    <button
+                                      className="px-3 py-1 text-sm flex items-center justify-center w-16 bg-white text-gray-500"
+                                      onClick={() => {
+                                        // TODO: Implement refuse
+                                      }}
+                                    >
+                                      Refuse
+                                    </button>
+                                    <button className="px-3 py-1 text-sm flex items-center justify-center w-16 bg-violet-700 text-white">
+                                      Accept
+                                    </button>
+                                  </div>
                                 </td>
                               </tr>
                             ))}
@@ -545,7 +572,10 @@ export default function SignalsPage() {
                             <span className="font-normal">Showing</span>{" "}
                             <span className="font-bold">
                               {(currentPage - 1) * rowsPerPage + 1}-
-                              {Math.min(currentPage * rowsPerPage, events.length)}
+                              {Math.min(
+                                currentPage * rowsPerPage,
+                                events.length
+                              )}
                             </span>{" "}
                             <span className="font-normal">of</span>{" "}
                             <span className="font-bold">{events.length}</span>
