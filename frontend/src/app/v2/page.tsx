@@ -324,7 +324,7 @@ const V2Page = () => {
                             </a>
                           </div>
 
-                          <div className="pt-4">
+                          {/* <div className="pt-4">
                             <div className="bg-purple-50 rounded-lg p-4">
                               <div className="flex items-center">
                                 <div className="w-2 h-2 bg-purple-400 rounded-full mr-2"></div>
@@ -334,7 +334,7 @@ const V2Page = () => {
                                 </p>
                               </div>
                             </div>
-                          </div>
+                          </div> */}
                         </div>
                       </div>
 
