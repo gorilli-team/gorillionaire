@@ -87,6 +87,18 @@ export function getXpForNextLevel(currentXp: number): number {
   return level < MAX_LEVEL ? xpForNextLevel : 0;
 }
 
+// Calculate daily transaction target based on user level
+export function getDailyTransactionTarget(level: number): number {
+  // Goal per level = level × 10 transactions daily
+  return level * 10;
+}
+
+// Get daily transaction target for a user based on their XP/level
+export function getDailyTransactionTargetForUser(currentXp: number): number {
+  const { level } = getLevelInfo(currentXp);
+  return getDailyTransactionTarget(level);
+}
+
 export function getTotalXpForNextLevel(currentXp: number): number {
   const { totalXpForNextLevel } = getLevelInfo(currentXp);
   return totalXpForNextLevel;

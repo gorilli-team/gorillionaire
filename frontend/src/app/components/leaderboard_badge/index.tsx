@@ -14,6 +14,9 @@ const LeaderboardBadge: React.FC = () => {
     address: string;
     avatarSrc: string;
     rank: string;
+    streak: number;
+    todayTransactionCount?: number;
+    dailyTransactionTarget?: number;
   } | null>(null);
 
   const [nadName, setNadName] = useState<string | null>(null);
@@ -45,6 +48,10 @@ const LeaderboardBadge: React.FC = () => {
           address: data.userActivity?.address || address,
           avatarSrc: "/avatar_1.png",
           rank: data.userActivity?.rank,
+          streak: data.userActivity?.streak || 0,
+          todayTransactionCount: data.userActivity?.todayTransactionCount || 0,
+          dailyTransactionTarget:
+            data.userActivity?.dailyTransactionTarget || 3,
         });
       } catch (error) {
         console.error("❌ Error fetching user activity:", error);
@@ -94,6 +101,26 @@ const LeaderboardBadge: React.FC = () => {
         <Image src="/star.svg" alt="points" width={16} height={16} />
         <span className="text-sm font-medium text-gray-800">
           {positionUser.points} pts
+        </span>
+      </div>
+
+      {/* Streak */}
+      {positionUser.streak > 0 && (
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <span className="text-orange-500 text-sm">🔥</span>
+          <span className="text-sm font-medium text-orange-700">
+            {positionUser.streak} day{positionUser.streak !== 1 ? "s" : ""}{" "}
+            streak!
+          </span>
+        </div>
+      )}
+
+      {/* Daily Transaction Target */}
+      <div className="flex items-center gap-1 flex-shrink-0">
+        <span className="text-blue-500 text-sm">📊</span>
+        <span className="text-sm font-medium text-blue-700">
+          {positionUser.todayTransactionCount}/
+          {positionUser.dailyTransactionTarget} txs
         </span>
       </div>
     </div>

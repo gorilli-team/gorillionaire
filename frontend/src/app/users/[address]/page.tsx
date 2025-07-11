@@ -96,6 +96,8 @@ interface UserProfile {
   };
   hasV2NFT?: boolean;
   profileBgImage?: string;
+  todayTransactionCount?: number;
+  dailyTransactionTarget?: number;
 }
 
 interface Quest {
@@ -402,6 +404,9 @@ const UserProfilePage = () => {
           pagination: data.userActivity?.pagination,
           hasV2NFT: Number(v2NFTBalance) > 0,
           profileBgImage: data.userActivity?.profileBgImage || null,
+          todayTransactionCount: data.userActivity?.todayTransactionCount || 0,
+          dailyTransactionTarget:
+            data.userActivity?.dailyTransactionTarget || 3,
         });
       } catch (error) {
         console.error("Error fetching user profile:", error);
@@ -830,6 +835,40 @@ const UserProfilePage = () => {
                       <div className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">
                         {userProfile.rank}
                         {getOrdinalSuffix(userProfile.rank)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Daily Transaction Target */}
+                  <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-sm font-medium text-blue-700 mb-1">
+                          Daily Transaction Target
+                        </h3>
+                        <div className="text-lg font-bold text-blue-900">
+                          {userProfile.todayTransactionCount || 0} /{" "}
+                          {userProfile.dailyTransactionTarget || 3} transactions
+                        </div>
+                        <div className="text-xs text-blue-600 mt-1">
+                          Level {getLevelInfo(userProfile.points).level} target
+                        </div>
+                      </div>
+                      <div className="text-2xl">📊</div>
+                    </div>
+                    <div className="mt-3">
+                      <div className="w-full bg-blue-200 rounded-full h-2 overflow-hidden">
+                        <div
+                          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                          style={{
+                            width: `${Math.min(
+                              ((userProfile.todayTransactionCount || 0) /
+                                (userProfile.dailyTransactionTarget || 3)) *
+                                100,
+                              100
+                            )}%`,
+                          }}
+                        ></div>
                       </div>
                     </div>
                   </div>

@@ -73,7 +73,8 @@ export default function Header() {
     },
   });
   const [monPriceFormatted, setMonPriceFormatted] = useState<string>("0.00");
-  const [isFlashing, setIsFlashing] = useState(false);
+  const [isFlashing, setIsFlashing] = useState(false); //eslint-disable-line
+  const [streak, setStreak] = useState<number>(0);
 
   // WebSocket notification state
   const wsRef = useRef<WebSocket | null>(null);
@@ -122,6 +123,9 @@ export default function Header() {
           }
         );
         await response.json();
+
+        // Fetch streak data after tracking user
+        await fetchStreak();
       }
     };
 
@@ -185,6 +189,24 @@ export default function Header() {
     };
   }, [authenticated, address]);
 
+  // Fetch user streak data
+  const fetchStreak = useCallback(async () => {
+    if (!authenticated || !address) return;
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/activity/track/me?address=${address}`
+      );
+      const data = await response.json();
+
+      if (data.userActivity?.streak) {
+        setStreak(data.userActivity.streak);
+      }
+    } catch (error) {
+      console.error("Error fetching streak data:", error);
+    }
+  }, [authenticated, address]);
+
   // Memoize fetchPrice to prevent unnecessary recreations
   const fetchPrice = useCallback(async () => {
     try {
@@ -227,6 +249,27 @@ export default function Header() {
     return () => clearInterval(interval);
   }, [fetchPrice]);
 
+  // Fetch streak when user changes
+  useEffect(() => {
+    if (authenticated && address) {
+      fetchStreak();
+    } else {
+      setStreak(0);
+    }
+  }, [authenticated, address, fetchStreak]);
+
+  // Show streak extension notification
+  useEffect(() => {
+    if (streak > 0) {
+      // Show a subtle notification when streak is active
+      const streakMessage =
+        streak === 1 ? "🔥 1 day streak!" : `🔥 ${streak} day streak!`;
+      if (streak >= 3) {
+        showCustomNotification(streakMessage, "Streak Active!");
+      }
+    }
+  }, [streak]);
+
   return (
     <>
       <ToastContainer
@@ -252,7 +295,7 @@ export default function Header() {
             <LeaderboardBadge />
           </div>
 
-          {monPriceFormatted !== "0.00" && (
+          {/* {monPriceFormatted !== "0.00" && (
             <div
               className={`flex items-center gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg transition-colors duration-500 ml-auto sm:ml-0 ${
                 isFlashing ? "bg-violet-300" : "bg-violet-100"
@@ -271,7 +314,7 @@ export default function Header() {
                 </span>
               </div>
             </div>
-          )}
+          )} */}
 
           {ready && authenticated ? (
             <div className="flex items-center gap-2 sm:gap-4">
