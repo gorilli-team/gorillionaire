@@ -350,58 +350,56 @@ export default function SignalsPage() {
                   <h2 className="text-xl font-bold px-4 py-2 text-gray-900">
                     V2 Signals
                   </h2>
-                  <div className="flex items-center">
-                    <select className="border border-gray-300 rounded-md px-3 py-1 text-xs mr-2 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500">
-                      <option value="">All Actions</option>
-                      <option value="BUY">Buy</option>
-                      <option value="SELL">Sell</option>
-                    </select>
+                  <div className="flex flex-col md:flex-row items-start md:items-center gap-3">
+                    <div className="flex flex-wrap gap-2">
+                      <select className="border border-gray-300 rounded-md px-3 py-2 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500">
+                        <option value="">All Actions</option>
+                        <option value="BUY">Buy</option>
+                        <option value="SELL">Sell</option>
+                      </select>
 
-                    <select className="border border-gray-300 rounded-md px-3 py-1 text-xs mr-2 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500">
-                      <option value="">All Timeframes</option>
-                      <option value="1h">1 Hour</option>
-                      <option value="4h">4 Hours</option>
-                      <option value="1d">1 Day</option>
-                      <option value="1w">1 Week</option>
-                    </select>
+                      <select className="border border-gray-300 rounded-md px-3 py-2 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500">
+                        <option value="">All Timeframes</option>
+                        <option value="1h">1 Hour</option>
+                        <option value="4h">4 Hours</option>
+                        <option value="1d">1 Day</option>
+                        <option value="1w">1 Week</option>
+                      </select>
 
-                    <select className="border border-gray-300 rounded-md px-3 py-1 text-xs bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500">
-                      <option value="">All Signals</option>
-                      <option value="PRICE_CHANGE">Price Change</option>
-                      <option value="VOLUME_SPIKE">Volume Spike</option>
-                      <option value="ACTIVITY_SPIKE">Activity Spike</option>
-                      <option value="HOLDER_CHANGE">Holder Change</option>
-                    </select>
+                      <select className="border border-gray-300 rounded-md px-3 py-2 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500">
+                        <option value="">All Signals</option>
+                        <option value="PRICE_CHANGE">Price Change</option>
+                        <option value="VOLUME_SPIKE">Volume Spike</option>
+                        <option value="ACTIVITY_SPIKE">Activity Spike</option>
+                        <option value="HOLDER_CHANGE">Holder Change</option>
+                      </select>
+                    </div>
 
-                    <div>
-                      <div className="flex items-center space-x-2 ml-4 mr-4">
-                        <div className="inline-flex rounded-full border border-gray-300 overflow-hidden">
-                          <button
-                            className="px-3 py-1 text-sm flex items-center justify-center w-16 bg-violet-700 text-white"
-                            onClick={() => {
-                              /* TODO: Implement filter */
-                            }}
-                          >
-                            All
-                          </button>
-                          <button
-                            className="px-3 py-1 text-sm flex items-center justify-center w-16 bg-white text-gray-500"
-                            onClick={() => {
-                              /* TODO: Implement filter */
-                            }}
-                          >
-                            Buy
-                          </button>
-                          <button
-                            className="px-3 py-1 text-sm flex items-center justify-center w-16 bg-white text-gray-500"
-                            onClick={() => {
-                              /* TODO: Implement filter */
-                            }}
-                          >
-                            Sell
-                          </button>
-                        </div>
-                      </div>
+                    <div className="inline-flex rounded-full border border-gray-300 overflow-hidden">
+                      <button
+                        className="px-4 py-2 text-sm flex items-center justify-center w-16 bg-violet-700 text-white"
+                        onClick={() => {
+                          /* TODO: Implement filter */
+                        }}
+                      >
+                        All
+                      </button>
+                      <button
+                        className="px-4 py-2 text-sm flex items-center justify-center w-16 bg-white text-gray-500"
+                        onClick={() => {
+                          /* TODO: Implement filter */
+                        }}
+                      >
+                        Buy
+                      </button>
+                      <button
+                        className="px-4 py-2 text-sm flex items-center justify-center w-16 bg-white text-gray-500"
+                        onClick={() => {
+                          /* TODO: Implement filter */
+                        }}
+                      >
+                        Sell
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -565,23 +563,153 @@ export default function SignalsPage() {
                         </tbody>
                       </table>
 
+                      {/* Mobile view */}
+                      <div className="md:hidden">
+                        {events
+                          .slice(
+                            (currentPage - 1) * rowsPerPage,
+                            currentPage * rowsPerPage
+                          )
+                          .map((event) => (
+                            <div
+                              key={event.id}
+                              className={`border-b border-gray-100 p-4 transition-colors duration-1000 ${
+                                latestEventId === event.id
+                                  ? event.action === "BUY"
+                                    ? "bg-green-50"
+                                    : "bg-red-50"
+                                  : ""
+                              }`}
+                            >
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center">
+                                  <div
+                                    className={`w-6 h-6 rounded-full mr-3 flex items-center justify-center ${
+                                      event.action === "BUY"
+                                        ? "bg-green-500"
+                                        : "bg-red-500"
+                                    }`}
+                                  >
+                                    <svg
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      className="w-4 h-4 text-white"
+                                      fill="none"
+                                      viewBox="0 0 24 24"
+                                      stroke="currentColor"
+                                      strokeWidth="2"
+                                    >
+                                      {event.action === "BUY" ? (
+                                        <>
+                                          <line
+                                            x1="12"
+                                            y1="20"
+                                            x2="12"
+                                            y2="10"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                          />
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M5 15l7-7 7 7"
+                                          />
+                                        </>
+                                      ) : (
+                                        <>
+                                          <line
+                                            x1="12"
+                                            y1="4"
+                                            x2="12"
+                                            y2="14"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                          />
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M19 9l-7 7-7-7"
+                                          />
+                                        </>
+                                      )}
+                                    </svg>
+                                  </div>
+                                  <div>
+                                    <div className="text-lg font-semibold text-gray-900">
+                                      {event.symbol}
+                                    </div>
+                                    <div className="text-sm text-gray-600">
+                                      {event.action.charAt(0).toUpperCase() +
+                                        event.action.slice(1).toLowerCase()}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-lg font-bold text-gray-900">
+                                    ${event.price.toFixed(6)}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    {getTimeAgo(event.timestamp)}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center space-x-2">
+                                  {colorSignalName(
+                                    signals.get(event.signal_id)?.name ||
+                                      event.signal_id
+                                  )}
+                                  <span className="bg-violet-100 text-violet-800 px-2 py-1 rounded-md text-xs">
+                                    {signals.get(event.signal_id)?.timeframe ||
+                                      ""}
+                                  </span>
+                                </div>
+                                <a
+                                  className="cursor-pointer hover:opacity-80 transition-opacity"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigateToSignalDetail(
+                                      `${event.signal_id}|${event.token_id}|${event.currency}`
+                                    );
+                                  }}
+                                >
+                                  {chart(charts.get(event.token_id) || [])}
+                                </a>
+                              </div>
+
+                              <div className="flex justify-end">
+                                <div className="inline-flex rounded-full border border-gray-300 overflow-hidden">
+                                  <button
+                                    className="px-4 py-2 text-sm flex items-center justify-center w-20 bg-white text-gray-500"
+                                    onClick={() => {
+                                      // TODO: Implement refuse
+                                    }}
+                                  >
+                                    Refuse
+                                  </button>
+                                  <button className="px-4 py-2 text-sm flex items-center justify-center w-20 bg-violet-700 text-white">
+                                    Accept
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+
                       {/* Pagination Controls */}
-                      <div className="flex justify-between items-center p-4">
-                        <div className="text-sm text-gray-500">
-                          <span className="text-sm text-gray-500 mb-4 sm:mb-0">
-                            <span className="font-normal">Showing</span>{" "}
-                            <span className="font-bold">
-                              {(currentPage - 1) * rowsPerPage + 1}-
-                              {Math.min(
-                                currentPage * rowsPerPage,
-                                events.length
-                              )}
-                            </span>{" "}
-                            <span className="font-normal">of</span>{" "}
-                            <span className="font-bold">{events.length}</span>
-                          </span>
+                      <div className="flex flex-col md:flex-row justify-between items-center p-4 gap-4">
+                        <div className="text-sm text-gray-500 text-center md:text-left">
+                          <span className="font-normal">Showing</span>{" "}
+                          <span className="font-bold">
+                            {(currentPage - 1) * rowsPerPage + 1}-
+                            {Math.min(currentPage * rowsPerPage, events.length)}
+                          </span>{" "}
+                          <span className="font-normal">of</span>{" "}
+                          <span className="font-bold">{events.length}</span>
                         </div>
-                        <div className="flex-grow flex justify-center mb-2">
+                        <div className="flex-grow flex justify-center">
                           <Pagination
                             currentPage={currentPage}
                             totalPages={Math.ceil(events.length / rowsPerPage)}
