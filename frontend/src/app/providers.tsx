@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createConfig, WagmiProvider } from "wagmi";
 import { coinbaseWallet } from "wagmi/connectors";
 import { NNS } from "@nadnameservice/nns-viem-sdk";
+import { AuthProvider } from "./contexts/AuthContext";
 
 // Viem define chain
 export const monadChain = defineChain({
@@ -82,7 +83,7 @@ export function Providers({ children }: { children: ReactNode }) {
             ],
             fundingMethodConfig: {
               moonpay: {
-                paymentMethod: "credit_debit_card", // Purchase with credit or debit card
+                paymentMethod: "credit_debit_card",
                 uiConfig: {
                   accentColor: "#696FFD",
                   theme: "light",
@@ -91,7 +92,9 @@ export function Providers({ children }: { children: ReactNode }) {
             },
           }}
         >
-          {children}
+          <AuthProvider>
+            {children}
+          </AuthProvider>
         </PrivyProvider>
       </QueryClientProvider>
     </WagmiProvider>
