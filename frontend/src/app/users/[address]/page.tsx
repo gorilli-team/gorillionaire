@@ -854,7 +854,6 @@ const UserProfilePage = () => {
                           Level {getLevelInfo(userProfile.points).level} target
                         </div>
                       </div>
-                      <div className="text-2xl">📊</div>
                     </div>
                     <div className="mt-3">
                       <div className="w-full bg-blue-200 rounded-full h-2 overflow-hidden">

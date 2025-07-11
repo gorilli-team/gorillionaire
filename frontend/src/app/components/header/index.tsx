@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { ToastContainer, toast, Bounce } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import LeaderboardBadge from "../leaderboard_badge";
+import DailyQuestHeader from "../DailyQuestHeader";
 import Cookies from "js-cookie";
 import { useGetProfile } from "@nadnameservice/nns-wagmi-hooks";
 import { HexString } from "@/app/types";
@@ -222,28 +223,31 @@ export default function Header() {
       );
       const data = await response.json();
 
-      data.data.forEach(
-        (item: {
-          symbol: string;
-          price: {
-            price: number;
-          };
-        }) => {
-          if (item.symbol === "WMON") {
-            const newPrice = item.price?.price;
-            const formattedPrice = new Intl.NumberFormat("en-US", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            }).format(newPrice || 0);
+      // Add null checks to prevent errors
+      if (data && data.data && Array.isArray(data.data)) {
+        data.data.forEach(
+          (item: {
+            symbol: string;
+            price: {
+              price: number;
+            };
+          }) => {
+            if (item.symbol === "WMON") {
+              const newPrice = item.price?.price;
+              const formattedPrice = new Intl.NumberFormat("en-US", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              }).format(newPrice || 0);
 
-            if (formattedPrice !== monPriceFormatted) {
-              setMonPriceFormatted(formattedPrice);
-              setIsFlashing(true);
-              setTimeout(() => setIsFlashing(false), 5000);
+              if (formattedPrice !== monPriceFormatted) {
+                setMonPriceFormatted(formattedPrice);
+                setIsFlashing(true);
+                setTimeout(() => setIsFlashing(false), 5000);
+              }
             }
           }
-        }
-      );
+        );
+      }
     } catch (error) {
       console.error("Error fetching price data:", error);
     }
@@ -315,6 +319,8 @@ export default function Header() {
           <div className="hidden md:block">
             <LeaderboardBadge />
           </div>
+
+          <DailyQuestHeader />
 
           {/* {monPriceFormatted !== "0.00" && (
             <div
