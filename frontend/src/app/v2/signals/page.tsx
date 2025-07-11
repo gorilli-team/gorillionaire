@@ -1,5 +1,8 @@
 "use client";
 
+import React from "react";
+import Sidebar from "@/app/components/sidebar";
+import Header from "@/app/components/header";
 import ProtectPage from "@/app/components/protect-page/index";
 import { useRouter } from "next/navigation";
 import { useState, useCallback, useEffect } from "react";
@@ -100,6 +103,8 @@ const chart = (data: ChartData[]) => {
 
 export default function SignalsPage() {
   const router = useRouter();
+  const [selectedPage, setSelectedPage] = useState("V2");
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [signals, setSignals] = useState<Map<string, Signal>>(new Map());
   const [events, setEvents] = useState<Event[]>([]);
   const [latestEventId, setLatestEventId] = useState<string | null>(null);
@@ -144,6 +149,7 @@ export default function SignalsPage() {
       setSignals(signals);
     }
   };
+
   const fetchCharts = useCallback(async (events: Event[]) => {
     for (const event of events) {
       const response = await apiClient.get({
@@ -225,250 +231,307 @@ export default function SignalsPage() {
         return name;
     }
   };
+
   return (
     <ProtectPage>
-      <div className="w-full min-h-screen bg-gray-50 p-4 md:p-6 lg:p-8">
-        <div className="bg-white rounded-lg shadow-sm">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold px-4 py-2">Signals</h2>
-            <div className="flex items-center">
-              <select className="border border-gray-300 rounded-md px-3 py-1 text-xs mr-2">
-                <option value="">All Actions</option>
-                <option value="BUY">Buy</option>
-                <option value="SELL">Sell</option>
-              </select>
+      <div className="flex min-h-screen bg-gray-100 text-gray-800">
+        {/* Mobile menu button */}
+        <button
+          className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-full bg-gray-200"
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          aria-label="Toggle menu"
+        >
+          <svg
+            className="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d={
+                isMobileMenuOpen
+                  ? "M6 18L18 6M6 6l12 12"
+                  : "M4 6h16M4 12h16M4 18h16"
+              }
+            />
+          </svg>
+        </button>
 
-              <select className="border border-gray-300 rounded-md px-3 py-1 text-xs mr-2">
-                <option value="">All Timeframes</option>
-                <option value="1h">1 Hour</option>
-                <option value="4h">4 Hours</option>
-                <option value="1d">1 Day</option>
-                <option value="1w">1 Week</option>
-              </select>
+        {/* Sidebar */}
+        <div
+          className={`
+            fixed lg:static
+            ${
+              isMobileMenuOpen
+                ? "translate-x-0"
+                : "-translate-x-full lg:translate-x-0"
+            }
+            transition-transform duration-300 ease-in-out
+            z-40 lg:z-0
+            bg-white
+            shadow-xl lg:shadow-none
+            w-64 lg:w-auto
+          `}
+        >
+          <Sidebar
+            selectedPage={selectedPage}
+            setSelectedPage={setSelectedPage}
+          />
+        </div>
 
-              <select className="border border-gray-300 rounded-md px-3 py-1 text-xs">
-                <option value="">All Signals</option>
-                <option value="PRICE_CHANGE">Price Change</option>
-                <option value="VOLUME_SPIKE">Volume Spike</option>
-                <option value="ACTIVITY_SPIKE">Activity Spike</option>
-                <option value="HOLDER_CHANGE">Holder Change</option>
-              </select>
+        {/* Overlay */}
+        {isMobileMenuOpen && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+        )}
 
-              <div>
-                <div className="flex items-center space-x-2 ml-4 mr-4">
-                  <button
-                    className="w-20 px-3 py-1 text-xs rounded-md bg-white text-gray-500 hover:bg-gray-100 border border-gray-300"
-                    onClick={() => {
-                      /* TODO: Implement filter */
-                    }}
-                  >
-                    All
-                  </button>
-                  <button
-                    className="w-20 px-3 py-1 text-xs rounded-md bg-white text-gray-500 hover:bg-gray-100 border border-gray-300"
-                    onClick={() => {
-                      /* TODO: Implement filter */
-                    }}
-                  >
-                    Buy
-                  </button>
-                  <button
-                    className="w-20 px-3 py-1 text-xs rounded-md bg-white text-gray-500 hover:bg-gray-100 border border-gray-300"
-                    onClick={() => {
-                      /* TODO: Implement filter */
-                    }}
-                  >
-                    Sell
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="overflow-x-auto">
-            <div className="min-w-full">
-              {/* Desktop view */}
-              <div>
-                <table className="w-full border-collapse hidden md:table">
-                  <thead className="sticky top-0 bg-white z-10">
-                    <tr className="text-left text-xs text-gray-500 bg-gray-50">
-                      <th className="px-4 py-2 text-xs">ACTION</th>
-                      <th className="px-4 py-2 text-xs">SYMBOL</th>
-                      <th className="px-4 py-2 text-xs">PRICE</th>
-                      <th className="px-4 py-2 text-xs text-center">CHART</th>
-                      <th className="px-4 py-2 text-xs">SIGNAL</th>
-                      <th className="px-4 py-2 text-xs">TIMEFRAME</th>
-                      <th className="px-4 py-2 text-xs">CREATED</th>
-                      <th className="px-4 py-2 text-xs text-center">ACTIONS</th>
-                      <th className="px-4 py-2 text-xs text-center">
-                        DECISION
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {events
-                      .slice(
-                        (currentPage - 1) * rowsPerPage,
-                        currentPage * rowsPerPage
-                      )
-                      .map((event) => (
-                        <tr
-                          key={event.id}
-                          className={`border-b border-gray-100 text-xs text-gray-500 transition-colors duration-1000 ${
-                            latestEventId === event.id
-                              ? event.action === "BUY"
-                                ? "bg-green-100"
-                                : "bg-red-100"
-                              : ""
-                          }`}
+        {/* Main content */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <Header />
+          <div className="flex-1 overflow-y-auto">
+            <div className="w-full max-w-7xl mx-auto p-4 md:p-6">
+              <div className="bg-white rounded-lg shadow-sm">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-bold px-4 py-2">V2 Signals</h2>
+                  <div className="flex items-center">
+                    <select className="border border-gray-300 rounded-md px-3 py-1 text-xs mr-2">
+                      <option value="">All Actions</option>
+                      <option value="BUY">Buy</option>
+                      <option value="SELL">Sell</option>
+                    </select>
+
+                    <select className="border border-gray-300 rounded-md px-3 py-1 text-xs mr-2">
+                      <option value="">All Timeframes</option>
+                      <option value="1h">1 Hour</option>
+                      <option value="4h">4 Hours</option>
+                      <option value="1d">1 Day</option>
+                      <option value="1w">1 Week</option>
+                    </select>
+
+                    <select className="border border-gray-300 rounded-md px-3 py-1 text-xs">
+                      <option value="">All Signals</option>
+                      <option value="PRICE_CHANGE">Price Change</option>
+                      <option value="VOLUME_SPIKE">Volume Spike</option>
+                      <option value="ACTIVITY_SPIKE">Activity Spike</option>
+                      <option value="HOLDER_CHANGE">Holder Change</option>
+                    </select>
+
+                    <div>
+                      <div className="flex items-center space-x-2 ml-4 mr-4">
+                        <button
+                          className="w-20 px-3 py-1 text-xs rounded-md bg-white text-gray-500 hover:bg-gray-100 border border-gray-300"
+                          onClick={() => {
+                            /* TODO: Implement filter */
+                          }}
                         >
-                          <td className="text-gray-500 px-4 py-2 text-xs">
-                            <div className="flex items-center">
-                              <div
-                                className={`w-4 h-4 rounded-full mr-2 flex items-center justify-center ${
-                                  event.action === "BUY"
-                                    ? "bg-green-400"
-                                    : "bg-red-400"
+                          All
+                        </button>
+                        <button
+                          className="w-20 px-3 py-1 text-xs rounded-md bg-white text-gray-500 hover:bg-gray-100 border border-gray-300"
+                          onClick={() => {
+                            /* TODO: Implement filter */
+                          }}
+                        >
+                          Buy
+                        </button>
+                        <button
+                          className="w-20 px-3 py-1 text-xs rounded-md bg-white text-gray-500 hover:bg-gray-100 border border-gray-300"
+                          onClick={() => {
+                            /* TODO: Implement filter */
+                          }}
+                        >
+                          Sell
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="overflow-x-auto">
+                  <div className="min-w-full">
+                    {/* Desktop view */}
+                    <div>
+                      <table className="w-full border-collapse hidden md:table">
+                        <thead className="sticky top-0 bg-white z-10">
+                          <tr className="text-left text-xs text-gray-500 bg-gray-50">
+                            <th className="px-4 py-2 text-xs">ACTION</th>
+                            <th className="px-4 py-2 text-xs">SYMBOL</th>
+                            <th className="px-4 py-2 text-xs">PRICE</th>
+                            <th className="px-4 py-2 text-xs text-center">CHART</th>
+                            <th className="px-4 py-2 text-xs">SIGNAL</th>
+                            <th className="px-4 py-2 text-xs">TIMEFRAME</th>
+                            <th className="px-4 py-2 text-xs">CREATED</th>
+                            <th className="px-4 py-2 text-xs text-center">ACTIONS</th>
+                            <th className="px-4 py-2 text-xs text-center">
+                              DECISION
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {events
+                            .slice(
+                              (currentPage - 1) * rowsPerPage,
+                              currentPage * rowsPerPage
+                            )
+                            .map((event) => (
+                              <tr
+                                key={event.id}
+                                className={`border-b border-gray-100 text-xs text-gray-500 transition-colors duration-1000 ${
+                                  latestEventId === event.id
+                                    ? event.action === "BUY"
+                                      ? "bg-green-100"
+                                      : "bg-red-100"
+                                    : ""
                                 }`}
                               >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="w-3 h-4 text-white"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                >
-                                  {event.action === "BUY" ? (
-                                    <>
-                                      <line
-                                        x1="12"
-                                        y1="20"
-                                        x2="12"
-                                        y2="10"
+                                <td className="text-gray-500 px-4 py-2 text-xs">
+                                  <div className="flex items-center">
+                                    <div
+                                      className={`w-4 h-4 rounded-full mr-2 flex items-center justify-center ${
+                                        event.action === "BUY"
+                                          ? "bg-green-400"
+                                          : "bg-red-400"
+                                      }`}
+                                    >
+                                      <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        className="w-3 h-4 text-white"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
                                         stroke="currentColor"
-                                        strokeWidth="2"
-                                      />
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M5 15l7-7 7 7"
-                                      />
-                                    </>
-                                  ) : (
-                                    <>
-                                      <line
-                                        x1="12"
-                                        y1="4"
-                                        x2="12"
-                                        y2="14"
-                                        stroke="currentColor"
-                                        strokeWidth="2"
-                                      />
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M19 9l-7 7-7-7"
-                                      />
-                                    </>
+                                      >
+                                        {event.action === "BUY" ? (
+                                          <>
+                                            <line
+                                              x1="12"
+                                              y1="20"
+                                              x2="12"
+                                              y2="10"
+                                              stroke="currentColor"
+                                              strokeWidth="2"
+                                            />
+                                            <path
+                                              strokeLinecap="round"
+                                              strokeLinejoin="round"
+                                              strokeWidth={2}
+                                              d="M5 15l7-7 7 7"
+                                            />
+                                          </>
+                                        ) : (
+                                          <>
+                                            <line
+                                              x1="12"
+                                              y1="4"
+                                              x2="12"
+                                              y2="14"
+                                              stroke="currentColor"
+                                              strokeWidth="2"
+                                            />
+                                            <path
+                                              strokeLinecap="round"
+                                              strokeLinejoin="round"
+                                              strokeWidth={2}
+                                              d="M19 9l-7 7-7-7"
+                                            />
+                                          </>
+                                        )}
+                                      </svg>
+                                    </div>
+                                    <span className="text-xs">
+                                      {event.action.charAt(0).toUpperCase() +
+                                        event.action.slice(1).toLowerCase()}
+                                    </span>
+                                  </div>
+                                </td>
+                                <td className="text-gray-500 text-xs font-bold">
+                                  <a
+                                    className="text-xs cursor-pointer px-4 py-2 hover:underline"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      navigateToSignalDetail(
+                                        `${event.signal_id}|${event.token_id}|${event.currency}`
+                                      );
+                                    }}
+                                  >
+                                    {event.symbol}
+                                  </a>
+                                </td>
+                                <td className="text-gray-500 px-4 py-2 text-xs">
+                                  {event.price.toFixed(6)}
+                                </td>
+                                <td className="text-gray-500 px-4 py-2 text-xs">
+                                  <a
+                                    className="cursor-pointer"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      navigateToSignalDetail(
+                                        `${event.signal_id}|${event.token_id}|${event.currency}`
+                                      );
+                                    }}
+                                  >
+                                    {chart(charts.get(event.token_id) || [])}
+                                  </a>
+                                </td>
+                                <td className="text-gray-500 px-4 py-2 text-xs">
+                                  {colorSignalName(
+                                    signals.get(event.signal_id)?.name ||
+                                      event.signal_id
                                   )}
-                                </svg>
-                              </div>
-                              <span className="text-xs">
-                                {event.action.charAt(0).toUpperCase() +
-                                  event.action.slice(1).toLowerCase()}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="text-gray-500 text-xs font-bold">
-                            <a
-                              className="text-xs cursor-pointer px-4 py-2 hover:underline"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigateToSignalDetail(
-                                  `${event.signal_id}|${event.token_id}|${event.currency}`
-                                );
-                              }}
-                            >
-                              {event.symbol}
-                            </a>
-                          </td>
-                          <td className="text-gray-500 px-4 py-2 text-xs">
-                            {event.price.toFixed(6)}
-                          </td>
-                          <td className="text-gray-500 px-4 py-2 text-xs">
-                            <a
-                              className="cursor-pointer"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigateToSignalDetail(
-                                  `${event.signal_id}|${event.token_id}|${event.currency}`
-                                );
-                              }}
-                            >
-                              {chart(charts.get(event.token_id) || [])}
-                            </a>
-                          </td>
-                          <td className="text-gray-500 px-4 py-2 text-xs">
-                            {colorSignalName(
-                              signals.get(event.signal_id)?.name ||
-                                event.signal_id
-                            )}
-                          </td>
-                          <td className="text-gray-500 px-4 py-2 text-xs">
-                            <span className="bg-gray-200 text-gray-800 px-2 py-1 rounded-md text-xs">
-                              {signals.get(event.signal_id)?.timeframe || ""}
-                            </span>
-                          </td>
-                          <td className="px-4 py-2 text-xs">
-                            {getTimeAgo(event.timestamp)}
-                          </td>
-                          <td className="px-4 py-2 text-xs"></td>
-                          <td className="px-4 py-2 text-xs flex justify-end items-center">
-                            <button
-                              className="text-xs cursor-pointer px-3 py-1 rounded-md bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 mr-2"
-                              onClick={() => {
-                                // TODO: Implement refuse
-                              }}
-                            >
-                              Refuse
-                            </button>
-                            <button className="text-xs cursor-pointer px-3 py-1 rounded-md bg-purple-600 text-white hover:bg-purple-700">
-                              Accept
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
+                                </td>
+                                <td className="text-gray-500 px-4 py-2 text-xs">
+                                  <span className="bg-gray-200 text-gray-800 px-2 py-1 rounded-md text-xs">
+                                    {signals.get(event.signal_id)?.timeframe || ""}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-2 text-xs">
+                                  {getTimeAgo(event.timestamp)}
+                                </td>
+                                <td className="px-4 py-2 text-xs"></td>
+                                <td className="px-4 py-2 text-xs flex justify-end items-center">
+                                  <button
+                                    className="text-xs cursor-pointer px-3 py-1 rounded-md bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 mr-2"
+                                    onClick={() => {
+                                      // TODO: Implement refuse
+                                    }}
+                                  >
+                                    Refuse
+                                  </button>
+                                  <button className="text-xs cursor-pointer px-3 py-1 rounded-md bg-purple-600 text-white hover:bg-purple-700">
+                                    Accept
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
 
-                {/* Pagination Controls */}
-                <div className="flex justify-between items-center">
-                  <div className="text-sm text-gray-500">
-                    <span className="text-sm text-gray-500 mb-4 sm:mb-0">
-                      <span className="font-normal">Showing</span>{" "}
-                      <span className="font-bold">
-                        {(currentPage - 1) * rowsPerPage + 1}-
-                        {Math.min(currentPage * rowsPerPage, events.length)}
-                      </span>{" "}
-                      <span className="font-normal">of</span>{" "}
-                      <span className="font-bold">{events.length}</span>
-                    </span>
-                  </div>
-                  <div className="flex-grow flex justify-center mb-2">
-                    <Pagination
-                      currentPage={currentPage}
-                      totalPages={events.length}
-                      onPageChange={() =>
-                        setCurrentPage((prev) =>
-                          Math.min(
-                            prev + 1,
-                            Math.ceil(events.length / rowsPerPage)
-                          )
-                        )
-                      }
-                      showIcons={false}
-                    />
+                      {/* Pagination Controls */}
+                      <div className="flex justify-between items-center p-4">
+                        <div className="text-sm text-gray-500">
+                          <span className="text-sm text-gray-500 mb-4 sm:mb-0">
+                            <span className="font-normal">Showing</span>{" "}
+                            <span className="font-bold">
+                              {(currentPage - 1) * rowsPerPage + 1}-
+                              {Math.min(currentPage * rowsPerPage, events.length)}
+                            </span>{" "}
+                            <span className="font-normal">of</span>{" "}
+                            <span className="font-bold">{events.length}</span>
+                          </span>
+                        </div>
+                        <div className="flex-grow flex justify-center mb-2">
+                          <Pagination
+                            currentPage={currentPage}
+                            totalPages={Math.ceil(events.length / rowsPerPage)}
+                            onPageChange={setCurrentPage}
+                            showIcons={false}
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
