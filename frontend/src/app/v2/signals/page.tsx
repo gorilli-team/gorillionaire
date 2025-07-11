@@ -152,25 +152,56 @@ export default function SignalsPage() {
 
   const fetchCharts = useCallback(async (events: Event[]) => {
     for (const event of events) {
-      const response = await apiClient.get({
-        url: ENDPOINTS.PRICE_DATA.replace(":id", event.token_id) + "?limit=500",
-        auth: true,
-      });
-      const chartData = (
-        response.data as { data: { timestamp: string; close: number }[] }
-      ).data.map((item: { timestamp: string; close: number }) => ({
-        timestamp: item.timestamp,
-        price: item.close,
-      }));
-      chartData.sort(
-        (a: ChartData, b: ChartData) =>
-          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-      );
-      setCharts((prev) => {
-        const newCharts = new Map(prev);
-        newCharts.set(event.token_id, chartData);
-        return newCharts;
-      });
+      try {
+        const response = await apiClient.get({
+          url: ENDPOINTS.PRICE_DATA.replace(":id", event.token_id) + "?limit=500",
+          auth: true,
+        });
+        
+        // Check if response.data has the expected structure
+        if (!response.data) {
+          console.warn("No data in response for token", event.token_id);
+          continue;
+        }
+        
+        // Handle different possible response structures
+        let chartData: ChartData[] = [];
+        
+        if (Array.isArray(response.data)) {
+          // If response.data is directly an array
+          chartData = response.data.map((item: { timestamp: string; close: number }) => ({
+            timestamp: item.timestamp,
+            price: item.close,
+          }));
+        } else if (
+          response.data &&
+          typeof response.data === "object" &&
+          "data" in response.data &&
+          Array.isArray(response.data.data)
+        ) {
+          // If response.data.data is the array
+          chartData = response.data.data.map((item: { timestamp: string; close: number }) => ({
+            timestamp: item.timestamp,
+            price: item.close,
+          }));
+        } else {
+          console.warn("Unexpected response structure for token", event.token_id, ":", response.data);
+          continue;
+        }
+        
+        chartData.sort(
+          (a: ChartData, b: ChartData) =>
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+        );
+        
+        setCharts((prev) => {
+          const newCharts = new Map(prev);
+          newCharts.set(event.token_id, chartData);
+          return newCharts;
+        });
+      } catch (error) {
+        console.error("Error fetching chart data for token", event.token_id, ":", error);
+      }
     }
   }, []);
 
@@ -452,9 +483,7 @@ export default function SignalsPage() {
                                     className="text-xs cursor-pointer px-4 py-2 hover:underline"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      navigateToSignalDetail(
-                                        `${event.signal_id}|${event.token_id}|${event.currency}`
-                                      );
+                                      navigateToSignalDetail(event.signal_id);
                                     }}
                                   >
                                     {event.symbol}
