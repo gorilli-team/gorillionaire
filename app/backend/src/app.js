@@ -36,6 +36,7 @@ app.use("/trade", require("./routes/trade/0x"));
 app.use("/nillion/data", require("./routes/nillion/data"));
 app.use("/activity/track", require("./routes/activity/track"));
 app.use("/activity/quests", require("./routes/activity/quests"));
+app.use("/activity/daily-quests", require("./routes/activity/daily-quests"));
 // app.use("/activity/badges", require("./routes/activity/badges"));
 app.use("/token/holders", require("./routes/token/holders"));
 app.use("/gorilli-nft/holders", require("./routes/gorilliNft/holders"));
