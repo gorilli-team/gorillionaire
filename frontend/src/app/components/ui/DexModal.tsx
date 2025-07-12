@@ -522,6 +522,11 @@ const DexModal: React.FC<DexModalProps> = ({
               </div>
 
               <div className="flex items-center justify-between text-sm text-gray-500">
+                <span>Slippage Tolerance</span>
+                <span>0.5%</span>
+              </div>
+
+              <div className="flex items-center justify-between text-sm text-gray-500">
                 <span>Fee</span>
                 <span>0% - FREE FOOD NOW 🦍</span>
               </div>
