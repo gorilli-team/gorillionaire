@@ -407,8 +407,11 @@ const Signals = () => {
 
   // New function to execute trade after DEX modal confirmation
   const executeTrade = useCallback(
-    async (inputAmount: string) => {
-      console.log("🚀 executeTrade called with inputAmount:", inputAmount);
+    async (quoteDataString: string) => {
+      console.log(
+        "🚀 executeTrade called with quoteDataString:",
+        quoteDataString
+      );
       console.log("🚀 currentDexToken:", currentDexToken);
       console.log("🚀 currentSignalId:", currentSignalId);
       console.log("🚀 user?.wallet?.address:", user?.wallet?.address);
@@ -423,32 +426,15 @@ const Signals = () => {
       const token = currentDexToken;
       const type = currentDexType;
 
-      console.log("📋 Trade parameters:", {
-        token: token.symbol,
-        amount: inputAmount,
-        type,
-        userAddress: user?.wallet?.address,
-      });
-
-      const params = new URLSearchParams({
-        token: token.symbol,
-        amount: inputAmount,
-        type: type.toLowerCase(),
-        userAddress: user?.wallet?.address,
-      });
-
-      console.log("📋 URL params:", params.toString());
-
-      console.log(
-        "📡 About to fetch quote from:",
-        `${process.env.NEXT_PUBLIC_API_URL}/trade/0x-quote?${params.toString()}`
-      );
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/trade/0x-quote?${params.toString()}`
-      );
-      console.log("📡 Quote response status:", res.status);
-      const quoteData = await res.json();
-      console.log("📡 Quote data received:", quoteData ? "Yes" : "No");
+      // Parse the quote data from the modal
+      let quoteData;
+      try {
+        quoteData = JSON.parse(quoteDataString);
+      } catch (error) {
+        console.error("Error parsing quote data:", error);
+        toast.error("Invalid quote data received");
+        return;
+      }
 
       if (!quoteData) {
         console.log("❌ No quote data received");
@@ -458,7 +444,7 @@ const Signals = () => {
       console.log("✅ Quote data received successfully");
 
       // Extract amount from quote data
-      const amount =
+      const amount: number =
         type === "Buy"
           ? parseFloat(quoteData.buyAmount || "0") /
             Math.pow(10, token.decimals)
@@ -1458,7 +1444,7 @@ const Signals = () => {
               ?.confidenceScore ||
             sellSignals.find((s) => s._id === currentSignalId)?.confidenceScore
           }
-          userAddress={user.wallet.address!}
+          userAddress={user?.wallet?.address || ""}
         />
       )}
     </div>
