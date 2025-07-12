@@ -254,32 +254,36 @@ export default function SignalsPage() {
   );
 
   const colorSignalName = (name: string) => {
+    const base =
+      "px-2.5 py-1 rounded-md text-sm font-medium text-center inline-block";
     switch (name) {
       case "RSI":
         return (
-          <span className="bg-blue-50 text-blue-700 px-2.5 py-1 rounded-md text-xs font-medium">
-            {name}
-          </span>
+          <span className={`text-green-700 bg-green-50 ${base}`}>{name}</span>
         );
       case "MACD":
         return (
-          <span className="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-md text-xs font-medium">
-            {name}
-          </span>
+          <span className={`text-blue-700 bg-blue-50 ${base}`}>{name}</span>
         );
       case "ADX":
         return (
-          <span className="bg-purple-50 text-purple-700 px-2.5 py-1 rounded-md text-xs font-medium">
-            {name}
-          </span>
+          <span className={`text-orange-700 bg-orange-50 ${base}`}>{name}</span>
         );
+      case "SMA":
+        return <span className={`text-red-700 bg-red-50 ${base}`}>{name}</span>;
       default:
         return (
-          <span className="bg-gray-50 text-gray-700 px-2.5 py-1 rounded-md text-xs font-medium">
-            {name}
-          </span>
+          <span className={`text-gray-800 bg-gray-100 ${base}`}>{name}</span>
         );
     }
+  };
+
+  const getTimeframeBadge = (timeframe: string) => {
+    return (
+      <span className="bg-gray-100 text-gray-800 rounded-md px-2.5 py-1 text-sm font-medium inline-block">
+        {timeframe}
+      </span>
+    );
   };
 
   return (
@@ -537,10 +541,10 @@ export default function SignalsPage() {
                                   )}
                                 </td>
                                 <td className="text-gray-900 px-4 py-3 text-sm">
-                                  <span className="bg-gray-50 text-gray-700 px-2.5 py-1 rounded-md text-xs font-medium">
-                                    {signals.get(event.signal_id)?.timeframe ||
-                                      ""}
-                                  </span>
+                                  {getTimeframeBadge(
+                                    signals.get(event.signal_id)?.timeframe ||
+                                      ""
+                                  )}
                                 </td>
                                 <td className="px-4 py-2 text-sm text-gray-600">
                                   {getTimeAgo(event.timestamp)}
