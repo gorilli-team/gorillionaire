@@ -348,7 +348,7 @@ export default function SignalsPage() {
         <div className="flex-1 flex flex-col overflow-hidden">
           <Header />
           <div className="flex-1 overflow-y-auto">
-            <div className="w-full max-w-7xl mx-auto p-4 md:p-6">
+            <div className="w-full px-4 md:px-6">
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="flex items-center justify-between p-6 border-b border-gray-100">
                   <h2 className="text-2xl font-bold text-gray-900">
