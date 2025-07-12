@@ -112,9 +112,11 @@ Chog.Transfer.handler(async ({ event, context }) => {
           "CHOG",
           "🐸"
         );
-        if (new Date(event.block.timestamp) < new Date(Date.now() - 3600000)) {
-          await sendTelegramNotification(message);
-        }
+        // if (
+        //   new Date(event.block.timestamp) < new Date(Date.now() - 432000000)
+        // ) {
+        //   await sendTelegramNotification(message);
+        // }
 
         console.log("Transfer stored successfully");
       }
@@ -193,9 +195,11 @@ Molandak.Transfer.handler(async ({ event, context }) => {
           "MOLANDAK",
           "🦊"
         );
-        if (new Date(event.block.timestamp) < new Date(Date.now() - 3600000)) {
-          await sendTelegramNotification(message);
-        }
+        // if (
+        //   new Date(event.block.timestamp) < new Date(Date.now() - 432000000)
+        // ) {
+        //   await sendTelegramNotification(message);
+        // }
 
         console.log("Transfer stored successfully");
       }
@@ -269,9 +273,11 @@ Moyaki.Transfer.handler(async ({ event, context }) => {
           "🌊"
         );
 
-        if (new Date(event.block.timestamp) < new Date(Date.now() - 3600000)) {
-          await sendTelegramNotification(message);
-        }
+        // if (
+        //   new Date(event.block.timestamp) < new Date(Date.now() - 432000000)
+        // ) {
+        //   await sendTelegramNotification(message);
+        // }
 
         console.log("Transfer stored successfully");
       }

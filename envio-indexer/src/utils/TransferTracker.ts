@@ -127,9 +127,9 @@ export class TransferTracker {
                 new Date(date.getTime() - 3600000)
               )}`;
 
-            if (date < new Date(Date.now() - 3600000)) {
-              await sendTelegramNotification(message);
-            }
+            // if (date < new Date(Date.now() - 432000000)) {
+            //   await sendTelegramNotification(message);
+            // }
             console.log("ACTIVE_SPIKE stored successfully");
           }
         } catch (error) {

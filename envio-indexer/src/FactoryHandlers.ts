@@ -68,7 +68,7 @@ async function handleNewListing(
         `<b>Token Address:</b> <code>${address}</code>\n` +
         `<b>View on Explorer:</b> <a href="https://testnet.monadexplorer.com/token/${address}">Click here</a>`;
 
-      if (new Date(event.block.timestamp) < new Date(Date.now() - 3600000)) {
+      if (new Date(event.block.timestamp) < new Date(Date.now() - 432000000)) {
         await sendTelegramNotification(message);
       }
 
