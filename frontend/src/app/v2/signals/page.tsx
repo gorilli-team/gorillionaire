@@ -506,7 +506,9 @@ export default function SignalsPage() {
                                     className="text-sm font-semibold cursor-pointer px-4 py-2 hover:text-violet-600 transition-colors"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      navigateToSignalDetail(event.signal_id);
+                                      navigateToSignalDetail(
+                                        `${event.signal_id}|${event.token_id}|${event.currency}`
+                                      );
                                     }}
                                   >
                                     {event.symbol}
