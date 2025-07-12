@@ -35,7 +35,7 @@ const Token: React.FC<TokenProps> = ({
           <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-700 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
             {image ? (
               <Image
-                src={image}
+                src={image && image.length > 0 ? image : "/fav.png"}
                 alt={`${symbol} token`}
                 className="w-full h-full object-cover"
                 width={32}

@@ -759,7 +759,11 @@ const Signals = () => {
                 <div className="flex items-center space-x-3 w-full">
                   <div className="w-16 h-16 rounded-full overflow-hidden flex-shrink-0 relative">
                     <Image
-                      src={token.imageUrl || ""}
+                      src={
+                        token.imageUrl && token.imageUrl.length > 0
+                          ? token.imageUrl
+                          : "/fav.png"
+                      }
                       alt={token.name || "token image"}
                       width={128}
                       height={128}
@@ -803,7 +807,12 @@ const Signals = () => {
                         <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 relative border border-gray-200">
                           {trade.userImageUrl && (
                             <Image
-                              src={trade.userImageUrl}
+                              src={
+                                trade.userImageUrl &&
+                                trade.userImageUrl.length > 0
+                                  ? trade.userImageUrl
+                                  : "/fav.png"
+                              }
                               alt={`${trade.user} avatar`}
                               width={32}
                               height={32}
@@ -875,7 +884,11 @@ const Signals = () => {
                         <div className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0 relative mr-2">
                           <Image
                             src={
-                              fetchImageFromSignalText(signal.signal_text) || ""
+                              fetchImageFromSignalText(signal.signal_text) &&
+                              fetchImageFromSignalText(signal.signal_text)
+                                .length > 0
+                                ? fetchImageFromSignalText(signal.signal_text)
+                                : "/fav.png"
                             }
                             alt={signal.signal_text || "signal image"}
                             width={24}
@@ -1019,7 +1032,11 @@ const Signals = () => {
                         <div className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0 relative mr-2">
                           <Image
                             src={
-                              fetchImageFromSignalText(signal.signal_text) || ""
+                              fetchImageFromSignalText(signal.signal_text) &&
+                              fetchImageFromSignalText(signal.signal_text)
+                                .length > 0
+                                ? fetchImageFromSignalText(signal.signal_text)
+                                : "/fav.png"
                             }
                             alt={signal.signal_text || "signal image"}
                             width={24}
