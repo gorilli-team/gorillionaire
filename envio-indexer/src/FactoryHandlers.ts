@@ -67,7 +67,10 @@ async function handleNewListing(
         `🚀 <b>New Token Listed on Uniswap V3!</b>\n\n` +
         `<b>Token Address:</b> <code>${address}</code>\n` +
         `<b>View on Explorer:</b> <a href="https://testnet.monadexplorer.com/token/${address}">Click here</a>`;
-      await sendTelegramNotification(message);
+
+      if (new Date(event.block.timestamp) < new Date(Date.now() - 3600000)) {
+        await sendTelegramNotification(message);
+      }
 
       console.log("listing stored successfully");
     }
