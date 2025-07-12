@@ -404,26 +404,31 @@ const Signals = () => {
 
   // New function to execute trade after DEX modal confirmation
   const executeTrade = useCallback(
-    async (inputAmount: string) => {
+    async (quoteDataString: string) => {
       if (!currentDexToken || !user?.wallet?.address) return;
 
       const token = currentDexToken;
       const type = currentDexType;
-      const amount = parseFloat(inputAmount);
 
-      const params = new URLSearchParams({
-        token: token.symbol,
-        amount: amount.toString(),
-        type: type.toLowerCase(),
-        userAddress: user?.wallet?.address,
-      });
-
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/trade/0x-quote?${params.toString()}`
-      );
-      const quoteData = await res.json();
+      // Parse the quote data from the modal
+      let quoteData;
+      try {
+        quoteData = JSON.parse(quoteDataString);
+      } catch (error) {
+        console.error("Error parsing quote data:", error);
+        toast.error("Invalid quote data received");
+        return;
+      }
 
       if (!quoteData) return;
+
+      // Extract amount from quote data
+      const amount =
+        type === "Buy"
+          ? parseFloat(quoteData.buyAmount || "0") /
+            Math.pow(10, token.decimals)
+          : parseFloat(quoteData.sellAmount || "0") /
+            Math.pow(10, token.decimals);
 
       if (quoteData.issues?.balance) {
         return toast.error("Insufficient balance");
@@ -1252,6 +1257,7 @@ const Signals = () => {
               ?.confidenceScore ||
             sellSignals.find((s) => s._id === currentSignalId)?.confidenceScore
           }
+          userAddress={user?.wallet?.address}
         />
       )}
     </div>

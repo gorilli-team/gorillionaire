@@ -25,6 +25,7 @@ interface DexModalProps {
   confidenceScore?: string;
   sellPercentage?: number;
   onAmountChange?: (inputAmount: string, outputAmount: string) => void;
+  userAddress: string;
 }
 
 const DexModal: React.FC<DexModalProps> = ({
@@ -40,6 +41,7 @@ const DexModal: React.FC<DexModalProps> = ({
   confidenceScore = "",
   sellPercentage = 100,
   onAmountChange,
+  userAddress,
 }) => {
   const [inputAmount, setInputAmount] = useState<string>("");
   const [outputAmount, setOutputAmount] = useState<string>("0");
@@ -133,18 +135,58 @@ const DexModal: React.FC<DexModalProps> = ({
   const handleConfirm = async () => {
     setIsLoading(true);
     try {
-      // Pass the current input amount to the parent component
-      if (type === "Buy") {
-        await onConfirm(outputAmount);
+      // Get quote from 0x API
+      const quoteData = await getQuote();
+
+      if (quoteData) {
+        console.log("Quote received:", quoteData);
+        // Pass the quote data to parent component
+        await onConfirm(JSON.stringify(quoteData));
       } else {
-        await onConfirm(inputAmount);
+        console.error("Failed to get quote");
       }
+
       // Close the modal after successful confirmation
       onClose();
     } catch (error) {
-      console.error("Error confirming trade:", error);
+      console.error("Error getting quote:", error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Simple function to get quote from 0x API
+  const getQuote = async () => {
+    try {
+      const params = new URLSearchParams({
+        token: token.symbol,
+        amount: type === "Buy" ? outputAmount : inputAmount,
+        type: type.toLowerCase(),
+        userAddress: userAddress,
+      });
+
+      console.log("Fetching quote with params:", params.toString());
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/trade/0x-quote?${params.toString()}`
+      );
+
+      console.log("Response status:", response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Backend error:", errorText);
+        throw new Error(
+          `HTTP error! status: ${response.status}, message: ${errorText}`
+        );
+      }
+
+      const data = await response.json();
+      console.log("Quote data received:", data);
+      return data;
+    } catch (error) {
+      console.error("Error fetching quote:", error);
+      return null;
     }
   };
 
@@ -523,8 +565,8 @@ const DexModal: React.FC<DexModalProps> = ({
                 }`}
             >
               {isLoading
-                ? "Loading..."
-                : `Confirm ${type === "Buy" ? "Buy" : "Sell"}`}
+                ? "Getting Quote..."
+                : `Get Quote (${type === "Buy" ? "Buy" : "Sell"})`}
             </button>
           </>
         )}

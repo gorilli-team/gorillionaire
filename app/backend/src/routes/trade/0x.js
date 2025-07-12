@@ -26,7 +26,13 @@ const symbolToTokenInfo = {
   MON: { address: MON_ADDRESS, decimals: 18 },
 };
 
-async function buildPriceRequest(tokenSymbol, amount, type, userAddress) {
+async function buildPriceRequest(
+  tokenSymbol,
+  amount,
+  type,
+  userAddress,
+  slippagePercentage = 1
+) {
   const tokenInfo = symbolToTokenInfo[tokenSymbol];
 
   // If "buy" I need to convert the amount passed (which is based in token) to MON amount
@@ -64,6 +70,7 @@ async function buildPriceRequest(tokenSymbol, amount, type, userAddress) {
       .parseUnits(amount.toFixed(tokenInfo.decimals), tokenInfo.decimals)
       .toString(),
     taker: userAddress,
+    slippagePercentage: slippagePercentage.toString(),
   });
 
   const headers = {
@@ -74,11 +81,12 @@ async function buildPriceRequest(tokenSymbol, amount, type, userAddress) {
   return { priceParams, headers, usdValue, tokenPrice };
 }
 
-async function getPrice(token, amount, type) {
+async function getPrice(token, amount, type, userAddress) {
   const { priceParams, headers } = await buildPriceRequest(
     token,
     Number(amount),
-    type
+    type,
+    userAddress
   );
 
   const priceResponse = await fetch(
@@ -130,25 +138,33 @@ router.get("/0x-quote", async (req, res) => {
     return res.status(500).json({ error: '"type" value not valid' });
 
   try {
+    console.log(
+      `Getting quote for ${type} ${amount} ${token} for user ${userAddress}`
+    );
     const quote = await getQuote(token, amount, type, userAddress);
+    console.log(`Quote received successfully`);
     res.status(200).json(quote);
   } catch (e) {
-    res.status(500).json({ error: e });
+    console.error(`Error getting quote: ${e.message}`);
+    res.status(500).json({ error: e.message || e });
   }
 });
 
 router.get("/0x-price", async (req, res) => {
-  const { token, amount, type } = req.query;
+  const { token, amount, type, userAddress } = req.query;
   if (!token || !amount || !type)
     return res.status(500).json({ error: "Required field missing" });
   if (!["sell", "buy"].includes(type))
     return res.status(500).json({ error: '"type" value not valid' });
 
   try {
+    console.log(`Getting price for ${type} ${amount} ${token}`);
     const price = await getPrice(token, amount, type, userAddress);
+    console.log(`Price received successfully`);
     res.status(200).json(price);
   } catch (e) {
-    res.status(500).json({ error: e });
+    console.error(`Error getting price: ${e.message}`);
+    res.status(500).json({ error: e.message || e });
   }
 });
 
