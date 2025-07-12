@@ -1238,7 +1238,7 @@ const Signals = () => {
       `}</style>
 
       {/* Add DEX Modal */}
-      {currentDexToken && (
+      {currentDexToken && user?.wallet?.address && (
         <DexModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
@@ -1257,7 +1257,7 @@ const Signals = () => {
               ?.confidenceScore ||
             sellSignals.find((s) => s._id === currentSignalId)?.confidenceScore
           }
-          userAddress={user?.wallet?.address}
+          userAddress={user.wallet.address!}
         />
       )}
     </div>

@@ -900,7 +900,7 @@ export default function SignalDetails() {
       </div>
 
       {/* Add DEX Modal */}
-      {currentDexToken && (
+      {currentDexToken && user?.wallet?.address && (
         <DexModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
@@ -916,6 +916,7 @@ export default function SignalDetails() {
             setCurrentDexInputAmount(inputAmount);
             setCurrentDexOutputAmount(outputAmount);
           }}
+          userAddress={user.wallet.address!}
         />
       )}
     </div>
