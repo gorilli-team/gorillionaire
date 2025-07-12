@@ -257,25 +257,25 @@ export default function SignalsPage() {
     switch (name) {
       case "RSI":
         return (
-          <span className="bg-violet-100 text-violet-800 px-2 py-1 rounded-md text-xs">
+          <span className="bg-blue-50 text-blue-700 px-2.5 py-1 rounded-md text-xs font-medium">
             {name}
           </span>
         );
       case "MACD":
         return (
-          <span className="bg-indigo-100 text-indigo-800 px-2 py-1 rounded-md text-xs">
+          <span className="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-md text-xs font-medium">
             {name}
           </span>
         );
       case "ADX":
         return (
-          <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-md text-xs">
+          <span className="bg-purple-50 text-purple-700 px-2.5 py-1 rounded-md text-xs font-medium">
             {name}
           </span>
         );
       default:
         return (
-          <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded-md text-xs">
+          <span className="bg-gray-50 text-gray-700 px-2.5 py-1 rounded-md text-xs font-medium">
             {name}
           </span>
         );
@@ -345,20 +345,20 @@ export default function SignalsPage() {
           <Header />
           <div className="flex-1 overflow-y-auto">
             <div className="w-full max-w-7xl mx-auto p-4 md:p-6">
-              <div className="bg-white rounded-lg shadow-md border border-gray-100">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-bold px-4 py-2 text-gray-900">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="flex items-center justify-between p-6 border-b border-gray-100">
+                  <h2 className="text-2xl font-bold text-gray-900">
                     V2 Signals
                   </h2>
                   <div className="flex flex-col md:flex-row items-start md:items-center gap-3">
                     <div className="flex flex-wrap gap-2">
-                      <select className="border border-gray-300 rounded-md px-3 py-2 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500">
+                      <select className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 hover:border-gray-300">
                         <option value="">All Actions</option>
                         <option value="BUY">Buy</option>
                         <option value="SELL">Sell</option>
                       </select>
 
-                      <select className="border border-gray-300 rounded-md px-3 py-2 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500">
+                      <select className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 hover:border-gray-300">
                         <option value="">All Timeframes</option>
                         <option value="1h">1 Hour</option>
                         <option value="4h">4 Hours</option>
@@ -366,7 +366,7 @@ export default function SignalsPage() {
                         <option value="1w">1 Week</option>
                       </select>
 
-                      <select className="border border-gray-300 rounded-md px-3 py-2 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500">
+                      <select className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 hover:border-gray-300">
                         <option value="">All Signals</option>
                         <option value="PRICE_CHANGE">Price Change</option>
                         <option value="VOLUME_SPIKE">Volume Spike</option>
@@ -375,9 +375,9 @@ export default function SignalsPage() {
                       </select>
                     </div>
 
-                    <div className="inline-flex rounded-full border border-gray-300 overflow-hidden">
+                    <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden shadow-sm">
                       <button
-                        className="px-4 py-2 text-sm flex items-center justify-center w-16 bg-violet-700 text-white"
+                        className="px-4 py-2 text-sm flex items-center justify-center w-16 bg-blue-50 text-blue-700 border-r border-gray-200 transition-all duration-200 hover:bg-blue-100"
                         onClick={() => {
                           /* TODO: Implement filter */
                         }}
@@ -385,7 +385,7 @@ export default function SignalsPage() {
                         All
                       </button>
                       <button
-                        className="px-4 py-2 text-sm flex items-center justify-center w-16 bg-white text-gray-500"
+                        className="px-4 py-2 text-sm flex items-center justify-center w-16 bg-white text-gray-600 transition-all duration-200 hover:bg-gray-50 border-r border-gray-200"
                         onClick={() => {
                           /* TODO: Implement filter */
                         }}
@@ -393,7 +393,7 @@ export default function SignalsPage() {
                         Buy
                       </button>
                       <button
-                        className="px-4 py-2 text-sm flex items-center justify-center w-16 bg-white text-gray-500"
+                        className="px-4 py-2 text-sm flex items-center justify-center w-16 bg-white text-gray-600 transition-all duration-200 hover:bg-gray-50"
                         onClick={() => {
                           /* TODO: Implement filter */
                         }}
@@ -409,17 +409,17 @@ export default function SignalsPage() {
                     <div>
                       <table className="w-full border-collapse hidden md:table">
                         <thead className="sticky top-0 bg-white z-10">
-                          <tr className="text-left text-sm text-gray-700 bg-violet-50 font-medium">
-                            <th className="px-4 py-2 text-sm">ACTION</th>
-                            <th className="px-4 py-2 text-sm">PAIR</th>
-                            <th className="px-4 py-2 text-sm">PRICE</th>
-                            <th className="px-4 py-2 text-sm text-center">
+                          <tr className="text-left text-sm text-gray-600 bg-gray-50 font-medium border-b border-gray-200">
+                            <th className="px-4 py-3 text-sm">ACTION</th>
+                            <th className="px-4 py-3 text-sm">PAIR</th>
+                            <th className="px-4 py-3 text-sm">PRICE</th>
+                            <th className="px-4 py-3 text-sm text-center">
                               CHART
                             </th>
-                            <th className="px-4 py-2 text-sm">SIGNAL</th>
-                            <th className="px-4 py-2 text-sm">TIMEFRAME</th>
-                            <th className="px-4 py-2 text-sm">CREATED</th>
-                            <th className="px-4 py-2 text-sm text-center">
+                            <th className="px-4 py-3 text-sm">SIGNAL</th>
+                            <th className="px-4 py-3 text-sm">TIMEFRAME</th>
+                            <th className="px-4 py-3 text-sm">CREATED</th>
+                            <th className="px-4 py-3 text-sm text-center">
                               DECISION
                             </th>
                           </tr>
@@ -436,8 +436,8 @@ export default function SignalsPage() {
                                 className={`border-b border-gray-100 text-sm transition-colors duration-1000 ${
                                   latestEventId === event.id
                                     ? event.action === "BUY"
-                                      ? "bg-green-100"
-                                      : "bg-red-100"
+                                      ? "bg-emerald-50"
+                                      : "bg-rose-50"
                                     : ""
                                 }`}
                               >
@@ -446,8 +446,8 @@ export default function SignalsPage() {
                                     <div
                                       className={`w-5 h-5 rounded-full mr-2 flex items-center justify-center ${
                                         event.action === "BUY"
-                                          ? "bg-green-500"
-                                          : "bg-red-500"
+                                          ? "bg-emerald-500"
+                                          : "bg-rose-500"
                                       }`}
                                     >
                                       <svg
@@ -536,8 +536,8 @@ export default function SignalsPage() {
                                       event.signal_id
                                   )}
                                 </td>
-                                <td className="text-gray-900 px-4 py-2 text-sm">
-                                  <span className="bg-violet-100 text-violet-800 px-2 py-1 rounded-md text-xs">
+                                <td className="text-gray-900 px-4 py-3 text-sm">
+                                  <span className="bg-gray-50 text-gray-700 px-2.5 py-1 rounded-md text-xs font-medium">
                                     {signals.get(event.signal_id)?.timeframe ||
                                       ""}
                                   </span>
@@ -545,17 +545,17 @@ export default function SignalsPage() {
                                 <td className="px-4 py-2 text-sm text-gray-600">
                                   {getTimeAgo(event.timestamp)}
                                 </td>
-                                <td className="px-4 py-2 text-sm flex justify-end items-center">
-                                  <div className="inline-flex rounded-full border border-gray-300 overflow-hidden">
+                                <td className="px-4 py-3 text-sm flex justify-end items-center">
+                                  <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden shadow-sm">
                                     <button
-                                      className="px-3 py-1 text-sm flex items-center justify-center w-16 bg-white text-gray-500"
+                                      className="px-3 py-1.5 text-xs flex items-center justify-center w-16 bg-white text-gray-500 transition-all duration-200 hover:bg-gray-50 border-r border-gray-200"
                                       onClick={() => {
                                         // TODO: Implement refuse
                                       }}
                                     >
                                       Refuse
                                     </button>
-                                    <button className="px-3 py-1 text-sm flex items-center justify-center w-16 bg-violet-700 text-white">
+                                    <button className="px-3 py-1.5 text-xs flex items-center justify-center w-16 bg-blue-50 text-blue-700 transition-all duration-200 hover:bg-blue-100">
                                       Accept
                                     </button>
                                   </div>
@@ -578,8 +578,8 @@ export default function SignalsPage() {
                               className={`border-b border-gray-100 p-4 transition-colors duration-1000 ${
                                 latestEventId === event.id
                                   ? event.action === "BUY"
-                                    ? "bg-green-50"
-                                    : "bg-red-50"
+                                    ? "bg-emerald-50"
+                                    : "bg-rose-50"
                                   : ""
                               }`}
                             >
@@ -588,8 +588,8 @@ export default function SignalsPage() {
                                   <div
                                     className={`w-6 h-6 rounded-full mr-3 flex items-center justify-center ${
                                       event.action === "BUY"
-                                        ? "bg-green-500"
-                                        : "bg-red-500"
+                                        ? "bg-emerald-500"
+                                        : "bg-rose-500"
                                     }`}
                                   >
                                     <svg
@@ -663,7 +663,7 @@ export default function SignalsPage() {
                                     signals.get(event.signal_id)?.name ||
                                       event.signal_id
                                   )}
-                                  <span className="bg-violet-100 text-violet-800 px-2 py-1 rounded-md text-xs">
+                                  <span className="bg-gray-50 text-gray-700 px-2.5 py-1 rounded-md text-xs font-medium">
                                     {signals.get(event.signal_id)?.timeframe ||
                                       ""}
                                   </span>
@@ -682,16 +682,16 @@ export default function SignalsPage() {
                               </div>
 
                               <div className="flex justify-end">
-                                <div className="inline-flex rounded-full border border-gray-300 overflow-hidden">
+                                <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden shadow-sm">
                                   <button
-                                    className="px-4 py-2 text-sm flex items-center justify-center w-20 bg-white text-gray-500"
+                                    className="px-4 py-2 text-sm flex items-center justify-center w-20 bg-white text-gray-500 transition-all duration-200 hover:bg-gray-50 border-r border-gray-200"
                                     onClick={() => {
                                       // TODO: Implement refuse
                                     }}
                                   >
                                     Refuse
                                   </button>
-                                  <button className="px-4 py-2 text-sm flex items-center justify-center w-20 bg-violet-700 text-white">
+                                  <button className="px-4 py-2 text-sm flex items-center justify-center w-20 bg-blue-50 text-blue-700 transition-all duration-200 hover:bg-blue-100">
                                     Accept
                                   </button>
                                 </div>
