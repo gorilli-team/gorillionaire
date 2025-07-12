@@ -95,16 +95,9 @@ const DexModal: React.FC<DexModalProps> = ({
   const calculateInputForBuy = async (targetAmount: number) => {
     setIsLoading(true);
     try {
-      // Calculate how much MON we need based on token price and MON price
-      // First get the USD value of the tokens we want to buy
       const usdValue = targetAmount * token.price;
-      // Then convert USD value to MON amount
       const monNeeded = usdValue / monPrice;
-
-      // Add 0.5% slippage tolerance
-      const monNeededWithSlippage = monNeeded * 1.005;
-
-      setInputAmount(monNeededWithSlippage.toFixed(6));
+      setInputAmount(monNeeded.toFixed(6));
       setIsLoading(false);
     } catch (error) {
       console.error("Error calculating input amount:", error);
@@ -115,16 +108,9 @@ const DexModal: React.FC<DexModalProps> = ({
   const calculateOutputForSell = async (sourceAmount: number) => {
     setIsLoading(true);
     try {
-      // Calculate how much MON we'll get based on token price and MON price
-      // First get the USD value of the tokens we want to sell
       const usdValue = sourceAmount * token.price;
-      // Then convert USD value to MON amount
       const monReceived = usdValue / monPrice;
-
-      // Subtract 0.5% slippage tolerance
-      const monReceivedWithSlippage = monReceived * 0.995;
-
-      setOutputAmount(monReceivedWithSlippage.toFixed(6));
+      setOutputAmount(monReceived.toFixed(6));
       setIsLoading(false);
     } catch (error) {
       console.error("Error calculating output amount:", error);
@@ -209,7 +195,7 @@ const DexModal: React.FC<DexModalProps> = ({
         // For buy: user changes input (MON amount), calculate token output
         const usdValue = parseFloat(value) * monPrice;
         const tokenAmount = usdValue / token.price;
-        const newOutputAmount = (tokenAmount * 0.995).toFixed(6); // Apply slippage
+        const newOutputAmount = tokenAmount.toFixed(6); // Apply slippage
         setOutputAmount(newOutputAmount);
         onAmountChange?.(value, newOutputAmount);
       } else {
@@ -226,7 +212,7 @@ const DexModal: React.FC<DexModalProps> = ({
         // For buy: user changes output (token amount), calculate MON input
         const usdValue = parseFloat(value) * token.price;
         const monNeeded = usdValue / monPrice;
-        const newInputAmount = (monNeeded * 1.005).toFixed(6); // Apply slippage
+        const newInputAmount = monNeeded.toFixed(6); // Apply slippage
         // If calculated MON needed exceeds balance, cap to max possible
         if (parseFloat(newInputAmount) > inputToken.totalHolding) {
           const maxTokenAmount =
@@ -247,7 +233,7 @@ const DexModal: React.FC<DexModalProps> = ({
         // For sell: user changes output (MON amount), calculate token input
         const usdValue = parseFloat(value) * monPrice;
         const tokenAmount = usdValue / token.price;
-        const newInputAmount = (tokenAmount * 1.005).toFixed(6); // Apply slippage
+        const newInputAmount = tokenAmount.toFixed(6); // Apply slippage
         // Check if calculated token amount exceeds balance
         if (parseFloat(newInputAmount) > inputToken.totalHolding) {
           const maxMonAmount =
@@ -533,11 +519,6 @@ const DexModal: React.FC<DexModalProps> = ({
                     : (token.price / monPrice).toFixed(6)}{" "}
                   {type === "Buy" ? token.symbol : "MON"}
                 </span>
-              </div>
-
-              <div className="flex items-center justify-between text-sm text-gray-500">
-                <span>Slippage Tolerance</span>
-                <span>0.5%</span>
               </div>
 
               <div className="flex items-center justify-between text-sm text-gray-500">
