@@ -842,7 +842,18 @@ const UserProfilePage = () => {
                   </div>
                   <div className="space-y-2 sm:space-y-3">
                     {quests
-                      // .filter((quest) => quest.questType !== "discord")
+                      .filter((quest) => {
+                        // Show all quests that are completed
+                        if (quest.isCompleted) return true;
+                        
+                        // Show quests that don't have an end date
+                        if (!quest.questEndDate) return true;
+                        
+                        // Show quests that haven't ended yet
+                        const now = new Date();
+                        const endDate = new Date(quest.questEndDate);
+                        return endDate > now;
+                      })
                       .map((quest, idx) => (
                         <div
                           key={idx}
