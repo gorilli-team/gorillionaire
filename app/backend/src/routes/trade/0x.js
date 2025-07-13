@@ -56,7 +56,11 @@ async function buildPriceRequest(
   // if buy, convert amount to MON amount
   if (type === "buy") amount = usdValue / monPrice;
 
-  const priceParams = new URLSearchParams({
+  const ZEROX_FEE_RECIPIENT = process.env.ZEROX_FEE_RECIPIENT;
+  const ZEROX_FEE_PERCENTAGE = process.env.ZEROX_FEE_PERCENTAGE;
+
+  // Build priceParams with or without fee params (Monad Testnet: use swapFeeRecipient, swapFeeBps, swapFeeToken)
+  const priceParamsObj = {
     chainId: MONAD_CHAIN_ID.toString(),
     sellToken:
       type === "sell"
@@ -71,7 +75,20 @@ async function buildPriceRequest(
       .toString(),
     taker: userAddress,
     slippagePercentage: slippagePercentage.toString(),
-  });
+  };
+
+  if (ZEROX_FEE_RECIPIENT && ZEROX_FEE_PERCENTAGE) {
+    // Convert percentage to basis points (0.1% => 10)
+    const swapFeeBps = Math.round(
+      Number(ZEROX_FEE_PERCENTAGE) * 100
+    ).toString();
+    priceParamsObj.swapFeeRecipient = ZEROX_FEE_RECIPIENT;
+    priceParamsObj.swapFeeBps = swapFeeBps;
+    priceParamsObj.swapFeeToken =
+      type === "sell" ? priceParamsObj.sellToken : priceParamsObj.buyToken;
+  }
+
+  const priceParams = new URLSearchParams(priceParamsObj);
 
   const headers = {
     "0x-api-key": process.env.ZEROX_API_KEY,
@@ -89,13 +106,13 @@ async function getPrice(token, amount, type, userAddress) {
     userAddress
   );
 
-  const priceResponse = await fetch(
-    "https://api.0x.org/swap/permit2/price?" + priceParams.toString(),
-    { headers }
-  );
+  const requestUrl =
+    "https://api.0x.org/swap/permit2/price?" + priceParams.toString();
+  console.log("0x API Request URL (price):", requestUrl);
 
-  // Docs here: https://0x.org/docs/api#tag/Swap
+  const priceResponse = await fetch(requestUrl, { headers });
   const res = await priceResponse.json();
+  console.log("0x API Response (price):", JSON.stringify(res, null, 2));
 
   return res;
 }
@@ -104,12 +121,14 @@ async function getQuote(token, amount, type, userAddress) {
   const { priceParams, headers, usdValue, tokenPrice } =
     await buildPriceRequest(token, Number(amount), type, userAddress);
 
-  const priceResponse = await fetch(
-    "https://api.0x.org/swap/permit2/quote?" + priceParams.toString(),
-    { headers }
-  );
+  const requestUrl =
+    "https://api.0x.org/swap/permit2/quote?" + priceParams.toString();
+  console.log("0x API Request URL (quote):", requestUrl);
 
+  const priceResponse = await fetch(requestUrl, { headers });
   const res = await priceResponse.json();
+  console.log("0x API Response (quote):", JSON.stringify(res, null, 2));
+
   if (!res.transaction) {
     throw new Error("No transaction data found");
   }
