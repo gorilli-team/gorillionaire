@@ -357,6 +357,16 @@ export default function Header() {
 
           {ready && authenticated ? (
             <div className="flex items-center gap-2 sm:gap-4">
+              {/* Streak Display */}
+              {streak > 0 && (
+                <div className="flex items-center gap-1 px-2 py-1 bg-orange-100 rounded-md border border-orange-200">
+                  <span className="text-orange-600 text-xs font-bold">🔥</span>
+                  <span className="text-orange-700 text-xs font-semibold">
+                    {streak} day{streak > 1 ? "s" : ""}
+                  </span>
+                </div>
+              )}
+
               {nadProfile?.primaryName ? (
                 <div className="text-xs sm:text-sm text-gray-600 truncate max-w-[80px] sm:max-w-none">
                   {nadProfile.primaryName}
