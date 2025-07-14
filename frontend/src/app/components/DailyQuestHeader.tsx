@@ -38,7 +38,46 @@ const DailyQuestHeader = () => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [claimedQuests, setClaimedQuests] = useState<Set<string>>(new Set());
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [completedQuests, setCompletedQuests] = useState<Set<string>>(
+    new Set()
+  );
   const panelRef = useRef<HTMLDivElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Create audio element for quest completion sound
+  useEffect(() => {
+    // Create a simple beep sound using Web Audio API
+    const createBeepSound = () => {
+      try {
+        const audioContext = new (window.AudioContext ||
+          (window as any).webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+        oscillator.frequency.setValueAtTime(
+          600,
+          audioContext.currentTime + 0.1
+        );
+
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(
+          0.01,
+          audioContext.currentTime + 0.2
+        );
+
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.2);
+      } catch (error) {
+        console.log("Audio not supported or blocked by browser");
+      }
+    };
+
+    audioRef.current = { play: createBeepSound } as any;
+  }, []);
 
   const fetchDailyQuests = async () => {
     if (!authenticated || !user?.wallet?.address) return;
@@ -48,6 +87,28 @@ const DailyQuestHeader = () => {
         `${process.env.NEXT_PUBLIC_API_URL}/activity/daily-quests/${user.wallet.address}`
       );
       const data = await response.json();
+
+      // Check for newly completed quests and play sound
+      if (dailyQuests) {
+        data.quests.forEach((quest: DailyQuest) => {
+          const previousQuest = dailyQuests.quests.find(
+            (q) => q._id === quest._id
+          );
+          if (
+            quest.isCompleted &&
+            !quest.isClaimed &&
+            previousQuest &&
+            !previousQuest.isCompleted
+          ) {
+            // Quest was just completed - play sound
+            if (audioRef.current) {
+              audioRef.current.play().catch(console.error);
+            }
+            setCompletedQuests((prev) => new Set(prev).add(quest._id));
+          }
+        });
+      }
+
       setDailyQuests(data);
 
       // Track claimed quests
@@ -84,7 +145,11 @@ const DailyQuestHeader = () => {
       const data = await response.json();
 
       if (response.ok) {
-        setClaimedQuests((prev) => new Set(prev).add(questId));
+        // Find the quest by questId to get the _id for tracking
+        const quest = dailyQuests?.quests.find(q => q.questId === questId);
+        if (quest) {
+          setClaimedQuests((prev) => new Set(prev).add(quest._id));
+        }
         setSuccessMessage(`Quest completed! +${data.rewardPoints} points`);
 
         // Refresh quests
@@ -156,6 +221,11 @@ const DailyQuestHeader = () => {
     (quest) => quest.isActive
   ).length;
 
+  // Get active quests sorted by order
+  const activeQuests = dailyQuests.quests
+    .filter((quest) => quest.isActive)
+    .sort((a, b) => a.questOrder - b.questOrder);
+
   return (
     <div className="relative">
       {/* Daily Quest Button */}
@@ -198,7 +268,7 @@ const DailyQuestHeader = () => {
       {isExpanded && (
         <div
           ref={panelRef}
-          className="absolute top-full right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-96 overflow-y-auto"
+          className="absolute top-full right-0 mt-2 w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-96 overflow-y-auto"
         >
           <div className="p-4">
             <div className="flex items-center justify-between mb-4">
@@ -239,20 +309,27 @@ const DailyQuestHeader = () => {
               </div>
             </div>
 
-            {/* Quests List */}
+            {/* Quests List - Show next quests with focus on first */}
             <div className="space-y-3">
-              {dailyQuests.quests
-                .filter((quest) => quest.isActive)
-                .map((quest) => (
+              {activeQuests.map((quest, index) => {
+                const isFirstQuest = index === 0;
+                const isNextQuest = !quest.isClaimed && quest.isActive;
+                const isCompleted = quest.isCompleted && !quest.isClaimed;
+                const isClaimed = quest.isClaimed;
+                const isNewlyCompleted = completedQuests.has(quest._id);
+
+                return (
                   <div
                     key={quest._id}
                     className={`p-3 rounded-lg border transition-all duration-200 ${
-                      quest.isClaimed
+                      isClaimed
                         ? "bg-green-50 border-green-200"
-                        : quest.isCompleted
+                        : isCompleted
                         ? "bg-yellow-50 border-yellow-200"
+                        : isFirstQuest
+                        ? "bg-violet-50 border-violet-200 shadow-md"
                         : "bg-gray-50 border-gray-200"
-                    }`}
+                    } ${isNewlyCompleted ? "animate-pulse" : ""}`}
                   >
                     <div className="flex items-start gap-3">
                       <div className="w-8 h-8 flex items-center justify-center bg-violet-100 rounded-lg flex-shrink-0">
@@ -269,13 +346,23 @@ const DailyQuestHeader = () => {
                         <div className="flex items-center gap-2 mb-1">
                           <h4 className="font-semibold text-gray-900 text-sm">
                             {quest.questName}
+                            {isFirstQuest && !isClaimed && (
+                              <span className="ml-2 px-2 py-0.5 bg-violet-600 text-white text-xs rounded-full">
+                                Current
+                              </span>
+                            )}
                           </h4>
                           <span className="px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 text-xs font-semibold">
                             +{quest.questRewardAmount} pts
                           </span>
-                          {quest.isClaimed && (
+                          {isClaimed && (
                             <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-semibold">
                               ✓ Claimed
+                            </span>
+                          )}
+                          {isCompleted && !isClaimed && (
+                            <span className="px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 text-xs font-semibold">
+                              Ready to Claim
                             </span>
                           )}
                         </div>
@@ -284,11 +371,16 @@ const DailyQuestHeader = () => {
                           {quest.questDescription}
                         </p>
 
+                        {/* Progress Bar - Show prominently for first quest */}
                         <div className="flex items-center gap-2 mb-2">
                           <div className="flex-1">
-                            <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                            <div className="w-full bg-gray-200 rounded-full overflow-hidden">
                               <div
-                                className="bg-gradient-to-r from-violet-500 to-indigo-600 h-1.5 rounded-full transition-all duration-300"
+                                className={`h-2 rounded-full transition-all duration-300 ${
+                                  isFirstQuest
+                                    ? "bg-gradient-to-r from-violet-500 to-indigo-600"
+                                    : "bg-gradient-to-r from-gray-400 to-gray-500"
+                                }`}
                                 style={{
                                   width: `${quest.progressPercentage}%`,
                                 }}
@@ -300,19 +392,28 @@ const DailyQuestHeader = () => {
                           </span>
                         </div>
 
-                        {quest.isCompleted && !quest.isClaimed && (
+                        {/* Show claim button for completed quests */}
+                        {isCompleted && !isClaimed && (
                           <button
-                            onClick={() => handleClaimQuest(quest._id)}
+                            onClick={() => handleClaimQuest(quest.questId)}
                             disabled={isLoading}
                             className="w-full px-3 py-1.5 bg-violet-600 text-white rounded-lg text-xs font-medium hover:bg-violet-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             {isLoading ? "Claiming..." : "Claim Reward"}
                           </button>
                         )}
+
+                        {/* Show next quest indicator */}
+                        {isNextQuest && !isFirstQuest && !isClaimed && (
+                          <div className="text-xs text-gray-500 italic">
+                            Complete previous quests first
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
-                ))}
+                );
+              })}
             </div>
 
             {/* Stats Summary */}

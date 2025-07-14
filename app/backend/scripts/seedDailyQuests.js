@@ -2,14 +2,25 @@ const mongoose = require("mongoose");
 const DailyQuest = require("../src/models/DailyQuest");
 require("dotenv").config();
 
-// Connect to MongoDB
-mongoose.connect(
-  process.env.MONGODB_CONNECTION_STRING || "mongodb://localhost:27017/gorillionaire",
-  {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  }
-);
+// Connect to MongoDB using the same logic as server.js
+const baseConnectionString = process.env.MONGODB_CONNECTION_STRING;
+if (!baseConnectionString) {
+  throw new Error("MONGODB_CONNECTION_STRING environment variable is required");
+}
+
+// Clean and construct connection string to connect to signals database
+const cleanConnectionString = baseConnectionString
+  .split("/")
+  .slice(0, -1)
+  .join("/");
+const connectionString = `${cleanConnectionString}/signals`;
+
+console.log("🔗 Connecting to database:", connectionString);
+
+mongoose.connect(connectionString, {
+  serverSelectionTimeoutMS: 10000,
+  socketTimeoutMS: 45000,
+});
 
 // Fibonacci sequence for trade requirements
 const fibonacciSequence = [
