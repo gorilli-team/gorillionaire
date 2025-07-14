@@ -43,6 +43,7 @@ const DailyQuestHeader = () => {
   const [showCompletedQuests, setShowCompletedQuests] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const previousQuestsRef = useRef<DailyQuestData | null>(null);
 
   // Create audio element for quest completion sound
   useEffect(() => {
@@ -93,9 +94,9 @@ const DailyQuestHeader = () => {
       const data = await response.json();
 
       // Check for newly completed quests and play sound
-      if (dailyQuests) {
+      if (previousQuestsRef.current) {
         data.quests.forEach((quest: DailyQuest) => {
-          const previousQuest = dailyQuests.quests.find(
+          const previousQuest = previousQuestsRef.current!.quests.find(
             (q) => q._id === quest._id
           );
           if (
@@ -112,11 +113,13 @@ const DailyQuestHeader = () => {
         });
       }
 
+      // Update the ref with current data before setting state
+      previousQuestsRef.current = data;
       setDailyQuests(data);
     } catch {
       console.error("Error fetching daily quests");
     }
-  }, [authenticated, user?.wallet?.address, dailyQuests]);
+  }, [authenticated, user?.wallet?.address]);
 
   const handleClaimQuest = async (questId: string) => {
     if (!user?.wallet?.address) return;
