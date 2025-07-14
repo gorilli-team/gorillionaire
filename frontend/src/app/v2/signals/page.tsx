@@ -154,25 +154,28 @@ export default function SignalsPage() {
     for (const event of events) {
       try {
         const response = await apiClient.get({
-          url: ENDPOINTS.PRICE_DATA.replace(":id", event.token_id) + "?limit=500",
+          url:
+            ENDPOINTS.PRICE_DATA.replace(":id", event.token_id) + "?limit=500",
           auth: true,
         });
-        
+
         // Check if response.data has the expected structure
         if (!response.data) {
           console.warn("No data in response for token", event.token_id);
           continue;
         }
-        
+
         // Handle different possible response structures
         let chartData: ChartData[] = [];
-        
+
         if (Array.isArray(response.data)) {
           // If response.data is directly an array
-          chartData = response.data.map((item: { timestamp: string; close: number }) => ({
-            timestamp: item.timestamp,
-            price: item.close,
-          }));
+          chartData = response.data.map(
+            (item: { timestamp: string; close: number }) => ({
+              timestamp: item.timestamp,
+              price: item.close,
+            })
+          );
         } else if (
           response.data &&
           typeof response.data === "object" &&
@@ -180,27 +183,38 @@ export default function SignalsPage() {
           Array.isArray(response.data.data)
         ) {
           // If response.data.data is the array
-          chartData = response.data.data.map((item: { timestamp: string; close: number }) => ({
-            timestamp: item.timestamp,
-            price: item.close,
-          }));
+          chartData = response.data.data.map(
+            (item: { timestamp: string; close: number }) => ({
+              timestamp: item.timestamp,
+              price: item.close,
+            })
+          );
         } else {
-          console.warn("Unexpected response structure for token", event.token_id, ":", response.data);
+          console.warn(
+            "Unexpected response structure for token",
+            event.token_id,
+            ":",
+            response.data
+          );
           continue;
         }
-        
+
         chartData.sort(
           (a: ChartData, b: ChartData) =>
             new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
         );
-        
         setCharts((prev) => {
           const newCharts = new Map(prev);
           newCharts.set(event.token_id, chartData);
           return newCharts;
         });
       } catch (error) {
-        console.error("Error fetching chart data for token", event.token_id, ":", error);
+        console.error(
+          "Error fetching chart data for token",
+          event.token_id,
+          ":",
+          error
+        );
       }
     }
   }, []);
@@ -239,28 +253,36 @@ export default function SignalsPage() {
   );
 
   const colorSignalName = (name: string) => {
+    const base =
+      "px-2.5 py-1 rounded-md text-sm font-medium text-center inline-block";
     switch (name) {
       case "RSI":
         return (
-          <span className="bg-blue-200 text-blue-800 px-2 py-1 rounded-md text-xs">
-            {name}
-          </span>
+          <span className={`text-green-700 bg-green-50 ${base}`}>{name}</span>
         );
       case "MACD":
         return (
-          <span className="bg-pink-200 text-pink-800 px-2 py-1 rounded-md text-xs">
-            {name}
-          </span>
+          <span className={`text-blue-700 bg-blue-50 ${base}`}>{name}</span>
         );
       case "ADX":
         return (
-          <span className="bg-orange-200 text-orange-800 px-2 py-1 rounded-md text-xs">
-            {name}
-          </span>
+          <span className={`text-orange-700 bg-orange-50 ${base}`}>{name}</span>
         );
+      case "SMA":
+        return <span className={`text-red-700 bg-red-50 ${base}`}>{name}</span>;
       default:
-        return name;
+        return (
+          <span className={`text-gray-800 bg-gray-100 ${base}`}>{name}</span>
+        );
     }
+  };
+
+  const getTimeframeBadge = (timeframe: string) => {
+    return (
+      <span className="bg-gray-100 text-gray-800 rounded-md px-2.5 py-1 text-sm font-medium inline-block">
+        {timeframe}
+      </span>
+    );
   };
 
   return (
@@ -325,60 +347,62 @@ export default function SignalsPage() {
         <div className="flex-1 flex flex-col overflow-hidden">
           <Header />
           <div className="flex-1 overflow-y-auto">
-            <div className="w-full max-w-7xl mx-auto p-4 md:p-6">
-              <div className="bg-white rounded-lg shadow-sm">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-bold px-4 py-2">V2 Signals</h2>
-                  <div className="flex items-center">
-                    <select className="border border-gray-300 rounded-md px-3 py-1 text-xs mr-2">
-                      <option value="">All Actions</option>
-                      <option value="BUY">Buy</option>
-                      <option value="SELL">Sell</option>
-                    </select>
+            <div className="w-full px-4 md:px-6">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="flex items-center justify-between p-6 border-b border-gray-100">
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    V2 Signals
+                  </h2>
+                  <div className="flex flex-col md:flex-row items-start md:items-center gap-3">
+                    <div className="flex flex-wrap gap-2">
+                      <select className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 hover:border-gray-300">
+                        <option value="">All Actions</option>
+                        <option value="BUY">Buy</option>
+                        <option value="SELL">Sell</option>
+                      </select>
 
-                    <select className="border border-gray-300 rounded-md px-3 py-1 text-xs mr-2">
-                      <option value="">All Timeframes</option>
-                      <option value="1h">1 Hour</option>
-                      <option value="4h">4 Hours</option>
-                      <option value="1d">1 Day</option>
-                      <option value="1w">1 Week</option>
-                    </select>
+                      <select className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 hover:border-gray-300">
+                        <option value="">All Timeframes</option>
+                        <option value="1h">1 Hour</option>
+                        <option value="4h">4 Hours</option>
+                        <option value="1d">1 Day</option>
+                        <option value="1w">1 Week</option>
+                      </select>
 
-                    <select className="border border-gray-300 rounded-md px-3 py-1 text-xs">
-                      <option value="">All Signals</option>
-                      <option value="PRICE_CHANGE">Price Change</option>
-                      <option value="VOLUME_SPIKE">Volume Spike</option>
-                      <option value="ACTIVITY_SPIKE">Activity Spike</option>
-                      <option value="HOLDER_CHANGE">Holder Change</option>
-                    </select>
+                      <select className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 hover:border-gray-300">
+                        <option value="">All Signals</option>
+                        <option value="PRICE_CHANGE">Price Change</option>
+                        <option value="VOLUME_SPIKE">Volume Spike</option>
+                        <option value="ACTIVITY_SPIKE">Activity Spike</option>
+                        <option value="HOLDER_CHANGE">Holder Change</option>
+                      </select>
+                    </div>
 
-                    <div>
-                      <div className="flex items-center space-x-2 ml-4 mr-4">
-                        <button
-                          className="w-20 px-3 py-1 text-xs rounded-md bg-white text-gray-500 hover:bg-gray-100 border border-gray-300"
-                          onClick={() => {
-                            /* TODO: Implement filter */
-                          }}
-                        >
-                          All
-                        </button>
-                        <button
-                          className="w-20 px-3 py-1 text-xs rounded-md bg-white text-gray-500 hover:bg-gray-100 border border-gray-300"
-                          onClick={() => {
-                            /* TODO: Implement filter */
-                          }}
-                        >
-                          Buy
-                        </button>
-                        <button
-                          className="w-20 px-3 py-1 text-xs rounded-md bg-white text-gray-500 hover:bg-gray-100 border border-gray-300"
-                          onClick={() => {
-                            /* TODO: Implement filter */
-                          }}
-                        >
-                          Sell
-                        </button>
-                      </div>
+                    <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden shadow-sm">
+                      <button
+                        className="px-4 py-2 text-sm flex items-center justify-center w-16 bg-blue-50 text-blue-700 border-r border-gray-200 transition-all duration-200 hover:bg-blue-100"
+                        onClick={() => {
+                          /* TODO: Implement filter */
+                        }}
+                      >
+                        All
+                      </button>
+                      <button
+                        className="px-4 py-2 text-sm flex items-center justify-center w-16 bg-white text-gray-600 transition-all duration-200 hover:bg-gray-50 border-r border-gray-200"
+                        onClick={() => {
+                          /* TODO: Implement filter */
+                        }}
+                      >
+                        Buy
+                      </button>
+                      <button
+                        className="px-4 py-2 text-sm flex items-center justify-center w-16 bg-white text-gray-600 transition-all duration-200 hover:bg-gray-50"
+                        onClick={() => {
+                          /* TODO: Implement filter */
+                        }}
+                      >
+                        Sell
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -388,16 +412,17 @@ export default function SignalsPage() {
                     <div>
                       <table className="w-full border-collapse hidden md:table">
                         <thead className="sticky top-0 bg-white z-10">
-                          <tr className="text-left text-xs text-gray-500 bg-gray-50">
-                            <th className="px-4 py-2 text-xs">ACTION</th>
-                            <th className="px-4 py-2 text-xs">SYMBOL</th>
-                            <th className="px-4 py-2 text-xs">PRICE</th>
-                            <th className="px-4 py-2 text-xs text-center">CHART</th>
-                            <th className="px-4 py-2 text-xs">SIGNAL</th>
-                            <th className="px-4 py-2 text-xs">TIMEFRAME</th>
-                            <th className="px-4 py-2 text-xs">CREATED</th>
-                            <th className="px-4 py-2 text-xs text-center">ACTIONS</th>
-                            <th className="px-4 py-2 text-xs text-center">
+                          <tr className="text-left text-sm text-gray-600 bg-gray-50 font-medium border-b border-gray-200">
+                            <th className="px-4 py-3 text-sm">ACTION</th>
+                            <th className="px-4 py-3 text-sm">PAIR</th>
+                            <th className="px-4 py-3 text-sm">PRICE</th>
+                            <th className="px-4 py-3 text-sm text-center">
+                              CHART
+                            </th>
+                            <th className="px-4 py-3 text-sm">SIGNAL</th>
+                            <th className="px-4 py-3 text-sm">TIMEFRAME</th>
+                            <th className="px-4 py-3 text-sm">CREATED</th>
+                            <th className="px-4 py-3 text-sm text-center">
                               DECISION
                             </th>
                           </tr>
@@ -411,29 +436,30 @@ export default function SignalsPage() {
                             .map((event) => (
                               <tr
                                 key={event.id}
-                                className={`border-b border-gray-100 text-xs text-gray-500 transition-colors duration-1000 ${
+                                className={`border-b border-gray-100 text-sm transition-colors duration-1000 ${
                                   latestEventId === event.id
                                     ? event.action === "BUY"
-                                      ? "bg-green-100"
-                                      : "bg-red-100"
+                                      ? "bg-emerald-50"
+                                      : "bg-rose-50"
                                     : ""
                                 }`}
                               >
-                                <td className="text-gray-500 px-4 py-2 text-xs">
+                                <td className="text-gray-900 px-4 py-2 text-sm">
                                   <div className="flex items-center">
                                     <div
-                                      className={`w-4 h-4 rounded-full mr-2 flex items-center justify-center ${
+                                      className={`w-5 h-5 rounded-full mr-2 flex items-center justify-center ${
                                         event.action === "BUY"
-                                          ? "bg-green-400"
-                                          : "bg-red-400"
+                                          ? "bg-emerald-500"
+                                          : "bg-rose-500"
                                       }`}
                                     >
                                       <svg
                                         xmlns="http://www.w3.org/2000/svg"
-                                        className="w-3 h-4 text-white"
+                                        className="w-3 h-3 text-white"
                                         fill="none"
                                         viewBox="0 0 24 24"
                                         stroke="currentColor"
+                                        strokeWidth="2"
                                       >
                                         {event.action === "BUY" ? (
                                           <>
@@ -472,29 +498,31 @@ export default function SignalsPage() {
                                         )}
                                       </svg>
                                     </div>
-                                    <span className="text-xs">
+                                    <span className="text-sm font-medium text-gray-900">
                                       {event.action.charAt(0).toUpperCase() +
                                         event.action.slice(1).toLowerCase()}
                                     </span>
                                   </div>
                                 </td>
-                                <td className="text-gray-500 text-xs font-bold">
+                                <td className="text-gray-900 text-sm font-semibold">
                                   <a
-                                    className="text-xs cursor-pointer px-4 py-2 hover:underline"
+                                    className="text-sm font-semibold cursor-pointer px-4 py-2 hover:text-violet-600 transition-colors"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      navigateToSignalDetail(event.signal_id);
+                                      navigateToSignalDetail(
+                                        `${event.signal_id}|${event.token_id}|${event.currency}`
+                                      );
                                     }}
                                   >
                                     {event.symbol}
                                   </a>
                                 </td>
-                                <td className="text-gray-500 px-4 py-2 text-xs">
+                                <td className="text-gray-900 px-4 py-2 text-sm font-medium">
                                   {event.price.toFixed(6)}
                                 </td>
-                                <td className="text-gray-500 px-4 py-2 text-xs">
+                                <td className="text-gray-900 px-4 py-2 text-sm">
                                   <a
-                                    className="cursor-pointer"
+                                    className="cursor-pointer hover:opacity-80 transition-opacity"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       navigateToSignalDetail(
@@ -505,53 +533,188 @@ export default function SignalsPage() {
                                     {chart(charts.get(event.token_id) || [])}
                                   </a>
                                 </td>
-                                <td className="text-gray-500 px-4 py-2 text-xs">
+                                <td className="text-gray-900 px-4 py-2 text-sm">
                                   {colorSignalName(
                                     signals.get(event.signal_id)?.name ||
                                       event.signal_id
                                   )}
                                 </td>
-                                <td className="text-gray-500 px-4 py-2 text-xs">
-                                  <span className="bg-gray-200 text-gray-800 px-2 py-1 rounded-md text-xs">
-                                    {signals.get(event.signal_id)?.timeframe || ""}
-                                  </span>
+                                <td className="text-gray-900 px-4 py-3 text-sm">
+                                  {getTimeframeBadge(
+                                    signals.get(event.signal_id)?.timeframe ||
+                                      ""
+                                  )}
                                 </td>
-                                <td className="px-4 py-2 text-xs">
+                                <td className="px-4 py-2 text-sm text-gray-600">
                                   {getTimeAgo(event.timestamp)}
                                 </td>
-                                <td className="px-4 py-2 text-xs"></td>
-                                <td className="px-4 py-2 text-xs flex justify-end items-center">
-                                  <button
-                                    className="text-xs cursor-pointer px-3 py-1 rounded-md bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 mr-2"
-                                    onClick={() => {
-                                      // TODO: Implement refuse
-                                    }}
-                                  >
-                                    Refuse
-                                  </button>
-                                  <button className="text-xs cursor-pointer px-3 py-1 rounded-md bg-purple-600 text-white hover:bg-purple-700">
-                                    Accept
-                                  </button>
+                                <td className="px-4 py-3 text-sm flex justify-end items-center">
+                                  <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden shadow-sm">
+                                    <button
+                                      className="px-3 py-1.5 text-xs flex items-center justify-center w-16 bg-white text-gray-500 transition-all duration-200 hover:bg-gray-50 border-r border-gray-200"
+                                      onClick={() => {
+                                        // TODO: Implement refuse
+                                      }}
+                                    >
+                                      Refuse
+                                    </button>
+                                    <button className="px-3 py-1.5 text-xs flex items-center justify-center w-16 bg-blue-50 text-blue-700 transition-all duration-200 hover:bg-blue-100">
+                                      Accept
+                                    </button>
+                                  </div>
                                 </td>
                               </tr>
                             ))}
                         </tbody>
                       </table>
 
+                      {/* Mobile view */}
+                      <div className="md:hidden">
+                        {events
+                          .slice(
+                            (currentPage - 1) * rowsPerPage,
+                            currentPage * rowsPerPage
+                          )
+                          .map((event) => (
+                            <div
+                              key={event.id}
+                              className={`border-b border-gray-100 p-4 transition-colors duration-1000 ${
+                                latestEventId === event.id
+                                  ? event.action === "BUY"
+                                    ? "bg-emerald-50"
+                                    : "bg-rose-50"
+                                  : ""
+                              }`}
+                            >
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center">
+                                  <div
+                                    className={`w-6 h-6 rounded-full mr-3 flex items-center justify-center ${
+                                      event.action === "BUY"
+                                        ? "bg-emerald-500"
+                                        : "bg-rose-500"
+                                    }`}
+                                  >
+                                    <svg
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      className="w-4 h-4 text-white"
+                                      fill="none"
+                                      viewBox="0 0 24 24"
+                                      stroke="currentColor"
+                                      strokeWidth="2"
+                                    >
+                                      {event.action === "BUY" ? (
+                                        <>
+                                          <line
+                                            x1="12"
+                                            y1="20"
+                                            x2="12"
+                                            y2="10"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                          />
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M5 15l7-7 7 7"
+                                          />
+                                        </>
+                                      ) : (
+                                        <>
+                                          <line
+                                            x1="12"
+                                            y1="4"
+                                            x2="12"
+                                            y2="14"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                          />
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M19 9l-7 7-7-7"
+                                          />
+                                        </>
+                                      )}
+                                    </svg>
+                                  </div>
+                                  <div>
+                                    <div className="text-lg font-semibold text-gray-900">
+                                      {event.symbol}
+                                    </div>
+                                    <div className="text-sm text-gray-600">
+                                      {event.action.charAt(0).toUpperCase() +
+                                        event.action.slice(1).toLowerCase()}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-lg font-bold text-gray-900">
+                                    ${event.price.toFixed(6)}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    {getTimeAgo(event.timestamp)}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center space-x-2">
+                                  {colorSignalName(
+                                    signals.get(event.signal_id)?.name ||
+                                      event.signal_id
+                                  )}
+                                  <span className="bg-gray-50 text-gray-700 px-2.5 py-1 rounded-md text-xs font-medium">
+                                    {signals.get(event.signal_id)?.timeframe ||
+                                      ""}
+                                  </span>
+                                </div>
+                                <a
+                                  className="cursor-pointer hover:opacity-80 transition-opacity"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigateToSignalDetail(
+                                      `${event.signal_id}|${event.token_id}|${event.currency}`
+                                    );
+                                  }}
+                                >
+                                  {chart(charts.get(event.token_id) || [])}
+                                </a>
+                              </div>
+
+                              <div className="flex justify-end">
+                                <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden shadow-sm">
+                                  <button
+                                    className="px-4 py-2 text-sm flex items-center justify-center w-20 bg-white text-gray-500 transition-all duration-200 hover:bg-gray-50 border-r border-gray-200"
+                                    onClick={() => {
+                                      // TODO: Implement refuse
+                                    }}
+                                  >
+                                    Refuse
+                                  </button>
+                                  <button className="px-4 py-2 text-sm flex items-center justify-center w-20 bg-blue-50 text-blue-700 transition-all duration-200 hover:bg-blue-100">
+                                    Accept
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+
                       {/* Pagination Controls */}
-                      <div className="flex justify-between items-center p-4">
-                        <div className="text-sm text-gray-500">
-                          <span className="text-sm text-gray-500 mb-4 sm:mb-0">
-                            <span className="font-normal">Showing</span>{" "}
-                            <span className="font-bold">
-                              {(currentPage - 1) * rowsPerPage + 1}-
-                              {Math.min(currentPage * rowsPerPage, events.length)}
-                            </span>{" "}
-                            <span className="font-normal">of</span>{" "}
-                            <span className="font-bold">{events.length}</span>
-                          </span>
+                      <div className="flex flex-col md:flex-row justify-between items-center p-4 gap-4">
+                        <div className="text-sm text-gray-500 text-center md:text-left">
+                          <span className="font-normal">Showing</span>{" "}
+                          <span className="font-bold">
+                            {(currentPage - 1) * rowsPerPage + 1}-
+                            {Math.min(currentPage * rowsPerPage, events.length)}
+                          </span>{" "}
+                          <span className="font-normal">of</span>{" "}
+                          <span className="font-bold">{events.length}</span>
                         </div>
-                        <div className="flex-grow flex justify-center mb-2">
+                        <div className="flex-grow flex justify-center">
                           <Pagination
                             currentPage={currentPage}
                             totalPages={Math.ceil(events.length / rowsPerPage)}

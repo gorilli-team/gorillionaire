@@ -311,7 +311,8 @@ const Signals = () => {
         amount: trade.tokenAmount,
         token: trade.tokenSymbol,
         timeAgo: getTimeAgo(trade.timestamp),
-        userImageUrl: trade.userImageUrl || "/avatar_0.png",
+        userImageUrl:
+          profiles[i]?.avatar || trade.userImageUrl || "/avatar_0.png",
       }));
 
       setCompletedTrades(formattedTrades);

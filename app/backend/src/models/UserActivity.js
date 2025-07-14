@@ -48,6 +48,10 @@ const userActivitySchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    profileBgImage: {
+      type: String,
+      default: null,
+    },
     v2Access: {
       enabled: {
         type: Boolean,

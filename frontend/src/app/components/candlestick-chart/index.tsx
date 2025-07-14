@@ -23,7 +23,6 @@ interface PriceData {
   close: number;
 }
 
-
 interface Signal {
   action: string;
   price: number;
@@ -37,14 +36,15 @@ interface PriceChartProps {
   signals: Signal[];
 }
 
-
-const CandlestickChart: React.FC<PriceChartProps> = ({ data, tokenSymbol, signals }) => {
+const CandlestickChart: React.FC<PriceChartProps> = ({
+  data,
+  tokenSymbol,
+  signals,
+}) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const [isClient, setIsClient] = useState(false);
-  const [timeRange] = useState<"1d" | "7d" | "30d" | "all">(
-    "all"
-  );
+  const [timeRange] = useState<"1d" | "7d" | "30d" | "all">("all");
   // const [priceStats] = useState<PriceStats | null>(null);
   const [allTimeHighLow] = useState<{
     high: { value: number; time: Time };
@@ -108,9 +108,6 @@ const CandlestickChart: React.FC<PriceChartProps> = ({ data, tokenSymbol, signal
       if (price1h !== current && price6h !== current && price24h !== current)
         break;
     }
-
-
-
   }, [data]);
 
   // // Find all-time high and low
@@ -181,23 +178,23 @@ const CandlestickChart: React.FC<PriceChartProps> = ({ data, tokenSymbol, signal
       //   crosshairMarkerVisible: true,
       // });
 
-
       const candlestickOptions: CandlestickStyleOptions = {
-        upColor: '#26a69a',
-        downColor: '#ef5350',
+        upColor: "#26a69a",
+        downColor: "#ef5350",
         borderVisible: false,
-        wickUpColor: '#26a69a',
-        wickDownColor: '#ef5350',
+        wickUpColor: "#26a69a",
+        wickDownColor: "#ef5350",
         wickVisible: true,
-        borderColor: '#000000',
-        borderUpColor: '#26a69a',
-        borderDownColor: '#ef5350',
-        wickColor: '#000000'
+        borderColor: "#000000",
+        borderUpColor: "#26a69a",
+        borderDownColor: "#ef5350",
+        wickColor: "#000000",
       };
 
-      const candlestickSeries = chart.addSeries(CandlestickSeries, candlestickOptions);
-
-
+      const candlestickSeries = chart.addSeries(
+        CandlestickSeries,
+        candlestickOptions
+      );
 
       // Transform data to ensure proper time format and unique ascending timestamps
       const formattedData = data
@@ -234,22 +231,33 @@ const CandlestickChart: React.FC<PriceChartProps> = ({ data, tokenSymbol, signal
             ? a.originalIndex - b.originalIndex
             : timeCompare;
         })
-        .map(({ time, open, high, low, close }) => ({ time, open, high, low, close }));
+        .map(({ time, open, high, low, close }) => ({
+          time,
+          open,
+          high,
+          low,
+          close,
+        }));
 
+      // Add signal markers
+      if (signals && signals.length > 0) {
+        const markers = signals.map((signal) => ({
+          time: Math.floor(
+            new Date(signal.timestamp).getTime() / 1000
+          ) as UTCTimestamp,
+          position: (signal.action === "BUY"
+            ? "belowBar"
+            : "aboveBar") as SeriesMarkerPosition,
+          color: signal.action === "BUY" ? "#16a34a" : "#dc2626",
+          shape: (signal.action === "BUY"
+            ? "arrowUp"
+            : "arrowDown") as SeriesMarkerShape,
+          text: signal.action + " @ " + signal.price.toFixed(6),
+          price: signal.price,
+        }));
 
-          // Add signal markers
-    if (signals && signals.length > 0) {
-      const markers = signals.map((signal) => ({
-        time: Math.floor(new Date(signal.timestamp).getTime() / 1000) as UTCTimestamp,
-        position: (signal.action === "BUY" ? "belowBar" : "aboveBar") as SeriesMarkerPosition,
-        color: signal.action === "BUY" ? "#16a34a" : "#dc2626",
-        shape: (signal.action === "BUY" ? "arrowUp" : "arrowDown") as SeriesMarkerShape,
-        text: signal.action + ' @ ' + signal.price.toFixed(6),
-        price: signal.price,
-      }));
-
-      createSeriesMarkers(candlestickSeries, markers);
-    }
+        createSeriesMarkers(candlestickSeries, markers);
+      }
 
       // Filter data based on selected time range
       if (timeRange !== "all" && uniqueSortedData.length > 0) {
@@ -280,11 +288,11 @@ const CandlestickChart: React.FC<PriceChartProps> = ({ data, tokenSymbol, signal
       }
 
       const chartData = data.map((item) => ({
-        time: (Number(item.time)) as UTCTimestamp,
+        time: Number(item.time) as UTCTimestamp,
         open: item.open,
         high: item.high,
         low: item.low,
-        close: item.close
+        close: item.close,
       }));
 
       // Sort data in ascending order by timestamp
@@ -444,7 +452,6 @@ const CandlestickChart: React.FC<PriceChartProps> = ({ data, tokenSymbol, signal
       console.error("Error initializing chart:", error);
     }
   }, [data, isClient, timeRange, allTimeHighLow]);
-
 
   // Server-side and initial client render
   if (!isClient || !data || data.length === 0) {

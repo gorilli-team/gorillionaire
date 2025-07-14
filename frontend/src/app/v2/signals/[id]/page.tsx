@@ -96,6 +96,32 @@ export default function SignalPage() {
   console.log("token_id", token_id);
   console.log("signal_id", signal_id);
   console.log("currency", currency);
+
+  // Handle invalid URL format
+  if (!signal_id || !token_id || !currency) {
+    return (
+      <ProtectPage>
+        <div className="flex min-h-screen bg-gray-100 text-gray-800">
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <Header />
+            <div className="flex-1 overflow-y-auto">
+              <div className="w-full max-w-7xl mx-auto p-4 md:p-6">
+                <div className="bg-white rounded-lg shadow-md p-6">
+                  <h1 className="text-xl font-semibold text-red-600 mb-4">Invalid URL Format</h1>
+                  <p className="text-gray-600">
+                    The signal URL is missing required parameters. Expected format: signal_id|token_id|currency
+                  </p>
+                  <p className="text-sm text-gray-500 mt-2">
+                    Received: {id}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </ProtectPage>
+    );
+  }
   
   // Add layout state
   const [selectedPage, setSelectedPage] = useState("V2");
@@ -110,7 +136,7 @@ export default function SignalPage() {
 
   const { from, to } = useMemo(() => {
     return {
-      from: parseTimeStringToTimestamp("-6h"),
+      from: parseTimeStringToTimestamp("-7d"), // Extended to 7 days to get more events
       to: parseTimeStringToTimestamp("now"),
     };
   }, []);
@@ -127,7 +153,7 @@ export default function SignalPage() {
       const response = await apiClient.get({
         url:
           ENDPOINTS.PRICE_DATA.replace(":id", token_id) +
-          `?tf=${timeframe}&from=${from}&to=${to}`,
+          `?tf=${timeframe}&from=${from}&to=${to}&limit=60`,
         auth: true,
       });
 
@@ -180,26 +206,53 @@ export default function SignalPage() {
   const fetchSignalEvents = async (
     signal_id: string,
     token_id: string,
-    currency: string,
-    from: number,
-    to: number
+    currency: string
   ) => {
-    const response = await apiClient.get({
-      url:
-        ENDPOINTS.SIGNAL_EVENTS.replace(":signal_id", signal_id) +
-        "?token=" +
-        token_id +
-        "&curr=" +
-        currency +
-        "&from=" +
-        from +
-        "&to=" +
-        to,
-      auth: true,
-    });
-    console.log("signals", response.data);
-    const data = response.data as { events: SignalEvent[] };
-    setSignals(data.events);
+    try {
+      console.log("Fetching signal events with params:", {
+        signal_id,
+        token_id,
+        currency
+      });
+
+      const response = await apiClient.get({
+        url:
+          ENDPOINTS.SIGNAL_EVENTS.replace(":signal_id", signal_id) +
+          "?token=" +
+          token_id +
+          "&curr=" +
+          currency,
+        auth: true,
+      });
+
+      console.log("Signal events response:", response);
+      console.log("Signal events data:", response.data);
+
+      if (response.status === 200 && response.data) {
+        // Handle different possible response structures
+        let events: SignalEvent[] = [];
+        
+        if (response.data.events && Array.isArray(response.data.events)) {
+          // Expected structure: { events: SignalEvent[] }
+          events = response.data.events;
+        } else if (Array.isArray(response.data)) {
+          // Direct array structure
+          events = response.data;
+        } else {
+          console.warn("Unexpected signal events response structure:", response.data);
+          events = [];
+        }
+
+        console.log("Parsed events:", events);
+        setSignals(events);
+      } else {
+        console.warn("No signal events data or invalid response");
+        setSignals([]);
+      }
+    } catch (error) {
+      console.error("Error fetching signal events:", error);
+      setSignals([]);
+    }
   };
 
   // const fetchHolders = async (tokenAddress: string) => {
@@ -291,8 +344,8 @@ export default function SignalPage() {
   useEffect(() => {
     fetchSignalInfo(signal_id);
     fetchTokenInfo(token_id);
-    fetchSignalEvents(signal_id, token_id, currency, from, to);
-  }, [signal_id, token_id, currency, from, to]);
+    fetchSignalEvents(signal_id, token_id, currency);
+  }, [signal_id, token_id, currency]);
 
   useEffect(() => {
     if (signal && token_id) {
@@ -373,7 +426,13 @@ export default function SignalPage() {
                 {/* Signal Events section */}
                 <div className="bg-white rounded-lg shadow-md p-4 text-xs col-span-1">
                   <h2 className="font-semibold mb-2">Signal Events</h2>
-                  {signals.map((event: SignalEvent, index: number) => (
+                  {signals.length === 0 ? (
+                    <div className="text-center text-gray-500 py-4">
+                      <p>No signal events found for this time range.</p>
+                      <p className="text-xs mt-1">Try adjusting the time range or check the console for errors.</p>
+                    </div>
+                  ) : (
+                    signals.map((event: SignalEvent, index: number) => (
                     <div
                       key={index || event.id}
                       className="bg-white rounded-lg p-4 text-xs border border-gray-100"
@@ -466,7 +525,8 @@ export default function SignalPage() {
                         </div>
                       </div>
                     </div>
-                  ))}
+                  ))
+                  )}
                 </div>
               </div>
             </div>

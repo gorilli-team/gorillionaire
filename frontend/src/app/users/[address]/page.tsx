@@ -14,6 +14,7 @@ import { NFT_ACCESS_ADDRESS } from "@/app/utils/constants";
 import { getLevelInfo, getXpProgress } from "@/app/utils/xp";
 import { LoadingOverlay } from "@/app/components/ui/LoadingSpinner";
 import { CountdownTimer } from "@/app/components/CountdownTimer";
+import ShareableProfileCard from "@/app/components/ShareableProfileCard";
 
 const formatNumber = (num: number): string => {
   if (num === 0) return "0.00";
@@ -94,6 +95,7 @@ interface UserProfile {
     totalPages: number;
   };
   hasV2NFT?: boolean;
+  profileBgImage?: string;
 }
 
 interface Quest {
@@ -153,6 +155,7 @@ const UserProfilePage = () => {
   const [hasReferrer, setHasReferrer] = useState<boolean | null>(null);
   const [referralCodeInput, setReferralCodeInput] = useState("");
   const [isSubmittingReferral, setIsSubmittingReferral] = useState(false);
+  const [showReferredUsers, setShowReferredUsers] = useState(false);
 
   const { data: v2NFTBalance } = useReadContract({
     abi,
@@ -398,6 +401,7 @@ const UserProfilePage = () => {
           dollarValue: data.userActivity?.dollarValue ?? 0,
           pagination: data.userActivity?.pagination,
           hasV2NFT: Number(v2NFTBalance) > 0,
+          profileBgImage: data.userActivity?.profileBgImage || null,
         });
       } catch (error) {
         console.error("Error fetching user profile:", error);
@@ -577,7 +581,7 @@ const UserProfilePage = () => {
         <Header />
         <div className="flex-1 overflow-y-auto">
           <div className="w-full px-2 sm:px-4 pt-2 sm:pt-4 pb-4 sm:pb-8">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 sm:gap-3">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 sm:gap-3 items-stretch">
               <div className="lg:col-span-2 space-y-2 sm:space-y-3">
                 <div className="bg-white rounded-lg shadow-lg p-4 sm:p-8 transform transition-all duration-300 hover:shadow-xl">
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
@@ -971,21 +975,14 @@ const UserProfilePage = () => {
                 </div>
               </div>
 
-              <div className="lg:col-span-1">
-                {/* Referral Visualization - Moved to top */}
+              <div className="lg:col-span-1 flex flex-col h-full">
+                {/* Referral Visualization - Move to top */}
                 {referralStats && (
                   <div
                     id="referral"
                     className="bg-white rounded-lg shadow-lg transform transition-all duration-300 hover:shadow-xl mb-3"
                   >
                     <div className="bg-white rounded-xl p-4">
-                      <div className="flex justify-between items-center mb-3">
-                        <h2 className="text-base font-bold text-gray-900">
-                          {isOwnProfile
-                            ? "Referral Program"
-                            : "Referral Statistics"}
-                        </h2>
-                      </div>
                       <div className="flex flex-col gap-3">
                         {/* Referral Code Input Section for New Users */}
                         {isOwnProfile &&
@@ -1127,15 +1124,38 @@ const UserProfilePage = () => {
 
                         {/* Referral Statistics */}
                         <div className="grid grid-cols-2 gap-3">
-                          <div className="bg-white rounded-lg p-3 border border-gray-200 text-center">
+                          <div
+                            className={`bg-white rounded-lg p-3 border text-center cursor-pointer transition-colors duration-200 flex items-center justify-center gap-2 ${
+                              showReferredUsers
+                                ? "border-violet-400 bg-violet-50"
+                                : "border-gray-200 hover:bg-violet-50 hover:border-violet-300"
+                            }`}
+                            onClick={() => setShowReferredUsers((v) => !v)}
+                            aria-expanded={showReferredUsers}
+                          >
                             <div className="text-2xl font-bold text-violet-600">
                               {referralStats.totalReferred}
                             </div>
                             <div className="text-xs text-gray-600">
                               Total Referred
                             </div>
+                            <svg
+                              className={`w-4 h-4 ml-2 transition-transform duration-200 ${
+                                showReferredUsers ? "rotate-90" : "rotate-0"
+                              }`}
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M9 5l7 7-7 7"
+                              />
+                            </svg>
                           </div>
-                          <div className="bg-white rounded-lg p-3 border border-gray-200 text-center">
+                          <div className="bg-white rounded-lg p-3 border border-gray-200 text-center cursor-pointer transition-colors duration-200 flex items-center justify-center gap-2 hover:bg-green-50 hover:border-green-300">
                             <div className="text-2xl font-bold text-green-600">
                               {referralStats.totalPointsEarned}
                             </div>
@@ -1145,71 +1165,100 @@ const UserProfilePage = () => {
                           </div>
                         </div>
 
-                        {/* Referred Users List */}
-                        {referralStats.referredUsers.length > 0 && (
+                        {/* Referred Users List - only show if toggled */}
+                        {showReferredUsers && (
                           <div className="space-y-2">
-                            <h4 className="text-sm font-semibold text-gray-900">
-                              Referred Users
-                            </h4>
-                            <div className="max-h-48 overflow-y-auto space-y-2">
-                              {referralStats.referredUsers.map(
-                                (user, index) => (
-                                  <Link
-                                    href={`/users/${user.address}`}
-                                    key={user.address}
-                                    className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                                  >
-                                    <div className="w-8 h-8 rounded-full overflow-hidden border border-gray-200">
-                                      <Image
-                                        src={
-                                          user.nadAvatar ||
-                                          `/avatar_${index % 6}.png`
-                                        }
-                                        alt="User Avatar"
-                                        width={32}
-                                        height={32}
-                                        className="w-full h-full object-cover"
-                                      />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <div className="text-sm font-medium text-gray-900 truncate">
-                                        {user.nadName ||
-                                          formatAddress(user.address)}
-                                      </div>
-                                      <div className="text-xs text-gray-500">
-                                        {user.totalPoints} pts • Joined{" "}
-                                        {formatDate(user.joinedAt)}
-                                      </div>
-                                    </div>
-                                    <div className="text-xs text-green-600 font-medium">
-                                      +{user.pointsEarned}
-                                    </div>
-                                  </Link>
-                                )
-                              )}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Empty State */}
-                        {referralStats.totalReferred === 0 && (
-                          <div className="text-center py-6 text-gray-500">
-                            <div className="text-4xl mb-2">🤝</div>
-                            <div className="text-sm font-medium mb-1">
-                              No referrals yet
-                            </div>
-                            <div className="text-xs">
-                              {isOwnProfile
-                                ? "Share your referral code to start earning points!"
-                                : "This user hasn't referred anyone yet"}
-                            </div>
+                            {referralStats.referredUsers.length > 0 ? (
+                              <>
+                                <h4 className="text-sm font-semibold text-gray-900">
+                                  Referred Users
+                                </h4>
+                                <div className="max-h-48 overflow-y-auto space-y-2">
+                                  {referralStats.referredUsers.map(
+                                    (user, index) => (
+                                      <Link
+                                        href={`/users/${user.address}`}
+                                        key={user.address}
+                                        className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                                      >
+                                        <div className="w-8 h-8 rounded-full overflow-hidden border border-gray-200">
+                                          <Image
+                                            src={
+                                              user.nadAvatar ||
+                                              `/avatar_${index % 6}.png`
+                                            }
+                                            alt="User Avatar"
+                                            width={32}
+                                            height={32}
+                                            className="w-full h-full object-cover"
+                                          />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                          <div className="text-sm font-medium text-gray-900 truncate">
+                                            {user.nadName ||
+                                              formatAddress(user.address)}
+                                          </div>
+                                          <div className="text-xs text-gray-500">
+                                            {user.totalPoints} pts • Joined{" "}
+                                            {formatDate(user.joinedAt)}
+                                          </div>
+                                        </div>
+                                        <div className="text-xs text-green-600 font-medium">
+                                          +{user.pointsEarned}
+                                        </div>
+                                      </Link>
+                                    )
+                                  )}
+                                </div>
+                              </>
+                            ) : (
+                              <div className="text-center py-6 text-gray-500">
+                                <div className="text-4xl mb-2">🤝</div>
+                                <div className="text-sm font-medium mb-1">
+                                  No referrals yet
+                                </div>
+                                <div className="text-xs">
+                                  {isOwnProfile
+                                    ? "Share your referral code to start earning points!"
+                                    : "This user hasn't referred anyone yet"}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
                     </div>
                   </div>
                 )}
+                {/* Share Profile Card - Only show for own profile */}
+                {/* {isOwnProfile && ( */}
+                <div className="bg-white rounded-lg shadow-lg transform transition-all duration-300 hover:shadow-xl mb-3">
+                  <ShareableProfileCard
+                    userProfile={{
+                      address: userProfile.address,
+                      nadName: userProfile.nadName,
+                      nadAvatar: userProfile.nadAvatar,
+                      points: userProfile.points,
+                      rank: userProfile.rank,
+                      dollarValue: userProfile.dollarValue,
+                    }}
+                    referralStats={referralStats}
+                    totalTransactions={userProfile.pagination?.total}
+                    isOwnProfile={isOwnProfile}
+                    backgroundImage={userProfile.profileBgImage}
+                  />
+                  {/* Debug log */}
+                  {(() => {
+                    console.log(
+                      "UserProfilePage - Passing backgroundImage:",
+                      userProfile.profileBgImage
+                    );
+                    return null;
+                  })()}
+                </div>
+                {/* )} */}
 
+                {/* Latest Activities */}
                 <div className="bg-white rounded-lg shadow-lg transform transition-all duration-300 hover:shadow-xl">
                   <div className="bg-white rounded-xl p-4">
                     <div className="flex justify-between items-center mb-3">
@@ -1524,81 +1573,6 @@ const UserProfilePage = () => {
                         No recent activities.
                       </div>
                     )}
-                  </div>
-                </div>
-                <div className="bg-white rounded-lg shadow-lg transform transition-all duration-300 hover:shadow-xl mt-3">
-                  <div className="bg-white rounded-xl p-4">
-                    <div className="flex justify-between items-center mb-3">
-                      <h2 className="text-base font-bold text-gray-900">
-                        Badges
-                      </h2>
-                    </div>
-                    <div className="flex flex-col gap-3">
-                      {[
-                        {
-                          name: "Social Gorilla",
-                          description:
-                            "Follow Gorilli Twitter, Discord and Telegram profiles.",
-                          image: "/01.png",
-                          status: "coming-soon",
-                        },
-                        {
-                          name: "Jungle Ambassador",
-                          description:
-                            "Invite a friend to join Gorillionaire family.",
-                          image: "/02.png",
-                          status: "coming-soon",
-                        },
-                        {
-                          name: "Streak Ape",
-                          description:
-                            "Accept at least 1 signal per day for 7 consecutive days.",
-                          image: "/03.png",
-                          status: "coming-soon",
-                        },
-                        {
-                          name: "Early Adopter",
-                          description:
-                            "Be one of the first user to join Gorillionaire v2.",
-                          image: "/04.png",
-                          status: "coming-soon",
-                        },
-                        {
-                          name: "Silverback OG",
-                          description:
-                            "Reach your first 1,000 points on Gorillionaire.",
-                          image: "/05.png",
-                          status: "coming-soon",
-                        },
-                      ].map((badge, idx) => (
-                        <div
-                          key={idx}
-                          className="flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-100 shadow-sm"
-                        >
-                          <div className="w-12 h-12 flex items-center justify-center rounded-full bg-violet-50 border">
-                            <Image
-                              src={badge.image}
-                              alt={badge.name}
-                              width={48}
-                              height={48}
-                              className="rounded-full"
-                              unoptimized
-                            />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="font-semibold text-gray-900 truncate">
-                              {badge.name}
-                            </div>
-                            <div className="text-gray-500 text-xs truncate">
-                              {badge.description}
-                            </div>
-                          </div>
-                          <span className="px-3 py-1 rounded-full bg-gray-200 text-gray-600 text-xs font-semibold">
-                            Coming Soon
-                          </span>
-                        </div>
-                      ))}
-                    </div>
                   </div>
                 </div>
               </div>
