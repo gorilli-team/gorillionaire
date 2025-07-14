@@ -2,7 +2,11 @@
 export function playTradeChime() {
   try {
     const ctx = new (window.AudioContext ||
-      (window as any).webkitAudioContext)();
+      (
+        window as unknown as typeof window & {
+          webkitAudioContext: typeof AudioContext;
+        }
+      ).webkitAudioContext)();
     const now = ctx.currentTime;
 
     // First note (C5)
@@ -28,7 +32,7 @@ export function playTradeChime() {
     // Clean up
     osc1.onended = () => ctx.close();
     osc2.onended = () => ctx.close();
-  } catch (e) {
+  } catch {
     // Audio not supported or blocked
     // Optionally log or ignore
   }
