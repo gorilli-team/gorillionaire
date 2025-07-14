@@ -653,25 +653,6 @@ const Signals = () => {
             )
           );
         }
-
-        await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/signals/generated-signals/user-signal`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${privyToken}`,
-            },
-            body: JSON.stringify({
-              userAddress: user?.wallet?.address,
-              signalId: currentSignalId,
-              choice: "Yes",
-              type: type,
-              token: token.symbol,
-              amount: amount.toString(),
-            }),
-          }
-        );
       } catch (error) {
         console.error("Trade execution error:", error);
         toast.error("Trade failed");
@@ -710,6 +691,29 @@ const Signals = () => {
 
         // Set current signal ID for later updates
         setCurrentSignalId(signalId);
+
+        // Store user signal immediately for "Yes" choice
+        const privyToken = Cookies.get("privy-token");
+        try {
+          await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/signals/generated-signals/user-signal`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${privyToken}`,
+              },
+              body: JSON.stringify({
+                userAddress: user?.wallet?.address,
+                signalId,
+                choice: option,
+              }),
+            }
+          );
+        } catch (error) {
+          console.error("Error storing user signal:", error);
+        }
+
         await onYes(token, amount, signal.type);
       } else {
         const privyToken = Cookies.get("privy-token");
