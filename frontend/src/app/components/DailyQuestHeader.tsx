@@ -142,24 +142,8 @@ const DailyQuestHeader = () => {
 
       const data = await response.json();
 
-      if (response.ok) {
-        // Play sound when quest is successfully claimed
-        if (audioRef.current) {
-          audioRef.current.play().catch(console.error);
-        }
-
-        setSuccessMessage(`Quest completed! +${data.rewardPoints} points`);
-
-        // Refresh quests
-        await fetchDailyQuests();
-
-        // Clear success message after 3 seconds
-        setTimeout(() => {
-          setSuccessMessage(null);
-        }, 3000);
-      } else {
-        console.error("Error claiming quest:", data.error);
-      }
+      await fetchDailyQuests();
+      setSuccessMessage(`Quest completed! +${data.questRewardAmount} points`);
     } catch (error) {
       console.error("Error claiming quest:", error);
     } finally {
