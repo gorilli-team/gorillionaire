@@ -167,7 +167,7 @@ contract SmartWallet {
             block.timestamp + 60
         );
 
-        emit BuyTokens(address(this), i_usdc, tokenOut, pair, msg.sender, amounts[0], amountOut, amountInMax);
+        emit BuyTokens(address(this), pair, i_usdc, tokenOut, msg.sender, amounts[0], amountOut, amountInMax);
     }
 
     function sellTokens(address router, address tokenIn, uint256 amountIn, uint256 amountOutMin) external onlyOperator onlyValidSwapParameters(router, tokenIn, amountIn) {
@@ -191,7 +191,7 @@ contract SmartWallet {
             block.timestamp + 60
         );
 
-        emit SellTokens(address(this), tokenIn, i_usdc, msg.sender, pair, amountIn, amounts[amounts.length - 1], amountOutMin);
+        emit SellTokens(address(this), pair, tokenIn, i_usdc, msg.sender, amountIn, amounts[amounts.length - 1], amountOutMin);
     }
 
     function setOperator(address _operator, bool authorized) external onlyOwner {
