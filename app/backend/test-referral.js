@@ -4,7 +4,8 @@ const UserActivity = require("./src/models/UserActivity");
 
 // Test configuration
 const MONGODB_URI =
-  process.env.MONGODB_URI || "mongodb://localhost:27017/gorillionaire";
+  process.env.MONGODB_CONNECTION_STRING ||
+  "mongodb://localhost:27017/gorillionaire";
 
 async function testReferralSystem() {
   try {

@@ -105,7 +105,7 @@ const LeaderboardBadge: React.FC = () => {
       </div>
 
       {/* Streak */}
-      {positionUser.streak > 0 && (
+      {/* {positionUser.streak > 0 && (
         <div className="flex items-center gap-1 flex-shrink-0">
           <span className="text-orange-500 text-sm">🔥</span>
           <span className="text-sm font-medium text-orange-700">
@@ -113,16 +113,7 @@ const LeaderboardBadge: React.FC = () => {
             streak!
           </span>
         </div>
-      )}
-
-      {/* Daily Transaction Target */}
-      <div className="flex items-center gap-1 flex-shrink-0">
-        <span className="text-blue-500 text-sm">📊</span>
-        <span className="text-sm font-medium text-blue-700">
-          {positionUser.todayTransactionCount}/
-          {positionUser.dailyTransactionTarget} txs
-        </span>
-      </div>
+      )} */}
     </div>
   );
 };
