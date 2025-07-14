@@ -67,13 +67,19 @@ const LeaderboardBadge: React.FC = () => {
   // Listen for trade completion events to refresh data
   useEffect(() => {
     const handleTradeCompleted = (event: CustomEvent) => {
-      // Only refresh if the trade was made by the current user
       if (event.detail.userAddress === address) {
-        console.log(
-          "🔄 tradeCompleted event received in LeaderboardBadge for address:",
-          address
-        );
-        fetchPositionUser();
+        setTimeout(async () => {
+          const response = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/activity/track/me?address=${address}`
+          );
+          const data = await response.json();
+          const newPoints = data.userActivity?.points || 0;
+          if (newPoints !== positionUser?.points) {
+            setPositionUser((prev) =>
+              prev ? { ...prev, points: newPoints } : prev
+            );
+          }
+        }, 2000); // 2 second delay
       }
     };
 
@@ -88,7 +94,7 @@ const LeaderboardBadge: React.FC = () => {
         handleTradeCompleted as EventListener
       );
     };
-  }, [address, fetchPositionUser]);
+  }, [address, positionUser?.points]);
 
   if (!authenticated || !positionUser) return null;
 
