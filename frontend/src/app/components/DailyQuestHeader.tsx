@@ -40,6 +40,7 @@ const DailyQuestHeader = () => {
   const [completedQuests, setCompletedQuests] = useState<Set<string>>(
     new Set()
   );
+  const [showCompletedQuests, setShowCompletedQuests] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -211,9 +212,14 @@ const DailyQuestHeader = () => {
     (quest) => quest.isActive
   ).length;
 
-  // Get active quests sorted by order
+  // Get active quests (not completed) sorted by order
   const activeQuests = dailyQuests.quests
-    .filter((quest) => quest.isActive)
+    .filter((quest) => quest.isActive && !quest.isClaimed)
+    .sort((a, b) => a.questOrder - b.questOrder);
+
+  // Get completed quests sorted by order
+  const claimedQuests = dailyQuests.quests
+    .filter((quest) => quest.isActive && quest.isClaimed)
     .sort((a, b) => a.questOrder - b.questOrder);
 
   return (
@@ -258,34 +264,46 @@ const DailyQuestHeader = () => {
       {isExpanded && (
         <div
           ref={panelRef}
-          className="absolute top-full right-0 mt-2 w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-96 overflow-y-auto"
+          className="fixed inset-x-0 top-[60px] mx-4 sm:absolute sm:top-full sm:right-0 sm:left-auto sm:w-96 sm:max-w-none sm:mx-0 max-w-none bg-white rounded-t-lg sm:rounded-lg shadow-xl border border-gray-200 z-50 max-h-[80vh] overflow-y-auto"
         >
-          <div className="p-4">
+          <div className="px-4 sm:px-4 py-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-gray-900">Daily Quests</h3>
-              <button
-                onClick={() => setIsExpanded(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowCompletedQuests(!showCompletedQuests)}
+                  className={`px-2 py-1 text-xs rounded-lg transition-colors sm:px-3 ${
+                    showCompletedQuests
+                      ? "bg-violet-600 text-white"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  }`}
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
+                  {showCompletedQuests ? "Active" : "Completed"}
+                </button>
+                <button
+                  onClick={() => setIsExpanded(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
             </div>
 
             {/* Progress Summary */}
-            <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-              <div className="flex justify-between text-sm text-gray-600 mb-2">
+            <div className="mb-4 p-2 sm:p-3 bg-gray-50 rounded-lg">
+              <div className="flex justify-between text-xs sm:text-sm text-gray-600 mb-2">
                 <span>Today&apos;s Progress</span>
                 <span>
                   {completedCount}/{totalQuests} completed
@@ -299,44 +317,101 @@ const DailyQuestHeader = () => {
               </div>
             </div>
 
-            {/* Quests List - Show next quests with focus on first */}
-            <div className="space-y-3">
-              {activeQuests.map((quest, index) => {
-                const isFirstQuest = index === 0;
-                const isNextQuest = !quest.isClaimed && quest.isActive;
-                const isCompleted = quest.isCompleted && !quest.isClaimed;
-                const isClaimed = quest.isClaimed;
-                const isNewlyCompleted = completedQuests.has(quest._id);
-
-                return (
-                  <div
-                    key={quest._id}
-                    className={`p-3 rounded-lg border transition-all duration-200 ${
-                      isClaimed
-                        ? "bg-green-50 border-green-200"
-                        : isCompleted
-                        ? "bg-yellow-50 border-yellow-200"
-                        : isFirstQuest
-                        ? "bg-violet-50 border-violet-200 shadow-md"
-                        : "bg-gray-50 border-gray-200"
-                    } ${isNewlyCompleted ? "animate-pulse" : ""}`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="w-8 h-8 flex items-center justify-center bg-violet-100 rounded-lg flex-shrink-0">
+            {/* Quests List - Show active or completed quests based on toggle */}
+            <div className="space-y-2 sm:space-y-3">
+              {showCompletedQuests ? (
+                // Show completed quests
+                claimedQuests.length > 0 ? (
+                  claimedQuests.map((quest) => (
+                    <div
+                      key={quest._id}
+                      className="p-2 sm:p-3 rounded-lg border bg-green-50 border-green-200 flex flex-col sm:flex-row gap-2"
+                    >
+                      <div className="w-10 h-10 flex items-center justify-center bg-green-100 rounded-lg flex-shrink-0 mx-auto sm:mx-0">
                         <Image
                           src={quest.questImage}
                           alt={quest.questName}
-                          width={24}
-                          height={24}
+                          width={32}
+                          height={32}
                           className="rounded-md"
                         />
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-semibold text-gray-900 text-sm">
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                          <h4 className="font-semibold text-gray-900 text-xs sm:text-sm">
                             {quest.questName}
-                            {isFirstQuest && !isClaimed && (
+                          </h4>
+                          <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-semibold">
+                            ✓ Claimed
+                          </span>
+                          <span className="px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 text-xs font-semibold">
+                            +{quest.questRewardAmount} pts
+                          </span>
+                        </div>
+
+                        <p className="text-gray-600 text-xs mb-2">
+                          {quest.questDescription}
+                        </p>
+
+                        {/* Progress Bar - Show 100% for completed quests */}
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="flex-1">
+                            <div className="w-full bg-gray-200 rounded-full overflow-hidden">
+                              <div
+                                className="h-2 rounded-full transition-all duration-300 bg-gradient-to-r from-green-500 to-green-600"
+                                style={{ width: "100%" }}
+                              ></div>
+                            </div>
+                          </div>
+                          <span className="text-xs text-gray-500 min-w-fit">
+                            {quest.questRequirement}/{quest.questRequirement}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <div className="text-sm">No completed quests yet</div>
+                    <div className="text-xs mt-1">
+                      Complete some quests to see them here!
+                    </div>
+                  </div>
+                )
+              ) : // Show active quests
+              activeQuests.length > 0 ? (
+                activeQuests.map((quest, index) => {
+                  const isFirstQuest = index === 0;
+                  const isCompleted = quest.isCompleted && !quest.isClaimed;
+                  const isNewlyCompleted = completedQuests.has(quest._id);
+
+                  return (
+                    <div
+                      key={quest._id}
+                      className={`p-2 sm:p-3 rounded-lg border transition-all duration-200 flex flex-col sm:flex-row gap-2 ${
+                        isCompleted
+                          ? "bg-yellow-50 border-yellow-200"
+                          : isFirstQuest
+                          ? "bg-violet-50 border-violet-200 shadow-md"
+                          : "bg-gray-50 border-gray-200"
+                      } ${isNewlyCompleted ? "animate-pulse" : ""}`}
+                    >
+                      <div className="w-10 h-10 flex items-center justify-center bg-violet-100 rounded-lg flex-shrink-0 mx-auto sm:mx-0">
+                        <Image
+                          src={quest.questImage}
+                          alt={quest.questName}
+                          width={32}
+                          height={32}
+                          className="rounded-md"
+                        />
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                          <h4 className="font-semibold text-gray-900 text-xs sm:text-sm">
+                            {quest.questName}
+                            {isFirstQuest && !quest.isClaimed && (
                               <span className="ml-2 px-2 py-0.5 bg-violet-600 text-white text-xs rounded-full">
                                 Current
                               </span>
@@ -345,12 +420,7 @@ const DailyQuestHeader = () => {
                           <span className="px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 text-xs font-semibold">
                             +{quest.questRewardAmount} pts
                           </span>
-                          {isClaimed && (
-                            <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-semibold">
-                              ✓ Claimed
-                            </span>
-                          )}
-                          {isCompleted && !isClaimed && (
+                          {isCompleted && (
                             <span className="px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 text-xs font-semibold">
                               Ready to Claim
                             </span>
@@ -361,7 +431,7 @@ const DailyQuestHeader = () => {
                           {quest.questDescription}
                         </p>
 
-                        {/* Progress Bar - Show prominently for first quest */}
+                        {/* Progress Bar - Show for all active quests */}
                         <div className="flex items-center gap-2 mb-2">
                           <div className="flex-1">
                             <div className="w-full bg-gray-200 rounded-full overflow-hidden">
@@ -383,7 +453,7 @@ const DailyQuestHeader = () => {
                         </div>
 
                         {/* Show claim button for completed quests */}
-                        {isCompleted && !isClaimed && (
+                        {isCompleted && (
                           <button
                             onClick={() => handleClaimQuest(quest.questId)}
                             disabled={isLoading}
@@ -394,16 +464,23 @@ const DailyQuestHeader = () => {
                         )}
 
                         {/* Show next quest indicator */}
-                        {isNextQuest && !isFirstQuest && !isClaimed && (
+                        {!isFirstQuest && !isCompleted && (
                           <div className="text-xs text-gray-500 italic">
                             Complete previous quests first
                           </div>
                         )}
                       </div>
                     </div>
+                  );
+                })
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <div className="text-sm">No active quests available</div>
+                  <div className="text-xs mt-1">
+                    Check back later for new quests!
                   </div>
-                );
-              })}
+                </div>
+              )}
             </div>
 
             {/* Stats Summary */}
