@@ -100,11 +100,10 @@ const DailyQuestHeader = () => {
           );
           if (
             quest.isCompleted &&
-            !quest.isClaimed &&
             previousQuest &&
             !previousQuest.isCompleted
           ) {
-            // Quest was just completed - play sound
+            // Quest was just completed (whether claimed or not) - play sound
             if (audioRef.current) {
               audioRef.current.play().catch(console.error);
             }
@@ -141,6 +140,11 @@ const DailyQuestHeader = () => {
       const data = await response.json();
 
       if (response.ok) {
+        // Play sound when quest is successfully claimed
+        if (audioRef.current) {
+          audioRef.current.play().catch(console.error);
+        }
+
         setSuccessMessage(`Quest completed! +${data.rewardPoints} points`);
 
         // Refresh quests
@@ -173,6 +177,29 @@ const DailyQuestHeader = () => {
     const interval = setInterval(fetchDailyQuests, 30000);
     return () => clearInterval(interval);
   }, [authenticated, user?.wallet?.address, fetchDailyQuests]);
+
+  // Listen for trade completion events to refresh quests
+  useEffect(() => {
+    const handleTradeCompleted = (event: CustomEvent) => {
+      // Only refresh if the trade was made by the current user
+      if (event.detail.userAddress === user?.wallet?.address) {
+        console.log("🔄 Refreshing daily quests after trade completion");
+        fetchDailyQuests();
+      }
+    };
+
+    window.addEventListener(
+      "tradeCompleted",
+      handleTradeCompleted as EventListener
+    );
+
+    return () => {
+      window.removeEventListener(
+        "tradeCompleted",
+        handleTradeCompleted as EventListener
+      );
+    };
+  }, [user?.wallet?.address, fetchDailyQuests]);
 
   // Click outside to close panel
   useEffect(() => {
