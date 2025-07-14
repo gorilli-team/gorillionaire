@@ -160,8 +160,8 @@ const DailyQuestHeader = () => {
       } else {
         console.error("Error claiming quest:", data.error);
       }
-    } catch {
-      console.error("Error claiming quest");
+    } catch (error) {
+      console.error("Error claiming quest:", error);
     } finally {
       setIsLoading(false);
     }

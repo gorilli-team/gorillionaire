@@ -103,16 +103,23 @@ router.get("/:address", async (req, res) => {
       // Calculate cumulative progress for each quest
       if (index === 0) {
         // First quest: show actual progress
-        currentProgress = Math.min(todayTransactionCount, quest.questRequirement);
+        currentProgress = Math.min(
+          todayTransactionCount,
+          quest.questRequirement
+        );
       } else {
         // For subsequent quests, calculate progress beyond previous cumulative requirements
         let previousCumulativeRequirement = 0;
         for (let i = 0; i < index; i++) {
-          previousCumulativeRequirement += userDailyQuests[i].questId.questRequirement;
+          previousCumulativeRequirement +=
+            userDailyQuests[i].questId.questRequirement;
         }
-        
+
         // Progress is trades beyond what's needed for previous quests
-        const availableTrades = Math.max(0, todayTransactionCount - previousCumulativeRequirement);
+        const availableTrades = Math.max(
+          0,
+          todayTransactionCount - previousCumulativeRequirement
+        );
         currentProgress = Math.min(availableTrades, quest.questRequirement);
       }
 
@@ -273,6 +280,76 @@ router.post("/reset", async (req, res) => {
     res.json({ message: "Daily quests reset successfully" });
   } catch (error) {
     console.error("Error resetting daily quests:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Get user's completed daily quests
+router.get("/:address/completed", async (req, res) => {
+  const { address } = req.params;
+  const { page = 1, limit = 10 } = req.query;
+  const skip = (page - 1) * limit;
+
+  try {
+    const user = await UserActivity.findOne({
+      address: { $in: [address, address.toLowerCase()] },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Get all completed daily quests for this user
+    const completedQuests = await UserDailyQuest.find({
+      address: { $regex: new RegExp(`^${address}$`, "i") },
+      isCompleted: true,
+    })
+      .populate("questId")
+      .sort({ completedAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    // Get total count of completed quests
+    const totalCompleted = await UserDailyQuest.countDocuments({
+      address: { $regex: new RegExp(`^${address}$`, "i") },
+      isCompleted: true,
+    });
+
+    const questsWithDetails = completedQuests.map((userQuest) => {
+      const quest = userQuest.questId;
+
+      return {
+        _id: userQuest._id,
+        questId: quest._id,
+        questName: quest.questName,
+        questDescription: quest.questDescription,
+        questImage: quest.questImage,
+        questType: quest.questType,
+        questRequirement: quest.questRequirement,
+        questRewardType: quest.questRewardType,
+        questRewardAmount: quest.questRewardAmount,
+        questLevel: quest.questLevel,
+        questOrder: quest.questOrder,
+        currentProgress: userQuest.currentProgress,
+        isCompleted: userQuest.isCompleted,
+        completedAt: userQuest.completedAt,
+        claimedAt: userQuest.claimedAt,
+        isClaimed: !!userQuest.claimedAt,
+        questDate: userQuest.questDate,
+      };
+    });
+
+    res.json({
+      quests: questsWithDetails,
+      pagination: {
+        total: totalCompleted,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages: Math.ceil(totalCompleted / limit),
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching completed daily quests:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
