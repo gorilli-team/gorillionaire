@@ -29,8 +29,6 @@ interface DailyQuest {
 interface DailyQuestData {
   quests: DailyQuest[];
   todayTransactionCount: number;
-  todayVolume: number;
-  currentStreak: number;
 }
 
 const DailyQuestHeader = () => {
@@ -198,7 +196,7 @@ const DailyQuestHeader = () => {
 
       {/* Expanded Quest Panel */}
       {isExpanded && (
-        <div 
+        <div
           ref={panelRef}
           className="absolute top-full right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-96 overflow-y-auto"
         >
@@ -319,25 +317,11 @@ const DailyQuestHeader = () => {
 
             {/* Stats Summary */}
             <div className="mt-4 pt-4 border-t border-gray-200">
-              <div className="grid grid-cols-3 gap-2 text-xs text-gray-600">
-                <div className="text-center">
-                  <div className="font-semibold text-violet-600">
-                    {dailyQuests.todayTransactionCount}
-                  </div>
-                  <div>Today's Trades</div>
+              <div className="text-center">
+                <div className="font-semibold text-violet-600 text-lg">
+                  {dailyQuests.todayTransactionCount}
                 </div>
-                <div className="text-center">
-                  <div className="font-semibold text-green-600">
-                    ${dailyQuests.todayVolume.toLocaleString()}
-                  </div>
-                  <div>Today's Volume</div>
-                </div>
-                <div className="text-center">
-                  <div className="font-semibold text-orange-600">
-                    {dailyQuests.currentStreak}
-                  </div>
-                  <div>Day Streak</div>
-                </div>
+                <div className="text-xs text-gray-600">Today's Trades</div>
               </div>
             </div>
           </div>

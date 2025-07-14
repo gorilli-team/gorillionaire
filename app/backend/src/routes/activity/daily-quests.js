@@ -95,36 +95,25 @@ router.get("/:address", async (req, res) => {
 
     // Calculate current progress for each quest
     const todayTransactionCount = getTodayTransactionCount(user.activitiesList);
-    const todayVolume = getTodayVolume(user.activitiesList);
 
-    const questsWithProgress = userDailyQuests.map((userQuest) => {
+    const questsWithProgress = userDailyQuests.map((userQuest, index) => {
       const quest = userQuest.questId;
       let currentProgress = userQuest.currentProgress;
 
-      // Update progress based on quest type
-      switch (quest.questType) {
-        case "dailyTransactions":
-          currentProgress = todayTransactionCount;
-          break;
-        case "dailyVolume":
-          currentProgress = Math.floor(todayVolume);
-          break;
-        case "dailyStreak":
-          currentProgress = user.streak || 0;
-          break;
-        case "dailySignals":
-          // Count today's signal activities
-          const todaySignals = user.activitiesList.filter((activity) => {
-            const activityDate = new Date(activity.date);
-            activityDate.setHours(0, 0, 0, 0);
-            return (
-              activityDate.getTime() === today.getTime() &&
-              (activity.name === "Signal Accepted" ||
-                activity.name === "Signal Refused")
-            );
-          }).length;
-          currentProgress = todaySignals;
-          break;
+      // Calculate cumulative progress for each quest
+      if (index === 0) {
+        // First quest: show actual progress
+        currentProgress = Math.min(todayTransactionCount, quest.questRequirement);
+      } else {
+        // For subsequent quests, calculate progress beyond previous cumulative requirements
+        let previousCumulativeRequirement = 0;
+        for (let i = 0; i < index; i++) {
+          previousCumulativeRequirement += userDailyQuests[i].questId.questRequirement;
+        }
+        
+        // Progress is trades beyond what's needed for previous quests
+        const availableTrades = Math.max(0, todayTransactionCount - previousCumulativeRequirement);
+        currentProgress = Math.min(availableTrades, quest.questRequirement);
       }
 
       // Update the user quest progress if it changed
@@ -178,8 +167,6 @@ router.get("/:address", async (req, res) => {
     res.json({
       quests: questsWithProgress,
       todayTransactionCount,
-      todayVolume: Math.floor(todayVolume),
-      currentStreak: user.streak || 0,
     });
   } catch (error) {
     console.error("Error fetching daily quests:", error);
