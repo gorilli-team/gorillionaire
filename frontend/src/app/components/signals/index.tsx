@@ -407,23 +407,55 @@ const Signals = () => {
 
   // New function to execute trade after DEX modal confirmation
   const executeTrade = useCallback(
-    async (quoteDataString: string) => {
-      if (!currentDexToken || !user?.wallet?.address) return;
+    async (inputAmount: string) => {
+      console.log("🚀 executeTrade called with inputAmount:", inputAmount);
+      console.log("🚀 currentDexToken:", currentDexToken);
+      console.log("🚀 currentSignalId:", currentSignalId);
+      console.log("🚀 user?.wallet?.address:", user?.wallet?.address);
+
+      if (!currentDexToken || !user?.wallet?.address) {
+        console.log("❌ Missing currentDexToken or user wallet address");
+        return;
+      }
+
+      console.log("✅ All required data present, proceeding with trade");
 
       const token = currentDexToken;
       const type = currentDexType;
 
-      // Parse the quote data from the modal
-      let quoteData;
-      try {
-        quoteData = JSON.parse(quoteDataString);
-      } catch (error) {
-        console.error("Error parsing quote data:", error);
-        toast.error("Invalid quote data received");
+      console.log("📋 Trade parameters:", {
+        token: token.symbol,
+        amount: inputAmount,
+        type,
+        userAddress: user?.wallet?.address,
+      });
+
+      const params = new URLSearchParams({
+        token: token.symbol,
+        amount: inputAmount,
+        type: type.toLowerCase(),
+        userAddress: user?.wallet?.address,
+      });
+
+      console.log("📋 URL params:", params.toString());
+
+      console.log(
+        "📡 About to fetch quote from:",
+        `${process.env.NEXT_PUBLIC_API_URL}/trade/0x-quote?${params.toString()}`
+      );
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/trade/0x-quote?${params.toString()}`
+      );
+      console.log("📡 Quote response status:", res.status);
+      const quoteData = await res.json();
+      console.log("📡 Quote data received:", quoteData ? "Yes" : "No");
+
+      if (!quoteData) {
+        console.log("❌ No quote data received");
         return;
       }
 
-      if (!quoteData) return;
+      console.log("✅ Quote data received successfully");
 
       // Extract amount from quote data
       const amount =
@@ -434,20 +466,30 @@ const Signals = () => {
             Math.pow(10, token.decimals);
 
       if (quoteData.issues?.balance) {
+        console.log("❌ Insufficient balance error");
         return toast.error("Insufficient balance");
       }
 
+      console.log("✅ No balance issues");
+
       const isNativeSell =
         quoteData.sellToken?.toLowerCase() === MON_ADDRESS.toLowerCase();
+      console.log("🔍 isNativeSell:", isNativeSell);
+      console.log("🔍 quoteData.transaction exists:", !!quoteData.transaction);
+
       if (isNativeSell && !quoteData.transaction) {
+        console.log("❌ Native sell but no transaction object");
         toast.error("Trade quote did not return a transaction object.");
         return;
       }
 
       if (!isNativeSell && !quoteData.transaction) {
+        console.log("❌ Non-native sell but no transaction object");
         toast.error("Trade quote did not return a transaction object.");
         return;
       }
+
+      console.log("✅ Transaction object present");
 
       // Show notification when trade request is being sent to the blockchain (only if transaction exists)
       toast(
@@ -468,7 +510,9 @@ const Signals = () => {
 
       // Native token flow (SELL MON)
       if (isNativeSell) {
+        console.log("🔄 Executing native sell transaction");
         try {
+          console.log("📤 About to send native transaction");
           const txHash = await sendTransactionAsync({
             account: user?.wallet?.address as `0x${string}`,
             gas: quoteData.transaction.gas
@@ -482,11 +526,18 @@ const Signals = () => {
               : undefined,
             chainId: MONAD_CHAIN_ID,
           });
+          console.log("📤 Native transaction sent, hash:", txHash);
 
+          console.log("⏳ Waiting for native transaction receipt...");
           await waitForTransactionReceipt(wagmiConfig, {
             hash: txHash,
             confirmations: 1,
           });
+
+          console.log(
+            "✅ Native transaction confirmed successfully, hash:",
+            txHash
+          );
 
           // Trade successful - dispatch custom event to refresh points and quests
           window.dispatchEvent(
@@ -500,7 +551,8 @@ const Signals = () => {
             })
           );
 
-          await fetch(
+          console.log("📊 About to call trade-points API for native sell");
+          const tradePointsResponse = await fetch(
             `${process.env.NEXT_PUBLIC_API_URL}/activity/track/trade-points`,
             {
               method: "POST",
@@ -516,9 +568,21 @@ const Signals = () => {
               }),
             }
           );
+          console.log(
+            "📊 Trade-points API response status:",
+            tradePointsResponse.status
+          );
+
+          console.log(
+            "🔍 About to check currentSignalId for native sell:",
+            currentSignalId
+          );
 
           // Update the signals state to add the user's choice
           if (currentSignalId) {
+            console.log(
+              "✅ currentSignalId is set for native sell, updating UI and storing user signal"
+            );
             setBuySignals((prevSignals) =>
               prevSignals.map((signal) =>
                 signal._id === currentSignalId
@@ -532,6 +596,67 @@ const Signals = () => {
                   ? { ...signal, userSignal: { choice: "Yes" } }
                   : signal
               )
+            );
+
+            // Store user signal after successful trade
+            console.log(
+              "🔄 Storing user signal after successful native sell trade:",
+              {
+                userAddress: user?.wallet?.address,
+                signalId: currentSignalId,
+                choice: "Yes",
+              }
+            );
+
+            try {
+              const response = await fetch(
+                `${process.env.NEXT_PUBLIC_API_URL}/signals/generated-signals/user-signal`,
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${Cookies.get("privy-token")}`,
+                  },
+                  body: JSON.stringify({
+                    userAddress: user?.wallet?.address,
+                    signalId: currentSignalId,
+                    choice: "Yes",
+                  }),
+                }
+              );
+
+              if (response.ok) {
+                console.log(
+                  "✅ User signal stored successfully after native sell trade"
+                );
+              } else if (response.status === 400) {
+                const errorData = await response.json();
+                if (errorData.error === "User signal already exists") {
+                  console.log(
+                    "ℹ️ User signal already exists, skipping storage"
+                  );
+                } else {
+                  console.error(
+                    "❌ Failed to store user signal after native sell trade:",
+                    errorData
+                  );
+                }
+              } else {
+                const errorData = await response.json();
+                console.error(
+                  "❌ Failed to store user signal after native sell trade:",
+                  errorData
+                );
+              }
+            } catch (error) {
+              console.error(
+                "❌ Error storing user signal after native sell trade:",
+                error
+              );
+            }
+          } else {
+            console.log(
+              "❌ currentSignalId is empty for native sell, cannot store user signal"
             );
           }
 
@@ -594,6 +719,7 @@ const Signals = () => {
       }
 
       try {
+        console.log("📤 About to send ERC20 transaction");
         const hash = await sendTransactionAsync({
           account: user?.wallet?.address as `0x${string}`,
           gas: transaction.gas ? BigInt(transaction.gas) : undefined,
@@ -601,11 +727,14 @@ const Signals = () => {
           data: transaction.data,
           chainId: MONAD_CHAIN_ID,
         });
+        console.log("📤 ERC20 transaction sent, hash:", hash);
 
+        console.log("⏳ Waiting for ERC20 transaction receipt...");
         await waitForTransactionReceipt(wagmiConfig, {
           hash,
           confirmations: 1,
         });
+        console.log("✅ ERC20 transaction confirmed successfully, hash:", hash);
 
         // Trade successful - dispatch custom event to refresh points and quests
         window.dispatchEvent(
@@ -620,7 +749,8 @@ const Signals = () => {
         );
 
         const privyToken = Cookies.get("privy-token");
-        await fetch(
+        console.log("📊 About to call trade-points API for ERC20");
+        const tradePointsResponse = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/activity/track/trade-points`,
           {
             method: "POST",
@@ -636,8 +766,20 @@ const Signals = () => {
             }),
           }
         );
+        console.log(
+          "📊 Trade-points API response status:",
+          tradePointsResponse.status
+        );
+
+        console.log(
+          "🔍 About to check currentSignalId for ERC20:",
+          currentSignalId
+        );
 
         if (currentSignalId) {
+          console.log(
+            "✅ currentSignalId is set for ERC20, updating UI and storing user signal"
+          );
           setBuySignals((prevSignals) =>
             prevSignals.map((signal) =>
               signal._id === currentSignalId
@@ -651,6 +793,62 @@ const Signals = () => {
                 ? { ...signal, userSignal: { choice: "Yes" } }
                 : signal
             )
+          );
+
+          // Store user signal after successful trade
+          console.log("🔄 Storing user signal after successful ERC20 trade:", {
+            userAddress: user?.wallet?.address,
+            signalId: currentSignalId,
+            choice: "Yes",
+          });
+
+          try {
+            const response = await fetch(
+              `${process.env.NEXT_PUBLIC_API_URL}/signals/generated-signals/user-signal`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${privyToken}`,
+                },
+                body: JSON.stringify({
+                  userAddress: user?.wallet?.address,
+                  signalId: currentSignalId,
+                  choice: "Yes",
+                }),
+              }
+            );
+
+            if (response.ok) {
+              console.log(
+                "✅ User signal stored successfully after ERC20 trade"
+              );
+            } else if (response.status === 400) {
+              const errorData = await response.json();
+              if (errorData.error === "User signal already exists") {
+                console.log("ℹ️ User signal already exists, skipping storage");
+              } else {
+                console.error(
+                  "❌ Failed to store user signal after ERC20 trade:",
+                  errorData
+                );
+              }
+            } else {
+              const errorData = await response.json();
+              console.error(
+                "❌ Failed to store user signal after ERC20 trade:",
+                errorData
+              );
+            }
+          } catch (error) {
+            console.error(
+              "❌ Error storing user signal after ERC20 trade:",
+              error
+            );
+          }
+        } else {
+          console.log(
+            "❌ currentSignalId is empty for ERC20, cannot store user signal"
           );
         }
       } catch (error) {
@@ -691,31 +889,14 @@ const Signals = () => {
 
         // Set current signal ID for later updates
         setCurrentSignalId(signalId);
-
-        // Store user signal immediately for "Yes" choice
-        const privyToken = Cookies.get("privy-token");
-        try {
-          await fetch(
-            `${process.env.NEXT_PUBLIC_API_URL}/signals/generated-signals/user-signal`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${privyToken}`,
-              },
-              body: JSON.stringify({
-                userAddress: user?.wallet?.address,
-                signalId,
-                choice: option,
-              }),
-            }
-          );
-        } catch (error) {
-          console.error("Error storing user signal:", error);
-        }
-
         await onYes(token, amount, signal.type);
       } else {
+        console.log("🔄 Storing user signal for 'No' choice:", {
+          userAddress: user?.wallet?.address,
+          signalId,
+          choice: option,
+        });
+
         const privyToken = Cookies.get("privy-token");
         const response = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/signals/generated-signals/user-signal`,
@@ -733,9 +914,22 @@ const Signals = () => {
           }
         );
 
-        if (response.status === 400) {
+        if (response.ok) {
+          console.log("✅ User signal stored successfully for 'No' choice");
+        } else if (response.status === 400) {
+          const errorData = await response.json();
+          console.error(
+            "❌ Failed to store user signal for 'No' choice:",
+            errorData
+          );
           toast.error("You have already 5 No signals in the last 24 hours");
           return;
+        } else {
+          const errorData = await response.json();
+          console.error(
+            "❌ Failed to store user signal for 'No' choice:",
+            errorData
+          );
         }
 
         onNo(signalId);
