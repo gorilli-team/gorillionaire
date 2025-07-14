@@ -388,7 +388,7 @@ export default function SignalPage() {
   };
 
   return (
-    <ProtectPage>
+    <ProtectPage requireV2Access={true}>
       <div className="flex min-h-screen bg-gray-100 text-gray-800">
         {/* Mobile menu button */}
         <button
