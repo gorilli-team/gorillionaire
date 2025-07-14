@@ -12,9 +12,9 @@ contract SmartWallet {
     event WithdrawUSDC(address indexed usdc, uint256 indexed amount);
     event BuyTokens(
         address indexed smartWallet,
-        address indexed tokenIn,
-        address indexed tokenOut,
-        address pair,
+        address indexed pair,
+        address tokenIn,
+        address tokenOut,
         address operator,
         uint256 amountIn,
         uint256 amountOut,
@@ -22,9 +22,9 @@ contract SmartWallet {
     );
     event SellTokens(
         address indexed smartWallet,
-        address indexed tokenIn,
-        address indexed tokenOut,
-        address pair,
+        address indexed pair,
+        address tokenIn,
+        address tokenOut,
         address operator,
         uint256 amountIn,
         uint256 amountOut,
