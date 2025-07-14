@@ -9,6 +9,7 @@ import Cookies from "js-cookie";
 import { useGetProfile } from "@nadnameservice/nns-wagmi-hooks";
 import { HexString } from "@/app/types";
 import { useDisconnect } from "wagmi";
+import { playTradeChime } from "@/app/utils/sound";
 
 interface Notification {
   type: string;
@@ -189,6 +190,17 @@ export default function Header() {
       }
     };
   }, [authenticated, address]);
+
+  // Play sound for every trade
+  useEffect(() => {
+    const handleTradeCompleted = () => {
+      playTradeChime();
+    };
+    window.addEventListener("tradeCompleted", handleTradeCompleted);
+    return () => {
+      window.removeEventListener("tradeCompleted", handleTradeCompleted);
+    };
+  }, []);
 
   // Fetch user streak data
   const fetchStreak = useCallback(async () => {

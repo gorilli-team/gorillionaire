@@ -30,6 +30,10 @@ const LeaderboardBadge: React.FC = () => {
         `${process.env.NEXT_PUBLIC_API_URL}/activity/track/me?address=${address}`
       );
       const data = await response.json();
+      console.log(
+        "🏆 fetchPositionUser: points from backend:",
+        data.userActivity?.points
+      );
 
       // Fetch NNS profile
       let nnsProfile = null;
@@ -65,7 +69,10 @@ const LeaderboardBadge: React.FC = () => {
     const handleTradeCompleted = (event: CustomEvent) => {
       // Only refresh if the trade was made by the current user
       if (event.detail.userAddress === address) {
-        console.log("🔄 Refreshing user data after trade completion");
+        console.log(
+          "🔄 tradeCompleted event received in LeaderboardBadge for address:",
+          address
+        );
         fetchPositionUser();
       }
     };
