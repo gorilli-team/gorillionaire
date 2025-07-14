@@ -109,9 +109,9 @@ const DailyQuestHeader = () => {
           ) {
             // Quest was just completed (whether claimed or not) - play sound
             console.log("🎉 Quest completed:", quest.questName);
-            // if (audioRef.current) {
-            //   audioRef.current.play().catch(console.error);
-            // }
+            if (audioRef.current) {
+              audioRef.current.play().catch(console.error);
+            }
             setCompletedQuests((prev) => new Set(prev).add(quest._id));
           }
         });
@@ -147,7 +147,14 @@ const DailyQuestHeader = () => {
 
       const data = await response.json();
 
-      console.log("🎉 Quest completed:", data);
+      if (response.ok) {
+        // Play sound when quest is successfully claimed
+        if (audioRef.current) {
+          audioRef.current.play().catch(console.error);
+        }
+
+        setSuccessMessage(`Quest completed! +${data.rewardPoints} points`);
+      }
 
       await fetchDailyQuests();
       setSuccessMessage(`Quest completed!`);
@@ -206,6 +213,29 @@ const DailyQuestHeader = () => {
       );
     };
   }, [user?.wallet?.address]);
+
+  // Listen for trade completion events to refresh quests
+  useEffect(() => {
+    const handleTradeCompleted = (event: CustomEvent) => {
+      // Only refresh if the trade was made by the current user
+      if (event.detail.userAddress === user?.wallet?.address) {
+        console.log("🔄 Refreshing daily quests after trade completion");
+        fetchDailyQuests();
+      }
+    };
+
+    window.addEventListener(
+      "tradeCompleted",
+      handleTradeCompleted as EventListener
+    );
+
+    return () => {
+      window.removeEventListener(
+        "tradeCompleted",
+        handleTradeCompleted as EventListener
+      );
+    };
+  }, [user?.wallet?.address, fetchDailyQuests]);
 
   // Click outside to close panel
   useEffect(() => {

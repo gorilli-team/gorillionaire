@@ -30,10 +30,6 @@ const LeaderboardBadge: React.FC = () => {
         `${process.env.NEXT_PUBLIC_API_URL}/activity/track/me?address=${address}`
       );
       const data = await response.json();
-      console.log(
-        "🏆 fetchPositionUser: points from backend:",
-        data.userActivity?.points
-      );
 
       // Fetch NNS profile
       let nnsProfile = null;
@@ -67,19 +63,10 @@ const LeaderboardBadge: React.FC = () => {
   // Listen for trade completion events to refresh data
   useEffect(() => {
     const handleTradeCompleted = (event: CustomEvent) => {
+      // Only refresh if the trade was made by the current user
       if (event.detail.userAddress === address) {
-        setTimeout(async () => {
-          const response = await fetch(
-            `${process.env.NEXT_PUBLIC_API_URL}/activity/track/me?address=${address}`
-          );
-          const data = await response.json();
-          const newPoints = data.userActivity?.points || 0;
-          if (newPoints !== positionUser?.points) {
-            setPositionUser((prev) =>
-              prev ? { ...prev, points: newPoints } : prev
-            );
-          }
-        }, 2000); // 2 second delay
+        console.log("🔄 Refreshing user data after trade completion");
+        fetchPositionUser();
       }
     };
 
@@ -94,7 +81,7 @@ const LeaderboardBadge: React.FC = () => {
         handleTradeCompleted as EventListener
       );
     };
-  }, [address, positionUser?.points]);
+  }, [address, fetchPositionUser]);
 
   if (!authenticated || !positionUser) return null;
 
