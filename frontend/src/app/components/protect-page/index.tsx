@@ -20,10 +20,6 @@ export default function ProtectPage({
   
   const [hasV2Access, setHasV2Access] = useState(false);
   const [v2AccessLoading, setV2AccessLoading] = useState(true);
-  const [v2AccessInfo, setV2AccessInfo] = useState<{
-    enabledAt?: string;
-    accessCodeUsed?: string;
-  }>({});
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -42,10 +38,6 @@ export default function ProtectPage({
           
           if (data.success) {
             setHasV2Access(data.v2Enabled || false);
-            setV2AccessInfo({
-              enabledAt: data.enabledAt,
-              accessCodeUsed: data.accessCodeUsed,
-            });
           }
         } catch (error) {
           console.error("Error checking V2 access:", error);
