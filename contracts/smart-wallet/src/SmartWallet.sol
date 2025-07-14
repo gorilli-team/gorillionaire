@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IUniswapV2Router02} from "./interfaces/IUniswapV2Router02.sol";
+import {IUniswapV2Factory} from "./interfaces/IUniswapV2Factory.sol";
 
 contract SmartWallet {
     event AuthorizeOperator(address indexed operator, bool indexed authorized);
@@ -10,17 +11,21 @@ contract SmartWallet {
     event DepositUSDC(address indexed usdc, uint256 indexed amount);
     event WithdrawUSDC(address indexed usdc, uint256 indexed amount);
     event BuyTokens(
-        address indexed operator,
+        address indexed smartWallet,
         address indexed tokenIn,
         address indexed tokenOut,
+        address pair,
+        address operator,
         uint256 amountIn,
         uint256 amountOut,
         uint256 amountInMax
     );
     event SellTokens(
-        address indexed operator,
+        address indexed smartWallet,
         address indexed tokenIn,
         address indexed tokenOut,
+        address pair,
+        address operator,
         uint256 amountIn,
         uint256 amountOut,
         uint256 amountOutMin
@@ -42,7 +47,8 @@ contract SmartWallet {
     error SmartWallet__TokenInMustBeUSDC();
 
     address public immutable i_usdc;
-    address public s_owner;
+    address public immutable i_owner;
+    address public immutable i_factoryV2;
     uint256 public s_tokenCounter;
     mapping(address => bool) public s_isOperator;
     mapping(address => bool) public s_isWhitelistedRouter;
@@ -51,13 +57,14 @@ contract SmartWallet {
     mapping(uint256 index => address token) public s_tokens;
     mapping(address token => bool inWallet) public s_isTokenInWallet;
 
-    constructor(address user, address usdc) {
-        s_owner = user;
+    constructor(address user, address usdc, address factoryV2) {
+        i_owner = user;
         i_usdc = usdc;
+        i_factoryV2 = factoryV2;
     }
 
     modifier onlyOwner() {
-        if (msg.sender != s_owner) {
+        if (msg.sender != i_owner) {
             revert SmartWallet__NotOwner();
         }
         _;
@@ -150,6 +157,8 @@ contract SmartWallet {
         path[0] = i_usdc;
         path[1] = tokenOut;
 
+        address pair = IUniswapV2Factory(i_factoryV2).getPair(i_usdc, tokenOut);
+
         uint256[] memory amounts = IUniswapV2Router02(router).swapTokensForExactTokens(
             amountOut,
             amountInMax,
@@ -158,7 +167,7 @@ contract SmartWallet {
             block.timestamp + 60
         );
 
-        emit BuyTokens(msg.sender, i_usdc, tokenOut, amounts[0], amountOut, amountInMax);
+        emit BuyTokens(address(this), i_usdc, tokenOut, pair, msg.sender, amounts[0], amountOut, amountInMax);
     }
 
     function sellTokens(address router, address tokenIn, uint256 amountIn, uint256 amountOutMin) external onlyOperator onlyValidSwapParameters(router, tokenIn, amountIn) {
@@ -172,6 +181,8 @@ contract SmartWallet {
         path[0] = tokenIn;
         path[1] = i_usdc;
 
+        address pair = IUniswapV2Factory(i_factoryV2).getPair(tokenIn, i_usdc);
+
         uint256[] memory amounts = IUniswapV2Router02(router).swapExactTokensForTokens(
             amountIn,
             amountOutMin,
@@ -180,7 +191,7 @@ contract SmartWallet {
             block.timestamp + 60
         );
 
-        emit SellTokens(msg.sender, tokenIn, i_usdc, amountIn, amounts[amounts.length - 1], amountOutMin);
+        emit SellTokens(address(this), tokenIn, i_usdc, msg.sender, pair, amountIn, amounts[amounts.length - 1], amountOutMin);
     }
 
     function setOperator(address _operator, bool authorized) external onlyOwner {
