@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import { Test, console } from "forge-std/Test.sol";
-import { SmartWallet } from "../src/SmartWallet.sol";
-import { SmartWalletFactory } from "../src/SmartWalletFactory.sol";
-import { MockERC20 } from "./mocks/MockERC20.sol";
-import { MockUniswapV2Router02 } from "./mocks/MockUniswapV2Router02.sol";
+import {Test, console} from "forge-std/Test.sol";
+import {SmartWallet} from "../src/SmartWallet.sol";
+import {SmartWalletFactory} from "../src/SmartWalletFactory.sol";
+import {MockERC20} from "./mocks/MockERC20.sol";
+import {MockUniswapV2Router02} from "./mocks/MockUniswapV2Router02.sol";
 
 contract IntegrationTest is Test {
     SmartWallet smartWallet;
@@ -61,6 +61,19 @@ contract IntegrationTest is Test {
 
         assertEq(usdcPrivateBalanceAfterDeposit, usdcPrivateAmountBeforeDeposit - usdcAmountToDeposit);
         assertEq(usdcSmartWalletBalanceAfterDeposit, usdcAmountToDeposit);
+    }
+
+    function test_depositUSDCShouldFailIfInsufficientBalance() public {
+        uint256 usdcAmountToDeposit = 1_000_000 * 10 ** usdc.decimals();
+
+        vm.startPrank(user1);
+        SmartWallet user1SmartWallet = smartWalletFactory.createSmartWallet(address(usdc));
+
+        usdc.approve(address(user1SmartWallet), type(uint256).max);
+
+        vm.expectRevert();
+        user1SmartWallet.depositUSDC(usdcAmountToDeposit);
+        vm.stopPrank();
     }
 
     function test_cannotBuyTokensWithoutAuthorizedOperator() public {
