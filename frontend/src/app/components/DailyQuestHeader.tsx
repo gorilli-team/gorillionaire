@@ -1,9 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import Image from "next/image";
-import Cookies from "js-cookie";
 
 interface DailyQuest {
   _id: string;
@@ -36,7 +35,7 @@ const DailyQuestHeader = () => {
   const [dailyQuests, setDailyQuests] = useState<DailyQuestData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [claimedQuests, setClaimedQuests] = useState<Set<string>>(new Set());
+
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [completedQuests, setCompletedQuests] = useState<Set<string>>(
     new Set()
@@ -50,7 +49,11 @@ const DailyQuestHeader = () => {
     const createBeepSound = () => {
       try {
         const audioContext = new (window.AudioContext ||
-          (window as any).webkitAudioContext)();
+          (
+            window as unknown as typeof window & {
+              webkitAudioContext: typeof AudioContext;
+            }
+          ).webkitAudioContext)();
         const oscillator = audioContext.createOscillator();
         const gainNode = audioContext.createGain();
 
@@ -71,15 +74,15 @@ const DailyQuestHeader = () => {
 
         oscillator.start(audioContext.currentTime);
         oscillator.stop(audioContext.currentTime + 0.2);
-      } catch (error) {
+      } catch {
         console.log("Audio not supported or blocked by browser");
       }
     };
 
-    audioRef.current = { play: createBeepSound } as any;
+    audioRef.current = { play: createBeepSound } as unknown as HTMLAudioElement;
   }, []);
 
-  const fetchDailyQuests = async () => {
+  const fetchDailyQuests = useCallback(async () => {
     if (!authenticated || !user?.wallet?.address) return;
 
     try {
@@ -110,18 +113,10 @@ const DailyQuestHeader = () => {
       }
 
       setDailyQuests(data);
-
-      // Track claimed quests
-      const claimed: Set<string> = new Set(
-        data.quests
-          .filter((quest: DailyQuest) => quest.claimedAt)
-          .map((quest: DailyQuest) => quest._id)
-      );
-      setClaimedQuests(claimed);
-    } catch (error) {
-      console.error("Error fetching daily quests:", error);
+    } catch {
+      console.error("Error fetching daily quests");
     }
-  };
+  }, [authenticated, user?.wallet?.address, dailyQuests]);
 
   const handleClaimQuest = async (questId: string) => {
     if (!user?.wallet?.address) return;
@@ -145,11 +140,6 @@ const DailyQuestHeader = () => {
       const data = await response.json();
 
       if (response.ok) {
-        // Find the quest by questId to get the _id for tracking
-        const quest = dailyQuests?.quests.find(q => q.questId === questId);
-        if (quest) {
-          setClaimedQuests((prev) => new Set(prev).add(quest._id));
-        }
         setSuccessMessage(`Quest completed! +${data.rewardPoints} points`);
 
         // Refresh quests
@@ -162,8 +152,8 @@ const DailyQuestHeader = () => {
       } else {
         console.error("Error claiming quest:", data.error);
       }
-    } catch (error) {
-      console.error("Error claiming quest:", error);
+    } catch {
+      console.error("Error claiming quest");
     } finally {
       setIsLoading(false);
     }
@@ -173,7 +163,7 @@ const DailyQuestHeader = () => {
     if (authenticated && user?.wallet?.address) {
       fetchDailyQuests();
     }
-  }, [authenticated, user?.wallet?.address]);
+  }, [authenticated, user?.wallet?.address, fetchDailyQuests]);
 
   // Auto-refresh quests every 30 seconds
   useEffect(() => {
@@ -181,7 +171,7 @@ const DailyQuestHeader = () => {
 
     const interval = setInterval(fetchDailyQuests, 30000);
     return () => clearInterval(interval);
-  }, [authenticated, user?.wallet?.address]);
+  }, [authenticated, user?.wallet?.address, fetchDailyQuests]);
 
   // Click outside to close panel
   useEffect(() => {
@@ -296,7 +286,7 @@ const DailyQuestHeader = () => {
             {/* Progress Summary */}
             <div className="mb-4 p-3 bg-gray-50 rounded-lg">
               <div className="flex justify-between text-sm text-gray-600 mb-2">
-                <span>Today's Progress</span>
+                <span>Today&apos;s Progress</span>
                 <span>
                   {completedCount}/{totalQuests} completed
                 </span>
@@ -422,7 +412,7 @@ const DailyQuestHeader = () => {
                 <div className="font-semibold text-violet-600 text-lg">
                   {dailyQuests.todayTransactionCount}
                 </div>
-                <div className="text-xs text-gray-600">Today's Trades</div>
+                <div className="text-xs text-gray-600">Today&apos;s Trades</div>
               </div>
             </div>
           </div>
