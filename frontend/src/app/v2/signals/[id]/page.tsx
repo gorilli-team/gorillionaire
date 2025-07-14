@@ -82,6 +82,16 @@ const parseTimeStringToTimestamp = (timeStr: string): number => {
   }
 
   return now + value * multipliers[unit];
+};
+
+// Add a type guard for objects with an 'events' array
+function hasEventsArray(obj: unknown): obj is { events: SignalEvent[] } {
+  return (
+    typeof obj === "object" &&
+    obj !== null &&
+    "events" in obj &&
+    Array.isArray((obj as { events?: unknown }).events)
+  );
 }
 
 export default function SignalPage() {
@@ -97,6 +107,42 @@ export default function SignalPage() {
   console.log("signal_id", signal_id);
   console.log("currency", currency);
 
+  // Add layout state - moved all hooks to the top before any conditional returns
+  const [selectedPage, setSelectedPage] = useState("V2");
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const [signal, setSignal] = useState<SignalData | null>(null);
+  const [signals, setSignals] = useState<SignalEvent[]>([]);
+  const [token, setToken] = useState<Token | null>(null);
+  const [prices, setPrices] = useState<
+    { time: number; open: number; high: number; low: number; close: number }[]
+  >([]);
+
+  const [loading, setLoading] = useState(true);
+
+  const { from, to } = useMemo(() => {
+    return {
+      from: parseTimeStringToTimestamp("-7d"), // Extended to 7 days to get more events
+      to: parseTimeStringToTimestamp("now"),
+    };
+  }, []);
+
+  // Add useEffect hooks before conditional return
+  useEffect(() => {
+    if (signal_id && token_id && currency) {
+      fetchSignalInfo(signal_id);
+      fetchTokenInfo(token_id);
+      fetchSignalEvents(signal_id, token_id, currency);
+    }
+  }, [signal_id, token_id, currency]);
+
+  useEffect(() => {
+    if (signal && token_id) {
+      fetchPriceData(token_id, signal?.timeframe, from, to);
+      setLoading(false);
+    }
+  }, [signal, token_id, from, to]);
+
   // Handle invalid URL format
   if (!signal_id || !token_id || !currency) {
     return (
@@ -107,13 +153,14 @@ export default function SignalPage() {
             <div className="flex-1 overflow-y-auto">
               <div className="w-full max-w-7xl mx-auto p-4 md:p-6">
                 <div className="bg-white rounded-lg shadow-md p-6">
-                  <h1 className="text-xl font-semibold text-red-600 mb-4">Invalid URL Format</h1>
+                  <h1 className="text-xl font-semibold text-red-600 mb-4">
+                    Invalid URL Format
+                  </h1>
                   <p className="text-gray-600">
-                    The signal URL is missing required parameters. Expected format: signal_id|token_id|currency
+                    The signal URL is missing required parameters. Expected
+                    format: signal_id|token_id|currency
                   </p>
-                  <p className="text-sm text-gray-500 mt-2">
-                    Received: {id}
-                  </p>
+                  <p className="text-sm text-gray-500 mt-2">Received: {id}</p>
                 </div>
               </div>
             </div>
@@ -122,24 +169,6 @@ export default function SignalPage() {
       </ProtectPage>
     );
   }
-  
-  // Add layout state
-  const [selectedPage, setSelectedPage] = useState("V2");
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  
-  const [signal, setSignal] = useState<SignalData | null>(null);
-  const [signals, setSignals] = useState<SignalEvent[]>([]);
-  const [token, setToken] = useState<Token | null>(null);
-  const [prices, setPrices] = useState<{ time: number; open: number; high: number; low: number; close: number }[]>([]);
-
-  const [loading, setLoading] = useState(true);
-
-  const { from, to } = useMemo(() => {
-    return {
-      from: parseTimeStringToTimestamp("-7d"), // Extended to 7 days to get more events
-      to: parseTimeStringToTimestamp("now"),
-    };
-  }, []);
 
   const fetchPriceData = async (
     token_id: string,
@@ -159,22 +188,36 @@ export default function SignalPage() {
 
       if (response.status === 200) {
         console.log("prices", response.data);
-        const chartData = (response.data as PriceData[]).map((item: PriceData) => {
-          const date = new Date(item.timestamp);
-          const timeValue = Math.floor(date.getTime() / 1000);
-          return {
-            time: timeValue,
-            open: item.open,
-            high: item.high,
-            low: item.low,
-            close: item.close,
-          };
-        });
+        const chartData = (response.data as PriceData[]).map(
+          (item: PriceData) => {
+            const date = new Date(item.timestamp);
+            const timeValue = Math.floor(date.getTime() / 1000);
+            return {
+              time: timeValue,
+              open: item.open,
+              high: item.high,
+              low: item.low,
+              close: item.close,
+            };
+          }
+        );
 
         chartData.sort(
           (
-            a: { time: number; open: number; high: number; low: number; close: number },
-            b: { time: number; open: number; high: number; low: number; close: number }
+            a: {
+              time: number;
+              open: number;
+              high: number;
+              low: number;
+              close: number;
+            },
+            b: {
+              time: number;
+              open: number;
+              high: number;
+              low: number;
+              close: number;
+            }
           ) => a.time - b.time
         );
 
@@ -212,7 +255,7 @@ export default function SignalPage() {
       console.log("Fetching signal events with params:", {
         signal_id,
         token_id,
-        currency
+        currency,
       });
 
       const response = await apiClient.get({
@@ -231,15 +274,18 @@ export default function SignalPage() {
       if (response.status === 200 && response.data) {
         // Handle different possible response structures
         let events: SignalEvent[] = [];
-        
-        if (response.data.events && Array.isArray(response.data.events)) {
+
+        if (hasEventsArray(response.data)) {
           // Expected structure: { events: SignalEvent[] }
           events = response.data.events;
         } else if (Array.isArray(response.data)) {
           // Direct array structure
           events = response.data;
         } else {
-          console.warn("Unexpected signal events response structure:", response.data);
+          console.warn(
+            "Unexpected signal events response structure:",
+            response.data
+          );
           events = [];
         }
 
@@ -329,9 +375,9 @@ export default function SignalPage() {
 
     return (
       <CandlestickChart
-        data={prices.map(item => ({
+        data={prices.map((item) => ({
           ...item,
-          time: item.time as Time
+          time: item.time as Time,
         }))}
         tokenSymbol={
           token?.symbol + " - " + signal?.name + " - " + signal?.timeframe
@@ -340,19 +386,6 @@ export default function SignalPage() {
       />
     );
   };
-
-  useEffect(() => {
-    fetchSignalInfo(signal_id);
-    fetchTokenInfo(token_id);
-    fetchSignalEvents(signal_id, token_id, currency);
-  }, [signal_id, token_id, currency]);
-
-  useEffect(() => {
-    if (signal && token_id) {
-      fetchPriceData(token_id, signal?.timeframe, from, to);
-      setLoading(false);
-    }
-  }, [signal, token_id, from, to]);
 
   return (
     <ProtectPage>
@@ -422,110 +455,119 @@ export default function SignalPage() {
                 <div className="col-span-2 gap-4 mb-2 px-4 font-semibold text-gray-700 p-4 bg-white rounded-lg shadow-md">
                   {renderPriceChart()}
                 </div>
-                
+
                 {/* Signal Events section */}
                 <div className="bg-white rounded-lg shadow-md p-4 text-xs col-span-1">
                   <h2 className="font-semibold mb-2">Signal Events</h2>
                   {signals.length === 0 ? (
                     <div className="text-center text-gray-500 py-4">
                       <p>No signal events found for this time range.</p>
-                      <p className="text-xs mt-1">Try adjusting the time range or check the console for errors.</p>
+                      <p className="text-xs mt-1">
+                        Try adjusting the time range or check the console for
+                        errors.
+                      </p>
                     </div>
                   ) : (
                     signals.map((event: SignalEvent, index: number) => (
-                    <div
-                      key={index || event.id}
-                      className="bg-white rounded-lg p-4 text-xs border border-gray-100"
-                    >
                       <div
-                        key={event.id}
-                        className=" grid grid-cols-2 border-b border-gray-100"
+                        key={index || event.id}
+                        className="bg-white rounded-lg p-4 text-xs border border-gray-100"
                       >
-                        <div className="flex items-center">
-                          <div
-                            className={`w-4 h-4 rounded-full mr-2 flex items-center justify-center ${
-                              event.action === "BUY" ? "bg-green-400" : "bg-red-400"
-                            }`}
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="w-3 h-4 text-white"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
+                        <div
+                          key={event.id}
+                          className=" grid grid-cols-2 border-b border-gray-100"
+                        >
+                          <div className="flex items-center">
+                            <div
+                              className={`w-4 h-4 rounded-full mr-2 flex items-center justify-center ${
+                                event.action === "BUY"
+                                  ? "bg-green-400"
+                                  : "bg-red-400"
+                              }`}
                             >
-                              {event.action === "BUY" ? (
-                                <>
-                                  <line
-                                    x1="12"
-                                    y1="20"
-                                    x2="12"
-                                    y2="10"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                  />
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M5 15l7-7 7 7"
-                                  />
-                                </>
-                              ) : (
-                                <>
-                                  <line
-                                    x1="12"
-                                    y1="4"
-                                    x2="12"
-                                    y2="14"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                  />
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M19 9l-7 7-7-7"
-                                  />
-                                </>
-                              )}
-                            </svg>
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="w-3 h-4 text-white"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                {event.action === "BUY" ? (
+                                  <>
+                                    <line
+                                      x1="12"
+                                      y1="20"
+                                      x2="12"
+                                      y2="10"
+                                      stroke="currentColor"
+                                      strokeWidth="2"
+                                    />
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M5 15l7-7 7 7"
+                                    />
+                                  </>
+                                ) : (
+                                  <>
+                                    <line
+                                      x1="12"
+                                      y1="4"
+                                      x2="12"
+                                      y2="14"
+                                      stroke="currentColor"
+                                      strokeWidth="2"
+                                    />
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M19 9l-7 7-7-7"
+                                    />
+                                  </>
+                                )}
+                              </svg>
+                            </div>
+                            <span className="text-xs">
+                              {event.action.charAt(0).toUpperCase() +
+                                event.action.slice(1).toLowerCase()}
+                            </span>
                           </div>
-                          <span className="text-xs">
-                            {event.action.charAt(0).toUpperCase() +
-                              event.action.slice(1).toLowerCase()}
-                          </span>
+                          <div className="px-4 py-2 text-xs flex justify-end items-center">
+                            <button
+                              className="text-xs cursor-pointer px-3 py-1 rounded-md bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 mr-2"
+                              onClick={() => {
+                                // TODO: Implement refuse
+                              }}
+                            >
+                              Refuse
+                            </button>
+                            <button className="text-xs cursor-pointer px-3 py-1 rounded-md bg-purple-600 text-white hover:bg-purple-700">
+                              Accept
+                            </button>
+                          </div>
                         </div>
-                        <div className="px-4 py-2 text-xs flex justify-end items-center">
-                          <button
-                            className="text-xs cursor-pointer px-3 py-1 rounded-md bg-white text-gray-800 hover:bg-gray-100 border border-gray-300 mr-2"
-                            onClick={() => {
-                              // TODO: Implement refuse
-                            }}
-                          >
-                            Refuse
-                          </button>
-                          <button className="text-xs cursor-pointer px-3 py-1 rounded-md bg-purple-600 text-white hover:bg-purple-700">
-                            Accept
-                          </button>
+                        <div className="items-center grid grid-cols-3 text-xs mt-2">
+                          <div className="">
+                            <div className="text-xs">Price</div>
+                            <div className="text-xs">
+                              {event.price.toFixed(6)}
+                            </div>
+                          </div>
+                          <div className="">
+                            <div className="text-xs">Created</div>
+                            <div className="text-xs">
+                              {getTimeAgo(event.timestamp)}
+                            </div>
+                          </div>
+                          <div className="">
+                            <div className="text-xs">User Actions</div>
+                            <div className="text-xs"></div>
+                          </div>
                         </div>
                       </div>
-                      <div className="items-center grid grid-cols-3 text-xs mt-2">
-                        <div className="">
-                          <div className="text-xs">Price</div>
-                          <div className="text-xs">{event.price.toFixed(6)}</div>
-                        </div>
-                        <div className="">
-                          <div className="text-xs">Created</div>
-                          <div className="text-xs">{getTimeAgo(event.timestamp)}</div>
-                        </div>
-                        <div className="">
-                          <div className="text-xs">User Actions</div>
-                          <div className="text-xs"></div>
-                        </div>
-                      </div>
-                    </div>
-                  ))
+                    ))
                   )}
                 </div>
               </div>
