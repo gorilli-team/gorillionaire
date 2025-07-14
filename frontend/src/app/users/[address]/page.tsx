@@ -957,7 +957,7 @@ const UserProfilePage = () => {
                                 />
                               ) : (
                                 <Image
-                                  src={"/propic.png"}
+                                  src={quest?.questImage || "/propic.png"}
                                   alt={quest.questName}
                                   className="rounded-md"
                                   width={28}

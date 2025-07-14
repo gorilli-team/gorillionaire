@@ -154,10 +154,17 @@ const DailyQuestHeader = () => {
         }
 
         setSuccessMessage(`Quest completed! +${data.rewardPoints} points`);
-      }
 
-      await fetchDailyQuests();
-      setSuccessMessage(`Quest completed!`);
+        // Refresh quests
+        await fetchDailyQuests();
+
+        // Clear success message after 3 seconds
+        setTimeout(() => {
+          setSuccessMessage(null);
+        }, 3000);
+      } else {
+        console.error("Error claiming quest:", data.error);
+      }
     } catch (error) {
       console.error("Error claiming quest:", error);
     } finally {
