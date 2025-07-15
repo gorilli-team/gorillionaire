@@ -35,13 +35,6 @@ async function buildPriceRequest(
 ) {
   const tokenInfo = symbolToTokenInfo[tokenSymbol];
 
-  console.log("🔍 buildPriceRequest - initial values:", {
-    tokenSymbol,
-    amount,
-    type,
-    userAddress,
-  });
-
   // If "buy" I need to convert the amount passed (which is based in token) to MON amount
   const codexOracle = new PriceOracle();
   const prices = await codexOracle.getTokenPrices([
@@ -58,38 +51,12 @@ async function buildPriceRequest(
   const monPrice = parseFloat(prices[0].priceUsd);
   const tokenPrice = parseFloat(prices[1].priceUsd);
 
-  console.log("💰 Price data:", {
-    monPrice,
-    tokenPrice,
-    originalAmount: amount,
-  });
-
   const usdValue = amount * tokenPrice;
-
-  console.log("💵 USD calculation:", {
-    amount,
-    tokenPrice,
-    usdValue,
-  });
 
   // if buy, convert amount to MON amount
   if (type === "buy") {
     const originalAmount = amount;
     amount = usdValue / monPrice;
-    console.log("🔄 Buy conversion:", {
-      originalAmount,
-      usdValue,
-      monPrice,
-      newAmount: amount,
-    });
-  } else {
-    // For sell orders, amount is already the token amount, no conversion needed
-    console.log("📉 Sell order - no conversion needed:", {
-      tokenAmount: amount,
-      tokenPrice,
-      usdValue,
-      note: "Amount is already token amount for sellAmount",
-    });
   }
 
   const ZEROX_FEE_RECIPIENT = process.env.ZEROX_FEE_RECIPIENT;
@@ -144,11 +111,9 @@ async function getPrice(token, amount, type, userAddress) {
 
   const requestUrl =
     "https://api.0x.org/swap/permit2/price?" + priceParams.toString();
-  console.log("0x API Request URL (price):", requestUrl);
 
   const priceResponse = await fetch(requestUrl, { headers });
   const res = await priceResponse.json();
-  console.log("0x API Response (price):", JSON.stringify(res, null, 2));
 
   return res;
 }
@@ -159,11 +124,9 @@ async function getQuote(token, amount, type, userAddress) {
 
   const requestUrl =
     "https://api.0x.org/swap/permit2/quote?" + priceParams.toString();
-  console.log("0x API Request URL (quote):", requestUrl);
 
   const priceResponse = await fetch(requestUrl, { headers });
   const res = await priceResponse.json();
-  console.log("0x API Response (quote):", JSON.stringify(res, null, 2));
 
   if (!res.transaction) {
     throw new Error("No transaction data found");
@@ -193,19 +156,7 @@ router.get("/0x-quote", async (req, res) => {
     return res.status(500).json({ error: '"type" value not valid' });
 
   try {
-    console.log("🔍 Backend received quote request:", {
-      token,
-      amount,
-      type,
-      userAddress,
-      note: type === "sell" ? "Amount should be token amount" : "Amount should be token amount (will be converted to MON)"
-    });
-    
-    console.log(
-      `Getting quote for ${type} ${amount} ${token} for user ${userAddress}`
-    );
     const quote = await getQuote(token, amount, type, userAddress);
-    console.log(`Quote received successfully`);
     res.status(200).json(quote);
   } catch (e) {
     console.error(`Error getting quote: ${e.message}`);
@@ -221,9 +172,7 @@ router.get("/0x-price", async (req, res) => {
     return res.status(500).json({ error: '"type" value not valid' });
 
   try {
-    console.log(`Getting price for ${type} ${amount} ${token}`);
     const price = await getPrice(token, amount, type, userAddress);
-    console.log(`Price received successfully`);
     res.status(200).json(price);
   } catch (e) {
     console.error(`Error getting price: ${e.message}`);
