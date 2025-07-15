@@ -151,6 +151,14 @@ export default function SignalsPage() {
   const [currentDexType, setCurrentDexType] = useState<"Buy" | "Sell">("Buy");
   const [currentSignalId, setCurrentSignalId] = useState<string>("");
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
+  const allowedTokens = ['MON', 'DAK', 'YAKI', 'CHOG'];
+
+  const filterAllowedTokens = (event: Event) => {
+    const symbols = event.symbol.split('/');
+    return symbols.some(symbol => allowedTokens.includes(symbol.toUpperCase()));
+  };
+
+  const filteredEvents = events.filter(filterAllowedTokens);
 
   const getTokensFromSymbol = useCallback((symbol: string): Token[] => {
     const symbols = symbol.split("/");
@@ -771,6 +779,7 @@ export default function SignalsPage() {
     );
   };
 
+
   return (
     <ProtectPage requireV2Access={true}>
       <div className="flex min-h-screen bg-gray-100 text-gray-800">
@@ -914,7 +923,7 @@ export default function SignalsPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {events
+                          {filteredEvents
                             .slice(
                               (currentPage - 1) * rowsPerPage,
                               currentPage * rowsPerPage
@@ -1083,7 +1092,7 @@ export default function SignalsPage() {
 
                       {/* Mobile view */}
                       <div className="md:hidden">
-                        {events
+                        {filteredEvents
                           .slice(
                             (currentPage - 1) * rowsPerPage,
                             currentPage * rowsPerPage
@@ -1256,7 +1265,7 @@ export default function SignalsPage() {
                         <div className="flex-grow flex justify-center">
                           <Pagination
                             currentPage={currentPage}
-                            totalPages={Math.ceil(events.length / rowsPerPage)}
+                            totalPages={Math.ceil(filteredEvents.length / rowsPerPage)}
                             onPageChange={setCurrentPage}
                             showIcons={false}
                           />
