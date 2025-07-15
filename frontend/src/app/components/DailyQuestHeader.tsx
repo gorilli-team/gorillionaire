@@ -42,7 +42,7 @@ const DailyQuestHeader = () => {
   );
   const [showCompletedQuests, setShowCompletedQuests] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioRef = useRef<{ play: () => void } | null>(null);
   const previousQuestsRef = useRef<DailyQuestData | null>(null);
 
   // Create audio element for quest completion sound
@@ -76,12 +76,12 @@ const DailyQuestHeader = () => {
 
         oscillator.start(audioContext.currentTime);
         oscillator.stop(audioContext.currentTime + 0.2);
-      } catch {
-        console.log("Audio not supported or blocked by browser");
+      } catch (error) {
+        console.log("Audio not supported or blocked by browser", error);
       }
     };
 
-    audioRef.current = { play: createBeepSound } as unknown as HTMLAudioElement;
+    audioRef.current = { play: createBeepSound };
   }, []);
 
   const fetchDailyQuests = useCallback(async () => {
@@ -147,7 +147,7 @@ const DailyQuestHeader = () => {
       if (response.ok) {
         // Play sound when quest is successfully claimed
         if (audioRef.current) {
-          audioRef.current.play().catch(console.error);
+          audioRef.current.play();
         }
 
         setSuccessMessage(`Quest completed! +${data.rewardPoints} points`);
@@ -180,7 +180,7 @@ const DailyQuestHeader = () => {
     const interval = setInterval(fetchDailyQuests, 30000);
 
     return () => clearInterval(interval);
-  }, [authenticated, user?.wallet?.address]);
+  }, [authenticated, user?.wallet?.address, fetchDailyQuests]);
 
   // Listen for trade completion events to refresh quests
   useEffect(() => {
@@ -202,29 +202,6 @@ const DailyQuestHeader = () => {
         fetchDailyQuests();
       } else {
         console.log("❌ Trade completion event ignored - different user");
-      }
-    };
-
-    window.addEventListener(
-      "tradeCompleted",
-      handleTradeCompleted as EventListener
-    );
-
-    return () => {
-      window.removeEventListener(
-        "tradeCompleted",
-        handleTradeCompleted as EventListener
-      );
-    };
-  }, [user?.wallet?.address]);
-
-  // Listen for trade completion events to refresh quests
-  useEffect(() => {
-    const handleTradeCompleted = (event: CustomEvent) => {
-      // Only refresh if the trade was made by the current user
-      if (event.detail.userAddress === user?.wallet?.address) {
-        console.log("🔄 Refreshing daily quests after trade completion");
-        fetchDailyQuests();
       }
     };
 
