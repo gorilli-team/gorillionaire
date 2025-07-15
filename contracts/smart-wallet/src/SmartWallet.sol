@@ -35,16 +35,11 @@ contract SmartWallet {
     error SmartWallet__InvalidTokenAddress();
     error SmartWallet__InvalidAmount();
     error SmartWallet__TransferFailed();
-    error SmartWallet__TokenNotInWallet();
-    error SmartWallet__InsufficientBalance();
-    error SmartWallet__NoTokensToWithdraw();
     error SmartWallet__NotOperator();
     error SmartWallet__InvalidRouterAddress();
-    error SmartWallet__TokensMustBeDifferent();
     error SmartWallet__InvalidOperatorAddress();
     error SmartWallet__InsufficientUSDCBalance();
     error SmartWallet__EmptyUSDCBalance();
-    error SmartWallet__TokenInMustBeUSDC();
 
     address public immutable i_usdc;
     address public immutable i_owner;
