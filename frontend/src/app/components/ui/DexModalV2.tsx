@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { Token } from "@/app/types";
 import { getTokenImage } from "@/app/utils/tokens";
@@ -34,14 +34,32 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
   const { chainId } = useAccount();
   const { switchChain } = useSwitchChain();
 
-  if (!token || !token.symbol || !pairToken || !pairToken.symbol) {
-    console.error("Invalid tokens passed to DexModalV2:", { token, pairToken });
-    return null;
-  }
-
-  
   const inputToken = type === "Buy" ? pairToken : token; 
   const outputToken = type === "Buy" ? token : pairToken;
+
+  const calculateInputForBuy = useCallback(async (targetAmount: number) => {
+    setIsLoading(true);
+    try {
+      const estimatedInput = targetAmount * amount;
+      setInputAmount(estimatedInput.toFixed(6));
+      setIsLoading(false);
+    } catch (error) {
+      console.error("Error calculating input amount:", error);
+      setIsLoading(false);
+    }
+  }, [amount]);
+
+  const calculateOutputForSell = useCallback(async (sourceAmount: number) => {
+    setIsLoading(true);
+    try {
+      const estimatedOutput = sourceAmount * amount;
+      setOutputAmount(estimatedOutput.toFixed(6));
+      setIsLoading(false);
+    } catch (error) {
+      console.error("Error calculating output amount:", error);
+      setIsLoading(false);
+    }
+  }, [amount]);
 
   useEffect(() => {
     if (isOpen) {
@@ -53,32 +71,7 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
         calculateOutputForSell(amount);
       }
     }
-  }, [isOpen, type, token, pairToken, amount]);
-
-  const calculateInputForBuy = async (targetAmount: number) => {
-    setIsLoading(true);
-    try {
-     
-      const estimatedInput = targetAmount * amount;
-      setInputAmount(estimatedInput.toFixed(6));
-      setIsLoading(false);
-    } catch (error) {
-      console.error("Error calculating input amount:", error);
-      setIsLoading(false);
-    }
-  };
-
-  const calculateOutputForSell = async (sourceAmount: number) => {
-    setIsLoading(true);
-    try {
-      const estimatedOutput = sourceAmount * amount;
-      setOutputAmount(estimatedOutput.toFixed(6));
-      setIsLoading(false);
-    } catch (error) {
-      console.error("Error calculating output amount:", error);
-      setIsLoading(false);
-    }
-  };
+  }, [isOpen, type, token, pairToken, amount, calculateInputForBuy, calculateOutputForSell]);
 
   const handleConfirm = async () => {
     setIsLoading(true);
@@ -142,6 +135,11 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
         return "bg-red-100 text-red-800";
     }
   };
+
+  if (!token || !token.symbol || !pairToken || !pairToken.symbol) {
+    console.error("Invalid tokens passed to DexModalV2:", { token, pairToken });
+    return null;
+  }
 
   if (!isOpen) return null;
 

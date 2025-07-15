@@ -44,10 +44,10 @@ type ChartData = {
   price: number;
 };
 
-type PriceData = {
-  timestamp: string;
-  close: number;
-};
+// type PriceData = {
+//   timestamp: string;
+//   close: number;
+// };
 
 type TokenData = {
   token_id: string;
@@ -56,12 +56,12 @@ type TokenData = {
   decimal: string;
 };
 
-const parseSignalText = (signalText: string) => {
-  const symbol = signalText.match(/CHOG|DAK|YAKI|MON/)?.[0];
-  const amountMatch = signalText.match(/\d+\.\d+/)?.[0];
-  const amount = amountMatch ? Number(amountMatch) : 0;
-  return { symbol, amount };
-};
+// const parseSignalText = (signalText: string) => {
+//   const symbol = signalText.match(/CHOG|DAK|YAKI|MON/)?.[0];
+//   const amountMatch = signalText.match(/\d+\.\d+/)?.[0];
+//   const amount = amountMatch ? Number(amountMatch) : 0;
+//   return { symbol, amount };
+// };
 
 const chart = (data: ChartData[]) => {
   if (!data || data.length === 0) {
