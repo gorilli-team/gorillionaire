@@ -112,7 +112,7 @@ contract SmartWallet {
         }
 
         IERC20 usdc = IERC20(i_usdc);
-        uint256 usdcBalance = usdc.balanceOf(msg.sender);
+        uint256 usdcBalance = usdc.balanceOf(address(this));
 
         if (usdcBalance == 0) {
             revert SmartWallet__EmptyUSDCBalance();
@@ -132,7 +132,7 @@ contract SmartWallet {
 
     function withdrawAllUSDC() public onlyOwner {
         IERC20 usdc = IERC20(i_usdc);
-        uint256 usdcBalance = usdc.balanceOf(msg.sender);
+        uint256 usdcBalance = usdc.balanceOf(address(this));
 
         if (usdcBalance == 0) {
             revert SmartWallet__EmptyUSDCBalance();
