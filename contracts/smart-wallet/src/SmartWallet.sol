@@ -44,13 +44,9 @@ contract SmartWallet {
     address public immutable i_usdc;
     address public immutable i_owner;
     address public immutable i_factoryV2;
-    uint256 public s_tokenCounter;
+
     mapping(address => bool) public s_isOperator;
     mapping(address => bool) public s_isWhitelistedRouter;
-
-    mapping(address token => uint256 amount) public s_balances;
-    mapping(uint256 index => address token) public s_tokens;
-    mapping(address token => bool inWallet) public s_isTokenInWallet;
 
     constructor(address user, address usdc, address factoryV2) {
         i_owner = user;
@@ -204,25 +200,5 @@ contract SmartWallet {
         s_isWhitelistedRouter[_router] = whitelisted;
 
         emit SetWhitelistedRouter(_router, whitelisted);
-    }
-
-    function getTokenBalance(address _token) public view returns (uint256) {
-        return s_balances[_token];
-    }
-
-    function checkIfTokenInWallet(address _token) public view returns (bool) {
-        return s_isTokenInWallet[_token];
-    }
-
-    function getTokenByIndex(uint256 index) public view returns (address) {
-        return s_tokens[index];
-    }
-
-    function checkIsOperator(address _operator) public view returns (bool) {
-        return s_isOperator[_operator];
-    }
-
-    function checkIsWhitelistedRouter(address _router) public view returns(bool) {
-        return s_isWhitelistedRouter[_router];
     }
 }
