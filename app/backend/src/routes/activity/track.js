@@ -100,9 +100,6 @@ router.post("/signin", async (req, res) => {
 
     if (!userActivity) {
       //create user activity
-      console.log("🆕 NEW USER CREATED for address:", address);
-      console.log("🔥 Initial streak set to: 0");
-      console.log("💰 Initial points: 50");
 
       const newUserActivity = new UserActivity({
         address: address.toLowerCase(),
@@ -307,49 +304,17 @@ router.post("/trade-points", async (req, res) => {
           // More than 1 day since last trade, reset streak to 0
           const oldStreak = userActivity.streak;
           userActivity.streak = 0;
-          console.log(
-            `⏰ STREAK EXPIRED: ${oldStreak} → 0 (${daysSinceLastTrade} days since last trade)`
-          );
-          console.log(
-            "   ✅ REASON: More than 1 day since last trade = expire streak"
-          );
         } else {
           // Less than 2 days since last trade, start new streak at 1
           const oldStreak = userActivity.streak;
           userActivity.streak = 1;
-          console.log(
-            `🆕 NEW STREAK STARTED: ${oldStreak} → 1 (first trade after short break)`
-          );
-          console.log(
-            "   ✅ REASON: First trade of today + no trades yesterday = start new streak"
-          );
         }
       } else {
         // No previous trades, start new streak at 1
         const oldStreak = userActivity.streak;
         userActivity.streak = 1;
-        console.log(
-          `🆕 NEW STREAK STARTED: ${oldStreak} → 1 (first trade ever)`
-        );
-        console.log("   ✅ REASON: First trade ever = start new streak");
       }
-    } else if (todayTradesBeforeThis > 0) {
-      // Not the first trade of the day = maintain current streak
-      console.log(
-        `✅ STREAK MAINTAINED: ${userActivity.streak} days (not first trade of day)`
-      );
-      console.log(
-        "   ✅ REASON: Not the first trade of today = maintain current streak"
-      );
-    } else {
-      console.log("❓ UNEXPECTED CASE: No streak decision made");
-      console.log("   ❓ REASON: This should not happen - check logic");
     }
-
-    console.log(
-      "🔥 Final streak after trade calculation:",
-      userActivity.streak
-    );
 
     await userActivity.save();
 
@@ -409,10 +374,6 @@ router.post("/trade-points", async (req, res) => {
           referral.referrerAddress,
           referralBonus,
           referrerActivity.points
-        );
-
-        console.log(
-          `Awarded ${referralBonus} referral bonus points to ${referral.referrerAddress} for trade by ${address}`
         );
       }
     }
