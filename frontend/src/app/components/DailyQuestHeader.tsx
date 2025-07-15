@@ -88,10 +88,13 @@ const DailyQuestHeader = () => {
     if (!authenticated || !user?.wallet?.address) return;
 
     try {
+      console.log("📊 Fetching daily quests for:", user.wallet.address);
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/activity/daily-quests/${user.wallet.address}`
       );
       const data = await response.json();
+
+      console.log("📊 Daily quests API response:", data);
 
       // Check for newly completed quests and play sound
       if (previousQuestsRef.current) {
@@ -105,6 +108,7 @@ const DailyQuestHeader = () => {
             !previousQuest.isCompleted
           ) {
             // Quest was just completed (whether claimed or not) - play sound
+            console.log("🎉 Quest completed:", quest.questName);
             if (audioRef.current) {
               audioRef.current.play().catch(console.error);
             }
@@ -116,8 +120,9 @@ const DailyQuestHeader = () => {
       // Update the ref with current data before setting state
       previousQuestsRef.current = data;
       setDailyQuests(data);
-    } catch {
-      console.error("Error fetching daily quests");
+      console.log("✅ Daily quests state updated");
+    } catch (error) {
+      console.error("Error fetching daily quests:", error);
     }
   }, [authenticated, user?.wallet?.address]);
 
@@ -168,10 +173,23 @@ const DailyQuestHeader = () => {
   // Listen for trade completion events to refresh quests
   useEffect(() => {
     const handleTradeCompleted = (event: CustomEvent) => {
-      // Only refresh if the trade was made by the current user
-      if (event.detail.userAddress === user?.wallet?.address) {
+      console.log("🎯 Trade completion event received:", {
+        eventUserAddress: event.detail?.userAddress,
+        currentUserAddress: user?.wallet?.address,
+        addressesMatch:
+          event.detail?.userAddress?.toLowerCase() ===
+          user?.wallet?.address?.toLowerCase(),
+      });
+
+      // Only refresh if the trade was made by the current user (case-insensitive comparison)
+      if (
+        event.detail?.userAddress?.toLowerCase() ===
+        user?.wallet?.address?.toLowerCase()
+      ) {
         console.log("🔄 Refreshing daily quests after trade completion");
         fetchDailyQuests();
+      } else {
+        console.log("❌ Trade completion event ignored - different user");
       }
     };
 
