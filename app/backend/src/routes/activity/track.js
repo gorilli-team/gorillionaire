@@ -54,6 +54,27 @@ const invalidateWeeklyCache = () => {
   weeklyCache.weekStart = null;
 };
 
+// Helper function to count today's transactions for a user
+const getTodayTransactionCount = (activitiesList) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  return activitiesList.filter((activity) => {
+    const activityDate = new Date(activity.date);
+    activityDate.setHours(0, 0, 0, 0);
+    return (
+      activityDate.getTime() === today.getTime() &&
+      (activity.name === "Trade" || activity.name === "Trade (2x XP)")
+    );
+  }).length;
+};
+
+// Helper function to calculate daily transaction target based on level
+const getDailyTransactionTarget = (level) => {
+  // Goal per level = level × 10 transactions daily
+  return level * 10;
+};
+
 //track user signin
 router.post("/signin", async (req, res) => {
   try {
@@ -79,11 +100,12 @@ router.post("/signin", async (req, res) => {
 
     if (!userActivity) {
       //create user activity
+
       const newUserActivity = new UserActivity({
         address: address.toLowerCase(),
         points: 50,
         lastSignIn: new Date(),
-        streak: 1,
+        streak: 0, // Start with 0 streak, will be incremented on first trade
         activitiesList: [
           {
             name: "Account Connected",
@@ -98,31 +120,9 @@ router.post("/signin", async (req, res) => {
       await trackOnDiscordXpGained("Account Connected", address, 50, 50);
       res.json({ message: "User activity created" });
     } else {
-      //update user activity
-      userActivity.lastSignIn = new Date();
-      //check if the user has connected their account in the last 24 hours
-      const lastSignIn = new Date(userActivity.lastSignIn);
-      const oneDayAgo = new Date();
-      const twoDaysAgo = new Date();
-      oneDayAgo.setDate(oneDayAgo.getDate() - 1);
-      twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
-
-      if (lastSignIn < twoDaysAgo) {
-        // More than 48 hours ago - reset streak to 1
-        userActivity.streak = 1;
-      } else if (lastSignIn < oneDayAgo) {
-        // Between 24 and 48 hours ago - increment streak
-        userActivity.streak += 1;
-        userActivity.points += 10;
-        userActivity.activitiesList.push({
-          name: "Streak Extended",
-          points: 10,
-          date: new Date(),
-        });
-      } else {
-        // Less than 24 hours ago - keep same streak
-        // Do nothing to maintain current streak
-      }
+      //update user activity - only update lastSignIn, don't affect streak
+      const now = new Date();
+      userActivity.lastSignIn = now;
       await userActivity.save();
       // Invalidate weekly cache since activity was updated
       invalidateWeeklyCache();
@@ -228,23 +228,9 @@ router.post("/trade-points", async (req, res) => {
         const timeDiff = now.getTime() - referredAt.getTime();
         const isWithinFirstWeek = timeDiff <= sevenDaysInMs;
 
-        // console.log("Referral check:", {
-        //   referredAt: referredAt.toISOString(),
-        //   now: now.toISOString(),
-        //   timeDiff: timeDiff,
-        //   sevenDaysInMs: sevenDaysInMs,
-        //   isWithinFirstWeek: isWithinFirstWeek,
-        // });
-
         if (isWithinFirstWeek) {
           points = points * 2; // 2x XP for first week
           is2xXpActive = true;
-          console.log(
-            "2x XP activated! Original points:",
-            Math.ceil(intent.usdValue),
-            "Final points:",
-            points
-          );
         }
       }
     }
@@ -259,6 +245,77 @@ router.post("/trade-points", async (req, res) => {
     });
     const totalPoints = userActivity.points + points;
     userActivity.points += points;
+
+    // Get today's date (start of day)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Get yesterday's date (start of day)
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    // Count today's trades (excluding this current trade)
+    const todayTradesBeforeThis = userActivity.activitiesList.filter(
+      (activity) => {
+        const activityDate = new Date(activity.date);
+        activityDate.setHours(0, 0, 0, 0);
+        return (
+          activityDate.getTime() === today.getTime() &&
+          (activity.name === "Trade" || activity.name === "Trade (2x XP)")
+        );
+      }
+    ).length;
+
+    // Count yesterday's trades
+    const yesterdayTrades = userActivity.activitiesList.filter((activity) => {
+      const activityDate = new Date(activity.date);
+      activityDate.setHours(0, 0, 0, 0);
+      return (
+        activityDate.getTime() === yesterday.getTime() &&
+        (activity.name === "Trade" || activity.name === "Trade (2x XP)")
+      );
+    }).length;
+
+    if (todayTradesBeforeThis === 0 && yesterdayTrades > 0) {
+      // First trade of the day AND had trades yesterday = extend streak
+      const oldStreak = userActivity.streak;
+      userActivity.streak += 1;
+      userActivity.points += 10; // Bonus points for extending streak
+      userActivity.activitiesList.push({
+        name: "Daily Trade Streak Extended",
+        points: 10,
+        date: new Date(),
+      });
+    } else if (todayTradesBeforeThis === 0 && yesterdayTrades === 0) {
+      // First trade of the day BUT no trades yesterday = check if streak should expire
+      const lastTradeDate = userActivity.activitiesList
+        .filter(
+          (activity) =>
+            activity.name === "Trade" || activity.name === "Trade (2x XP)"
+        )
+        .sort((a, b) => new Date(b.date) - new Date(a.date))[0]?.date;
+
+      if (lastTradeDate) {
+        const daysSinceLastTrade = Math.floor(
+          (new Date() - new Date(lastTradeDate)) / (1000 * 60 * 60 * 24)
+        );
+
+        if (daysSinceLastTrade > 1 && userActivity.streak > 0) {
+          // More than 1 day since last trade, reset streak to 0
+          const oldStreak = userActivity.streak;
+          userActivity.streak = 0;
+        } else {
+          // Less than 2 days since last trade, start new streak at 1
+          const oldStreak = userActivity.streak;
+          userActivity.streak = 1;
+        }
+      } else {
+        // No previous trades, start new streak at 1
+        const oldStreak = userActivity.streak;
+        userActivity.streak = 1;
+      }
+    }
+
     await userActivity.save();
 
     // Invalidate weekly cache since new activity was added
@@ -317,10 +374,6 @@ router.post("/trade-points", async (req, res) => {
           referral.referrerAddress,
           referralBonus,
           referrerActivity.points
-        );
-
-        console.log(
-          `Awarded ${referralBonus} referral bonus points to ${referral.referrerAddress} for trade by ${address}`
         );
       }
     }
@@ -394,12 +447,71 @@ router.get("/points", async (req, res) => {
     res.json({
       points: userActivity.points,
       lastSignIn: userActivity.lastSignIn,
+      streak: userActivity.streak,
+      streakType: "daily_trades",
       nextRewardAvailable: userActivity.isRewarded
         ? new Date(userActivity.lastSignIn.getTime() + 24 * 60 * 60 * 1000)
         : new Date(),
     });
   } catch (error) {
     console.error("Error fetching points:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Debug endpoint to check daily trade streaks
+router.get("/debug/streak", async (req, res) => {
+  try {
+    const { address } = req.query;
+    if (!address) {
+      return res.status(400).json({ error: "No address provided" });
+    }
+
+    const userActivity = await UserActivity.findOne({
+      address: address.toLowerCase(),
+    });
+
+    if (!userActivity) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const now = new Date();
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
+
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    // Count today's trades
+    const todayTrades = userActivity.activitiesList.filter((activity) => {
+      const activityDate = new Date(activity.date);
+      activityDate.setHours(0, 0, 0, 0);
+      return (
+        activityDate.getTime() === today.getTime() &&
+        (activity.name === "Trade" || activity.name === "Trade (2x XP)")
+      );
+    }).length;
+
+    // Count yesterday's trades
+    const yesterdayTrades = userActivity.activitiesList.filter((activity) => {
+      const activityDate = new Date(activity.date);
+      activityDate.setHours(0, 0, 0, 0);
+      return (
+        activityDate.getTime() === yesterday.getTime() &&
+        (activity.name === "Trade" || activity.name === "Trade (2x XP)")
+      );
+    }).length;
+
+    res.json({
+      address: userActivity.address,
+      currentStreak: userActivity.streak,
+      todayTrades: todayTrades,
+      yesterdayTrades: yesterdayTrades,
+      lastSignIn: userActivity.lastSignIn,
+      streakBasedOn: "Daily trades (not sign-ins)",
+    });
+  } catch (error) {
+    console.error("Error debugging streak:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -710,6 +822,7 @@ router.get("/me", async (req, res) => {
         address: 1,
         createdAt: 1,
         profileBgImage: 1,
+        streak: 1,
       }
     )
       .sort({ "activitiesList.date": -1 })
@@ -759,6 +872,65 @@ router.get("/me", async (req, res) => {
       rank: count + 1,
     };
 
+    // Get today's transaction count
+    const todayTransactionCount = getTodayTransactionCount(
+      userActivity.activitiesList
+    );
+    // Get daily transaction target based on user level (points)
+    // Calculate level using the same logic as the frontend
+    let userLevel = 1;
+    const XP_REQUIREMENTS = [
+      0, // Level 1
+      100, // Level 2
+      300, // Level 3
+      600, // Level 4
+      1000, // Level 5
+      1500, // Level 6
+      2100, // Level 7
+      2800, // Level 8
+      3600, // Level 9
+      4500, // Level 10
+      5500, // Level 11
+      6600, // Level 12
+      7800, // Level 13
+      9100, // Level 14
+      10500, // Level 15
+      12000, // Level 16
+      13600, // Level 17
+      15300, // Level 18
+      17100, // Level 19
+      19000, // Level 20
+      21500, // Level 21 (+2500)
+      24200, // Level 22 (+2700)
+      27100, // Level 23 (+2900)
+      30200, // Level 24 (+3100)
+      33500, // Level 25 (+3300)
+      37000, // Level 26 (+3500)
+      40700, // Level 27 (+3700)
+      44600, // Level 28 (+3900)
+      48700, // Level 29 (+4100)
+      53000, // Level 30 (+4300)
+      57500, // Level 31 (+4500)
+      62200, // Level 32 (+4700)
+      67100, // Level 33 (+4900)
+      72200, // Level 34 (+5100)
+      77500, // Level 35 (+5300)
+      83000, // Level 36 (+5500)
+      88700, // Level 37 (+5700)
+      94600, // Level 38 (+5900)
+      100700, // Level 39 (+6100)
+      107000, // Level 40 (+6300)
+    ];
+
+    while (
+      userLevel < XP_REQUIREMENTS.length &&
+      userActivity.points >= XP_REQUIREMENTS[userLevel]
+    ) {
+      userLevel++;
+    }
+
+    const dailyTransactionTarget = getDailyTransactionTarget(userLevel);
+
     res.json({
       userActivity: {
         ...result,
@@ -771,6 +943,8 @@ router.get("/me", async (req, res) => {
           totalPages: Math.ceil(totalCount / limit),
         },
         profileBgImage: result.profileBgImage || null,
+        todayTransactionCount,
+        dailyTransactionTarget,
       },
     });
   } catch (error) {

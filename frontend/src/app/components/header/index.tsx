@@ -4,10 +4,12 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { ToastContainer, toast, Bounce } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import LeaderboardBadge from "../leaderboard_badge";
+import DailyQuestHeader from "../DailyQuestHeader";
 import Cookies from "js-cookie";
 import { useGetProfile } from "@nadnameservice/nns-wagmi-hooks";
 import { HexString } from "@/app/types";
 import { useDisconnect } from "wagmi";
+import { playTradeChime } from "@/app/utils/sound";
 
 interface Notification {
   type: string;
@@ -73,7 +75,8 @@ export default function Header() {
     },
   });
   const [monPriceFormatted, setMonPriceFormatted] = useState<string>("0.00");
-  const [isFlashing, setIsFlashing] = useState(false);
+  const [isFlashing, setIsFlashing] = useState(false); //eslint-disable-line
+  const [streak, setStreak] = useState<number>(0);
 
   // WebSocket notification state
   const wsRef = useRef<WebSocket | null>(null);
@@ -122,6 +125,9 @@ export default function Header() {
           }
         );
         await response.json();
+
+        // Fetch streak data after tracking user
+        await fetchStreak();
       }
     };
 
@@ -185,6 +191,42 @@ export default function Header() {
     };
   }, [authenticated, address]);
 
+  // Play sound for every trade
+  useEffect(() => {
+    const handleTradeCompleted = () => {
+      playTradeChime();
+    };
+    window.addEventListener("tradeCompleted", handleTradeCompleted);
+    return () => {
+      window.removeEventListener("tradeCompleted", handleTradeCompleted);
+    };
+  }, []);
+
+  // Fetch user streak data
+  const fetchStreak = useCallback(async () => {
+    if (!authenticated || !address) return;
+
+    console.log("🔍 Fetching streak data for address:", address);
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/activity/track/me?address=${address}`
+      );
+      const data = await response.json();
+
+      console.log("📊 Streak API response:", data);
+
+      if (data.userActivity?.streak) {
+        console.log("🔥 Setting streak to:", data.userActivity.streak);
+        setStreak(data.userActivity.streak);
+      } else {
+        console.log("❌ No streak data found in response");
+      }
+    } catch (error) {
+      console.error("Error fetching streak data:", error);
+    }
+  }, [authenticated, address]);
+
   // Memoize fetchPrice to prevent unnecessary recreations
   const fetchPrice = useCallback(async () => {
     try {
@@ -193,28 +235,31 @@ export default function Header() {
       );
       const data = await response.json();
 
-      data.data.forEach(
-        (item: {
-          symbol: string;
-          price: {
-            price: number;
-          };
-        }) => {
-          if (item.symbol === "WMON") {
-            const newPrice = item.price?.price;
-            const formattedPrice = new Intl.NumberFormat("en-US", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            }).format(newPrice || 0);
+      // Add null checks to prevent errors
+      if (data && data.data && Array.isArray(data.data)) {
+        data.data.forEach(
+          (item: {
+            symbol: string;
+            price: {
+              price: number;
+            };
+          }) => {
+            if (item.symbol === "WMON") {
+              const newPrice = item.price?.price;
+              const formattedPrice = new Intl.NumberFormat("en-US", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              }).format(newPrice || 0);
 
-            if (formattedPrice !== monPriceFormatted) {
-              setMonPriceFormatted(formattedPrice);
-              setIsFlashing(true);
-              setTimeout(() => setIsFlashing(false), 5000);
+              if (formattedPrice !== monPriceFormatted) {
+                setMonPriceFormatted(formattedPrice);
+                setIsFlashing(true);
+                setTimeout(() => setIsFlashing(false), 5000);
+              }
             }
           }
-        }
-      );
+        );
+      }
     } catch (error) {
       console.error("Error fetching price data:", error);
     }
@@ -226,6 +271,41 @@ export default function Header() {
     const interval = setInterval(fetchPrice, 60000);
     return () => clearInterval(interval);
   }, [fetchPrice]);
+
+  // Fetch streak when user changes
+  useEffect(() => {
+    if (authenticated && address) {
+      fetchStreak();
+    } else {
+      setStreak(0);
+    }
+  }, [authenticated, address, fetchStreak]);
+
+  // Show streak extension notification
+  useEffect(() => {
+    console.log("🎯 Streak check triggered - current streak value:", streak);
+
+    if (streak > 0) {
+      // Show a subtle notification when streak is active
+      const streakMessage =
+        streak === 1 ? "🔥 1 day streak!" : `🔥 ${streak} day streak!`;
+
+      console.log("📢 Streak message:", streakMessage);
+
+      if (streak >= 3) {
+        console.log("🎉 Showing streak notification for streak >= 3");
+        showCustomNotification(streakMessage, "Streak Active!");
+      } else {
+        console.log("📝 Streak < 3, no notification shown");
+      }
+    } else if (streak === 0) {
+      console.log(
+        "💤 No active streak (streak = 0) - user didn't trade yesterday"
+      );
+    } else {
+      console.log("❓ Unexpected streak value:", streak);
+    }
+  }, [streak]);
 
   return (
     <>
@@ -252,7 +332,9 @@ export default function Header() {
             <LeaderboardBadge />
           </div>
 
-          {monPriceFormatted !== "0.00" && (
+          <DailyQuestHeader />
+
+          {/* {monPriceFormatted !== "0.00" && (
             <div
               className={`flex items-center gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg transition-colors duration-500 ml-auto sm:ml-0 ${
                 isFlashing ? "bg-violet-300" : "bg-violet-100"
@@ -271,10 +353,20 @@ export default function Header() {
                 </span>
               </div>
             </div>
-          )}
+          )} */}
 
           {ready && authenticated ? (
             <div className="flex items-center gap-2 sm:gap-4">
+              {/* Streak Display */}
+              {streak > 0 && (
+                <div className="flex items-center gap-1 px-2 py-1 bg-orange-100 rounded-md border border-orange-200">
+                  <span className="text-orange-600 text-xs font-bold">🔥</span>
+                  <span className="text-orange-700 text-xs font-semibold">
+                    {streak} day{streak > 1 ? "s" : ""}
+                  </span>
+                </div>
+              )}
+
               {nadProfile?.primaryName ? (
                 <div className="text-xs sm:text-sm text-gray-600 truncate max-w-[80px] sm:max-w-none">
                   {nadProfile.primaryName}

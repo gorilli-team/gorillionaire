@@ -54,7 +54,10 @@ async function buildPriceRequest(
   const usdValue = amount * tokenPrice;
 
   // if buy, convert amount to MON amount
-  if (type === "buy") amount = usdValue / monPrice;
+  if (type === "buy") {
+    const originalAmount = amount;
+    amount = usdValue / monPrice;
+  }
 
   const ZEROX_FEE_RECIPIENT = process.env.ZEROX_FEE_RECIPIENT;
   const ZEROX_FEE_PERCENTAGE = process.env.ZEROX_FEE_PERCENTAGE;
@@ -108,11 +111,9 @@ async function getPrice(token, amount, type, userAddress) {
 
   const requestUrl =
     "https://api.0x.org/swap/permit2/price?" + priceParams.toString();
-  console.log("0x API Request URL (price):", requestUrl);
 
   const priceResponse = await fetch(requestUrl, { headers });
   const res = await priceResponse.json();
-  console.log("0x API Response (price):", JSON.stringify(res, null, 2));
 
   return res;
 }
@@ -123,11 +124,9 @@ async function getQuote(token, amount, type, userAddress) {
 
   const requestUrl =
     "https://api.0x.org/swap/permit2/quote?" + priceParams.toString();
-  console.log("0x API Request URL (quote):", requestUrl);
 
   const priceResponse = await fetch(requestUrl, { headers });
   const res = await priceResponse.json();
-  console.log("0x API Response (quote):", JSON.stringify(res, null, 2));
 
   if (!res.transaction) {
     throw new Error("No transaction data found");
@@ -157,11 +156,7 @@ router.get("/0x-quote", async (req, res) => {
     return res.status(500).json({ error: '"type" value not valid' });
 
   try {
-    console.log(
-      `Getting quote for ${type} ${amount} ${token} for user ${userAddress}`
-    );
     const quote = await getQuote(token, amount, type, userAddress);
-    console.log(`Quote received successfully`);
     res.status(200).json(quote);
   } catch (e) {
     console.error(`Error getting quote: ${e.message}`);
@@ -177,9 +172,7 @@ router.get("/0x-price", async (req, res) => {
     return res.status(500).json({ error: '"type" value not valid' });
 
   try {
-    console.log(`Getting price for ${type} ${amount} ${token}`);
     const price = await getPrice(token, amount, type, userAddress);
-    console.log(`Price received successfully`);
     res.status(200).json(price);
   } catch (e) {
     console.error(`Error getting price: ${e.message}`);

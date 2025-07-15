@@ -402,6 +402,16 @@ export default function SignalDetails() {
         confirmations: 1,
       });
 
+      // Trade successful - dispatch custom event to refresh points and quests
+      window.dispatchEvent(new CustomEvent('tradeCompleted', {
+        detail: {
+          userAddress: user?.wallet?.address,
+          token: token.symbol,
+          amount: amount,
+          type: type
+        }
+      }));
+
       const privyToken = Cookies.get("privy-token");
       await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/activity/track/trade-points`,
@@ -497,6 +507,16 @@ export default function SignalDetails() {
       hash,
       confirmations: 1,
     });
+
+    // Trade successful - dispatch custom event to refresh points and quests
+    window.dispatchEvent(new CustomEvent('tradeCompleted', {
+      detail: {
+        userAddress: user?.wallet?.address,
+        token: token.symbol,
+        amount: amount,
+        type: type
+      }
+    }));
 
     await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/activity/track/trade-points`,

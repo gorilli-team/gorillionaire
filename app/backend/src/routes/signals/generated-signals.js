@@ -3,7 +3,15 @@ const router = express.Router();
 const GeneratedSignal = require("../../models/GeneratedSignal");
 const UserSignal = require("../../models/UserSignal");
 const UserAuth = require("../../models/UserAuth");
-const { awardRefuseSignalPoints, createAcceptedSignalUserQuests } = require("../../controllers/points");
+const {
+  awardRefuseSignalPoints,
+  createAcceptedSignalUserQuests,
+} = require("../../controllers/points");
+
+// router.use((req, res, next) => {
+//   console.log(`[USER-SIGNAL] Route hit: ${req.method} ${req.originalUrl}`);
+//   next();
+// });
 
 router.get("/", async (req, res) => {
   try {
@@ -166,42 +174,31 @@ router.post("/user-signal", async (req, res) => {
     return res.status(400).json({ error: "User not found" });
   }
 
-  if (choice === "No") {
-    //check if user has already 5 No signals in the last 24 hours
-    const userSignals = await UserSignal.find({
+  try {
+    const userSignal = await UserSignal.findOne({
       userAddress,
-      choice: "No",
-      created_at: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+      signalId,
+    });
+    if (userSignal) {
+      return res.status(400).json({ error: "User signal already exists" });
+    }
+
+    const newUserSignal = await UserSignal.create({
+      userAddress,
+      signalId,
+      choice,
     });
 
-    if (userSignals.length >= 5) {
-      return res
-        .status(400)
-        .json({ error: "User has already 5 No signals in the last 24 hours" });
+    if (choice === "No") {
+      await awardRefuseSignalPoints(userAddress, signalId);
+    } else if (choice === "Yes") {
+      await createAcceptedSignalUserQuests(userAddress, signalId);
     }
+
+    res.json(newUserSignal);
+  } catch (err) {
+    res.status(500).json({ error: "Internal server error" });
   }
-
-  const userSignal = await UserSignal.findOne({
-    userAddress,
-    signalId,
-  });
-  if (userSignal) {
-    return res.status(400).json({ error: "User signal already exists" });
-  }
-
-  const newUserSignal = await UserSignal.create({
-    userAddress,
-    signalId,
-    choice,
-  });
-
-  if (choice === "No") {
-    await awardRefuseSignalPoints(userAddress, signalId);
-  } else if (choice === "Yes") {
-    await createAcceptedSignalUserQuests(userAddress, signalId);
-  }
-
-  res.json(newUserSignal);
 });
 
 module.exports = router;

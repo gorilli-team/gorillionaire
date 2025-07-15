@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { usePrivy } from "@privy-io/react-auth";
 import { nnsClient } from "@/app/providers";
@@ -14,45 +14,74 @@ const LeaderboardBadge: React.FC = () => {
     address: string;
     avatarSrc: string;
     rank: string;
+    streak: number;
+    todayTransactionCount?: number;
+    dailyTransactionTarget?: number;
   } | null>(null);
 
   const [nadName, setNadName] = useState<string | null>(null);
   const [nadAvatar, setNadAvatar] = useState<string | null>(null);
 
-  useEffect(() => {
+  const fetchPositionUser = useCallback(async () => {
     if (!authenticated || !address) return;
 
-    const fetchPositionUser = async () => {
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/activity/track/me?address=${address}`
+      );
+      const data = await response.json();
+
+      // Fetch NNS profile
+      let nnsProfile = null;
       try {
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/activity/track/me?address=${address}`
-        );
-        const data = await response.json();
+        nnsProfile = await nnsClient.getProfile(address as HexString);
+      } catch (e: unknown) {
+        console.log("❌ Error fetching NNS profile:", e);
+        nnsProfile = null;
+      }
+      setNadName(nnsProfile?.primaryName || null);
+      setNadAvatar(nnsProfile?.avatar || null);
 
-        // Fetch NNS profile
-        let nnsProfile = null;
-        try {
-          nnsProfile = await nnsClient.getProfile(address as HexString);
-        } catch (e: unknown) {
-          console.log("❌ Error fetching NNS profile:", e);
-          nnsProfile = null;
-        }
-        setNadName(nnsProfile?.primaryName || null);
-        setNadAvatar(nnsProfile?.avatar || null);
+      setPositionUser({
+        points: data.userActivity?.points || 0,
+        address: data.userActivity?.address || address,
+        avatarSrc: "/avatar_1.png",
+        rank: data.userActivity?.rank,
+        streak: data.userActivity?.streak || 0,
+        todayTransactionCount: data.userActivity?.todayTransactionCount || 0,
+        dailyTransactionTarget: data.userActivity?.dailyTransactionTarget || 3,
+      });
+    } catch (error) {
+      console.error("❌ Error fetching user activity:", error);
+    }
+  }, [authenticated, address]);
 
-        setPositionUser({
-          points: data.userActivity?.points || 0,
-          address: data.userActivity?.address || address,
-          avatarSrc: "/avatar_1.png",
-          rank: data.userActivity?.rank,
-        });
-      } catch (error) {
-        console.error("❌ Error fetching user activity:", error);
+  useEffect(() => {
+    fetchPositionUser();
+  }, [fetchPositionUser]);
+
+  // Listen for trade completion events to refresh data
+  useEffect(() => {
+    const handleTradeCompleted = (event: CustomEvent) => {
+      // Only refresh if the trade was made by the current user
+      if (event.detail.userAddress === address) {
+        console.log("🔄 Refreshing user data after trade completion");
+        fetchPositionUser();
       }
     };
 
-    fetchPositionUser();
-  }, [authenticated, address]);
+    window.addEventListener(
+      "tradeCompleted",
+      handleTradeCompleted as EventListener
+    );
+
+    return () => {
+      window.removeEventListener(
+        "tradeCompleted",
+        handleTradeCompleted as EventListener
+      );
+    };
+  }, [address, fetchPositionUser]);
 
   if (!authenticated || !positionUser) return null;
 
@@ -96,6 +125,17 @@ const LeaderboardBadge: React.FC = () => {
           {positionUser.points} pts
         </span>
       </div>
+
+      {/* Streak */}
+      {/* {positionUser.streak > 0 && (
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <span className="text-orange-500 text-sm">🔥</span>
+          <span className="text-sm font-medium text-orange-700">
+            {positionUser.streak} day{positionUser.streak !== 1 ? "s" : ""}{" "}
+            streak!
+          </span>
+        </div>
+      )} */}
     </div>
   );
 };

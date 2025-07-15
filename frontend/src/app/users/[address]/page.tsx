@@ -63,6 +63,30 @@ const formatDate = (dateString: string): string => {
   }
 };
 
+const formatQuestDate = (dateString: string): string => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const questDate = new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate()
+  );
+
+  if (questDate.getTime() === today.getTime()) {
+    return "Today";
+  } else if (questDate.getTime() === today.getTime() - 24 * 60 * 60 * 1000) {
+    return "Yesterday";
+  } else {
+    return date.toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+  }
+};
+
 interface UserActivity {
   name: string;
   points: string;
@@ -96,6 +120,8 @@ interface UserProfile {
   };
   hasV2NFT?: boolean;
   profileBgImage?: string;
+  todayTransactionCount?: number;
+  dailyTransactionTarget?: number;
 }
 
 interface Quest {
@@ -139,6 +165,11 @@ const UserProfilePage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedPage, setSelectedPage] = useState("Profile");
   const [quests, setQuests] = useState<Quest[]>([]);
+  const [completedDailyQuests, setCompletedDailyQuests] = useState<Quest[]>([]);
+  const [questTab, setQuestTab] = useState<"active" | "completed">("active");
+  const [completedQuestsPage, setCompletedQuestsPage] = useState(1);
+  const [completedQuestsTotal, setCompletedQuestsTotal] = useState(0);
+  const [completedQuestsLoading, setCompletedQuestsLoading] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [discordUsername, setDiscordUsername] = useState<string | null>(null);
   const [discordQuestCompleted, setDiscordQuestCompleted] = useState(false);
@@ -375,6 +406,23 @@ const UserProfilePage = () => {
     setClaimedQuests(alreadyClaimed);
   };
 
+  const fetchCompletedDailyQuests = async (page = 1) => {
+    try {
+      setCompletedQuestsLoading(true);
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/activity/daily-quests/${params.address}/completed?page=${page}&limit=10`
+      );
+      const data = await response.json();
+      setCompletedDailyQuests(data.quests || []);
+      setCompletedQuestsTotal(data.pagination?.total || 0);
+      setCompletedQuestsPage(page);
+    } catch (error) {
+      console.error("Error fetching completed daily quests:", error);
+    } finally {
+      setCompletedQuestsLoading(false);
+    }
+  };
+
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
@@ -402,6 +450,9 @@ const UserProfilePage = () => {
           pagination: data.userActivity?.pagination,
           hasV2NFT: Number(v2NFTBalance) > 0,
           profileBgImage: data.userActivity?.profileBgImage || null,
+          todayTransactionCount: data.userActivity?.todayTransactionCount || 0,
+          dailyTransactionTarget:
+            data.userActivity?.dailyTransactionTarget || 3,
         });
       } catch (error) {
         console.error("Error fetching user profile:", error);
@@ -418,6 +469,7 @@ const UserProfilePage = () => {
   useEffect(() => {
     if (params.address) {
       fetchUserQuests();
+      fetchCompletedDailyQuests();
     }
   }, [params.address]);
 
@@ -840,148 +892,311 @@ const UserProfilePage = () => {
                       Quests
                     </h2>
                   </div>
-                  <div className="space-y-2 sm:space-y-3">
-                    {quests
-                      .filter((quest) => {
-                        // Show all quests that are completed
-                        if (quest.isCompleted) return true;
-                        
-                        // Show quests that don't have an end date
-                        if (!quest.questEndDate) return true;
-                        
-                        // Show quests that haven't ended yet
-                        const now = new Date();
-                        const endDate = new Date(quest.questEndDate);
-                        return endDate > now;
-                      })
-                      .map((quest, idx) => (
+
+                  {/* Quest Tabs */}
+                  <div className="flex space-x-1 mb-4 bg-gray-100 rounded-lg p-1">
+                    <button
+                      onClick={() => setQuestTab("active")}
+                      className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
+                        questTab === "active"
+                          ? "bg-white text-violet-600 shadow-sm"
+                          : "text-gray-600 hover:text-gray-900"
+                      }`}
+                    >
+                      Active Quests
+                    </button>
+                    <button
+                      onClick={() => setQuestTab("completed")}
+                      className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
+                        questTab === "completed"
+                          ? "bg-white text-violet-600 shadow-sm"
+                          : "text-gray-600 hover:text-gray-900"
+                      }`}
+                    >
+                      Completed Daily Quests
+                    </button>
+                  </div>
+
+                  <div className="space-y-1.5 sm:space-y-2">
+                    {questTab === "active" ? (
+                      // Active Quests
+                      quests
+                        .filter((quest) => {
+                          // Show all quests that are completed
+                          if (quest.isCompleted) return true;
+
+                          // Show quests that don't have an end date
+                          if (!quest.questEndDate) return true;
+
+                          // Show quests that haven't ended yet
+                          const now = new Date();
+                          const endDate = new Date(quest.questEndDate);
+                          return endDate > now;
+                        })
+                        .map((quest, idx) => (
+                          <div
+                            key={idx}
+                            className="flex flex-col sm:flex-row sm:items-center bg-white rounded-xl shadow p-3 sm:p-4"
+                          >
+                            <div className="w-12 h-12 flex items-center justify-center bg-violet-100 rounded-lg mb-3 sm:mb-0 sm:mr-4">
+                              {quest.questName.includes("Foundry") ? (
+                                <Image
+                                  src={"/foundry.png"}
+                                  alt={quest.questName}
+                                  className="rounded-md"
+                                  width={28}
+                                  height={28}
+                                />
+                              ) : quest.questType === "discord" ? (
+                                <Image
+                                  src={"/discord.png"}
+                                  alt={quest.questName}
+                                  className="rounded-md"
+                                  width={28}
+                                  height={28}
+                                />
+                              ) : (
+                                <Image
+                                  src={quest?.questImage || "/propic.png"}
+                                  alt={quest.questName}
+                                  className="rounded-md"
+                                  width={28}
+                                  height={28}
+                                />
+                              )}
+                            </div>
+                            <div className="flex-1 flex flex-col gap-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <div className="font-semibold text-gray-900">
+                                  {quest.questName}
+                                </div>
+                                <span className="px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 text-xs font-semibold">
+                                  +{quest.questRewardAmount} pts
+                                </span>
+                                {quest.isCompleted && (
+                                  <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-semibold">
+                                    ✓ Completed
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-gray-500 text-sm">
+                                {quest.questDescription}
+                              </div>
+                              {quest.questName.includes("Foundry") && (
+                                <>
+                                  {quest.questEndDate &&
+                                  new Date(quest.questEndDate) > new Date() ? (
+                                    <div className="text-gray-500 text-sm">
+                                      <CountdownTimer
+                                        targetDate={quest.questEndDate}
+                                      />{" "}
+                                    </div>
+                                  ) : (
+                                    <div className="text-gray-500 text-sm">
+                                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-50 text-red-600 rounded-md text-xs font-medium">
+                                        <svg
+                                          className="w-3 h-3"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          viewBox="0 0 24 24"
+                                        >
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth="2"
+                                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                                          />
+                                        </svg>
+                                        Ended {formatDate(quest.questEndDate)}
+                                      </span>
+                                    </div>
+                                  )}
+                                </>
+                              )}
+                              <div className="flex items-center gap-2 mt-2">
+                                <div className="flex-1">
+                                  <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                                    <div
+                                      className="bg-gradient-to-r from-violet-500 to-indigo-600 h-2 rounded-full transition-all duration-300"
+                                      style={{
+                                        width: quest.isCompleted
+                                          ? "100%"
+                                          : `${quest.progressPercentage || 0}%`,
+                                      }}
+                                    ></div>
+                                  </div>
+                                </div>
+                                {!quest.claimedAt &&
+                                  !claimedQuests.has(quest._id) &&
+                                  quest.questType !== "discord" && (
+                                    <span className="text-xs text-gray-500 min-w-fit">
+                                      {quest.currentProgress || 0}/
+                                      {quest.questRequirement}
+                                    </span>
+                                  )}
+                              </div>
+                            </div>
+                            {isOwnProfile &&
+                              !(
+                                quest.claimedAt || claimedQuests.has(quest._id)
+                              ) &&
+                              quest.questType !== "discord" && (
+                                <button
+                                  onClick={() => handleClaimQuest(quest._id)}
+                                  className={`mt-3 sm:mt-0 sm:ml-4 px-4 py-2 rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed ${
+                                    quest.claimedAt ||
+                                    claimedQuests.has(quest._id)
+                                      ? "bg-violet-600 text-white hover:bg-violet-700"
+                                      : "bg-indigo-600 transition-colors text-white hover:bg-indigo-700"
+                                  }`}
+                                  disabled={
+                                    quest.currentProgress <
+                                      quest.questRequirement ||
+                                    !!quest.claimedAt ||
+                                    claimedQuests.has(quest._id)
+                                  }
+                                >
+                                  Claim
+                                </button>
+                              )}
+                          </div>
+                        ))
+                    ) : // Completed Daily Quests
+                    completedQuestsLoading ? (
+                      <div className="text-center py-8">
+                        <div className="inline-flex items-center gap-2">
+                          <div className="w-4 h-4 border-2 border-violet-600 border-t-transparent rounded-full animate-spin"></div>
+                          <span className="text-sm text-gray-600">
+                            Loading completed quests...
+                          </span>
+                        </div>
+                      </div>
+                    ) : completedDailyQuests.length > 0 ? (
+                      completedDailyQuests.map((quest, idx) => (
                         <div
                           key={idx}
-                          className="flex flex-col sm:flex-row sm:items-center bg-white rounded-xl shadow p-3 sm:p-4"
+                          className="flex flex-col sm:flex-row sm:items-center bg-white rounded-lg shadow p-2 sm:p-3"
                         >
-                          <div className="w-12 h-12 flex items-center justify-center bg-violet-100 rounded-lg mb-3 sm:mb-0 sm:mr-4">
+                          <div className="w-16 h-16 flex items-center justify-center bg-green-100 rounded-lg mb-2 sm:mb-0 sm:mr-3">
                             {quest.questName.includes("Foundry") ? (
                               <Image
                                 src={"/foundry.png"}
                                 alt={quest.questName}
                                 className="rounded-md"
-                                width={36}
-                                height={36}
+                                width={72}
+                                height={72}
                               />
                             ) : quest.questType === "discord" ? (
                               <Image
                                 src={"/discord.png"}
                                 alt={quest.questName}
                                 className="rounded-md"
-                                width={36}
-                                height={36}
+                                width={72}
+                                height={72}
                               />
                             ) : (
                               <Image
-                                src={"/propic.png"}
+                                src={quest?.questImage || "/propic.png"}
                                 alt={quest.questName}
                                 className="rounded-md"
-                                width={36}
-                                height={36}
+                                width={72}
+                                height={72}
                               />
                             )}
                           </div>
                           <div className="flex-1 flex flex-col gap-1">
                             <div className="flex flex-wrap items-center gap-2">
-                              <div className="font-semibold text-gray-900">
+                              <div className="font-semibold text-gray-900 text-sm">
                                 {quest.questName}
                               </div>
-                              <span className="px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 text-xs font-semibold">
+                              <span className="px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 text-xs font-semibold">
                                 +{quest.questRewardAmount} pts
                               </span>
-                              {quest.isCompleted && (
-                                <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-semibold">
-                                  ✓ Completed
-                                </span>
-                              )}
+                              <span className="px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-semibold">
+                                ✓ Completed
+                              </span>
                             </div>
-                            <div className="text-gray-500 text-sm">
+                            <div className="text-gray-500 text-xs">
                               {quest.questDescription}
                             </div>
-                            {quest.questName.includes("Foundry") && (
-                              <>
-                                {quest.questEndDate &&
-                                new Date(quest.questEndDate) > new Date() ? (
-                                  <div className="text-gray-500 text-sm">
-                                    <CountdownTimer
-                                      targetDate={quest.questEndDate}
-                                    />{" "}
-                                  </div>
-                                ) : (
-                                  <div className="text-gray-500 text-sm">
-                                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-50 text-red-600 rounded-md text-xs font-medium">
-                                      <svg
-                                        className="w-3 h-3"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                      >
-                                        <path
-                                          strokeLinecap="round"
-                                          strokeLinejoin="round"
-                                          strokeWidth="2"
-                                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                                        />
-                                      </svg>
-                                      Ended {formatDate(quest.questEndDate)}
-                                    </span>
-                                  </div>
-                                )}
-                              </>
+                            {quest.completedAt && (
+                              <div className="text-gray-700 text-sm font-medium bg-gray-50 px-2 py-1 rounded-md inline-block">
+                                ✓ Completed on{" "}
+                                {formatQuestDate(quest.completedAt.toString())}
+                              </div>
                             )}
                             <div className="flex items-center gap-2 mt-2">
                               <div className="flex-1">
                                 <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
                                   <div
-                                    className="bg-gradient-to-r from-violet-500 to-indigo-600 h-2 rounded-full transition-all duration-300"
-                                    style={{
-                                      width: quest.isCompleted
-                                        ? "100%"
-                                        : `${quest.progressPercentage || 0}%`,
-                                    }}
+                                    className="bg-green-500 h-2 rounded-full"
+                                    style={{ width: "100%" }}
                                   ></div>
                                 </div>
                               </div>
-                              {!quest.claimedAt &&
-                                !claimedQuests.has(quest._id) &&
-                                quest.questType !== "discord" && (
-                                  <span className="text-xs text-gray-500 min-w-fit">
-                                    {quest.currentProgress || 0}/
-                                    {quest.questRequirement}
-                                  </span>
-                                )}
+                              <span className="text-xs text-gray-500 min-w-fit">
+                                {quest.currentProgress || 0}/
+                                {quest.questRequirement}
+                              </span>
                             </div>
                           </div>
-                          {isOwnProfile &&
-                            !(
-                              quest.claimedAt || claimedQuests.has(quest._id)
-                            ) &&
-                            quest.questType !== "discord" && (
-                              <button
-                                onClick={() => handleClaimQuest(quest._id)}
-                                className={`mt-3 sm:mt-0 sm:ml-4 px-4 py-2 rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed ${
-                                  quest.claimedAt ||
-                                  claimedQuests.has(quest._id)
-                                    ? "bg-violet-600 text-white hover:bg-violet-700"
-                                    : "bg-indigo-600 transition-colors text-white hover:bg-indigo-700"
-                                }`}
-                                disabled={
-                                  quest.currentProgress <
-                                    quest.questRequirement ||
-                                  !!quest.claimedAt ||
-                                  claimedQuests.has(quest._id)
-                                }
-                              >
-                                Claim
-                              </button>
-                            )}
                         </div>
-                      ))}
+                      ))
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        <div className="text-4xl mb-2">📋</div>
+                        <div className="text-sm">
+                          No completed daily quests yet
+                        </div>
+                        <div className="text-xs text-gray-400 mt-1">
+                          Complete some daily quests to see them here!
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Pagination for completed quests */}
+                    {questTab === "completed" && completedQuestsTotal > 10 && (
+                      <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
+                        <div className="text-sm text-gray-600">
+                          Showing {(completedQuestsPage - 1) * 10 + 1} to{" "}
+                          {Math.min(
+                            completedQuestsPage * 10,
+                            completedQuestsTotal
+                          )}{" "}
+                          of {completedQuestsTotal} completed quests
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() =>
+                              fetchCompletedDailyQuests(completedQuestsPage - 1)
+                            }
+                            disabled={
+                              completedQuestsPage <= 1 || completedQuestsLoading
+                            }
+                            className="px-3 py-1 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Previous
+                          </button>
+                          <span className="text-sm text-gray-600">
+                            Page {completedQuestsPage} of{" "}
+                            {Math.ceil(completedQuestsTotal / 10)}
+                          </span>
+                          <button
+                            onClick={() =>
+                              fetchCompletedDailyQuests(completedQuestsPage + 1)
+                            }
+                            disabled={
+                              completedQuestsPage >=
+                                Math.ceil(completedQuestsTotal / 10) ||
+                              completedQuestsLoading
+                            }
+                            className="px-3 py-1 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Next
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

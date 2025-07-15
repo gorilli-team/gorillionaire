@@ -21,7 +21,7 @@ import {
   WMONAD_ADDRESS,
 } from "@/app/utils/constants";
 import { usePrivy } from "@privy-io/react-auth";
-import { ToastContainer, toast, Bounce } from "react-toastify";
+import { toast, Bounce } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Cookies from "js-cookie";
 import { nnsClient } from "@/app/providers";
@@ -104,16 +104,19 @@ const fetchImageFromSignalText = (signalText: string) => {
 
 const formatNumber = (num: number): string => {
   if (isNaN(num)) return "0";
-
   if (num >= 1_000_000) {
     return (
       (num / 1_000_000).toLocaleString("en-US", { maximumFractionDigits: 1 }) +
       "M"
     );
-  } else if (num >= 1_000) {
+  } else if (num >= 100_000) {
+    // For very large thousands, use K notation
     return (
       (num / 1_000).toLocaleString("en-US", { maximumFractionDigits: 1 }) + "K"
     );
+  } else if (num >= 1_000) {
+    // For smaller thousands, always show the full number
+    return num.toLocaleString("en-US", { maximumFractionDigits: 0 });
   } else {
     return num.toLocaleString("en-US", { maximumFractionDigits: 1 });
   }
@@ -162,7 +165,6 @@ const Signals = () => {
   const fetchHolderData = useCallback(async () => {
     try {
       if (!user?.wallet?.address) {
-        console.log("No wallet address available");
         return;
       }
 
@@ -405,25 +407,24 @@ const Signals = () => {
   // New function to execute trade after DEX modal confirmation
   const executeTrade = useCallback(
     async (quoteDataString: string) => {
-      if (!currentDexToken || !user?.wallet?.address) return;
+      console.log("🚀 executeTrade called with quote data from DexModal");
+
+      if (!currentDexToken || !user?.wallet?.address) {
+        return;
+      }
 
       const token = currentDexToken;
       const type = currentDexType;
 
-      // Parse the quote data from the modal
-      let quoteData;
-      try {
-        quoteData = JSON.parse(quoteDataString);
-      } catch (error) {
-        console.error("Error parsing quote data:", error);
-        toast.error("Invalid quote data received");
+      // Parse the quote data from DexModal instead of making a new request
+      const quoteData = JSON.parse(quoteDataString);
+
+      if (!quoteData) {
         return;
       }
 
-      if (!quoteData) return;
-
       // Extract amount from quote data
-      const amount =
+      const amount: number =
         type === "Buy"
           ? parseFloat(quoteData.buyAmount || "0") /
             Math.pow(10, token.decimals)
@@ -436,6 +437,7 @@ const Signals = () => {
 
       const isNativeSell =
         quoteData.sellToken?.toLowerCase() === MON_ADDRESS.toLowerCase();
+
       if (isNativeSell && !quoteData.transaction) {
         toast.error("Trade quote did not return a transaction object.");
         return;
@@ -465,82 +467,121 @@ const Signals = () => {
 
       // Native token flow (SELL MON)
       if (isNativeSell) {
-        const txHash = await sendTransactionAsync({
-          account: user?.wallet?.address as `0x${string}`,
-          gas: quoteData.transaction.gas
-            ? BigInt(quoteData.transaction.gas)
-            : undefined,
-          to: quoteData.transaction.to,
-          data: quoteData.transaction.data,
-          value: BigInt(quoteData.transaction.value),
-          gasPrice: quoteData.transaction.gasPrice
-            ? BigInt(quoteData.transaction.gasPrice)
-            : undefined,
-          chainId: MONAD_CHAIN_ID,
-        });
+        try {
+          const txHash = await sendTransactionAsync({
+            account: user?.wallet?.address as `0x${string}`,
+            gas: quoteData.transaction.gas
+              ? BigInt(quoteData.transaction.gas)
+              : undefined,
+            to: quoteData.transaction.to,
+            data: quoteData.transaction.data,
+            value: BigInt(quoteData.transaction.value),
+            gasPrice: quoteData.transaction.gasPrice
+              ? BigInt(quoteData.transaction.gasPrice)
+              : undefined,
+            chainId: MONAD_CHAIN_ID,
+          });
+          await waitForTransactionReceipt(wagmiConfig, {
+            hash: txHash,
+            confirmations: 1,
+          });
 
-        await waitForTransactionReceipt(wagmiConfig, {
-          hash: txHash,
-          confirmations: 1,
-        });
+          // Trade successful - dispatch custom event to refresh points and quests
+          window.dispatchEvent(
+            new CustomEvent("tradeCompleted", {
+              detail: {
+                userAddress: user?.wallet?.address,
+                token: token.symbol,
+                amount: amount,
+                type: type,
+              },
+            })
+          );
 
-        await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/activity/track/trade-points`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${Cookies.get("privy-token")}`,
-            },
-            body: JSON.stringify({
-              address: user?.wallet?.address,
-              txHash,
-              intentId: quoteData.intentId,
-              signalId: currentSignalId,
-            }),
+          await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/activity/track/trade-points`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${Cookies.get("privy-token")}`,
+              },
+              body: JSON.stringify({
+                address: user?.wallet?.address,
+                txHash,
+                intentId: quoteData.intentId,
+                signalId: currentSignalId,
+              }),
+            }
+          );
+
+          // Update the signals state to add the user's choice
+          if (currentSignalId) {
+            setBuySignals((prevSignals) =>
+              prevSignals.map((signal) =>
+                signal._id === currentSignalId
+                  ? { ...signal, userSignal: { choice: "Yes" } }
+                  : signal
+              )
+            );
+            setSellSignals((prevSignals) =>
+              prevSignals.map((signal) =>
+                signal._id === currentSignalId
+                  ? { ...signal, userSignal: { choice: "Yes" } }
+                  : signal
+              )
+            );
+
+            try {
+              const response = await fetch(
+                `${process.env.NEXT_PUBLIC_API_URL}/signals/generated-signals/user-signal`,
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${Cookies.get("privy-token")}`,
+                  },
+                  body: JSON.stringify({
+                    userAddress: user?.wallet?.address,
+                    signalId: currentSignalId,
+                    choice: "Yes",
+                  }),
+                }
+              );
+
+              if (response.ok) {
+              } else if (response.status === 400) {
+                const errorData = await response.json();
+                if (errorData.error === "User signal already exists") {
+                } else {
+                  console.error(
+                    "❌ Failed to store user signal after native sell trade:",
+                    errorData
+                  );
+                }
+              } else {
+                const errorData = await response.json();
+                console.error(
+                  "❌ Failed to store user signal after native sell trade:",
+                  errorData
+                );
+              }
+            } catch (error) {
+              console.error(
+                "❌ Error storing user signal after native sell trade:",
+                error
+              );
+            }
           }
-        );
 
-        // Update the signals state to add the user's choice
-        if (currentSignalId) {
-          setBuySignals((prevSignals) =>
-            prevSignals.map((signal) =>
-              signal._id === currentSignalId
-                ? { ...signal, userSignal: { choice: "Yes" } }
-                : signal
-            )
-          );
-          setSellSignals((prevSignals) =>
-            prevSignals.map((signal) =>
-              signal._id === currentSignalId
-                ? { ...signal, userSignal: { choice: "Yes" } }
-                : signal
-            )
-          );
+          setIsModalOpen(false);
+          return;
+        } catch (error) {
+          console.error("Trade execution error:", error);
+          toast.error("Trade failed");
+          setIsModalOpen(false);
+          return;
         }
-
-        const privyToken = Cookies.get("privy-token");
-        await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/signals/generated-signals/user-signal`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${privyToken}`,
-            },
-            body: JSON.stringify({
-              userAddress: user?.wallet?.address,
-              signalId: currentSignalId,
-              choice: "Yes",
-              type: type,
-              token: token.symbol,
-              amount: amount.toString(),
-            }),
-          }
-        );
-
-        setIsModalOpen(false);
-        return;
       } else if (
         quoteData.sellToken?.toLowerCase() === MON_ADDRESS.toLowerCase()
       ) {
@@ -591,71 +632,129 @@ const Signals = () => {
         ]);
       }
 
-      const hash = await sendTransactionAsync({
-        account: user?.wallet?.address as `0x${string}`,
-        gas: transaction.gas ? BigInt(transaction.gas) : undefined,
-        to: transaction.to,
-        data: transaction.data,
-        chainId: MONAD_CHAIN_ID,
-      });
+      try {
+        const hash = await sendTransactionAsync({
+          account: user?.wallet?.address as `0x${string}`,
+          gas: transaction.gas ? BigInt(transaction.gas) : undefined,
+          to: transaction.to,
+          data: transaction.data,
+          chainId: MONAD_CHAIN_ID,
+        });
+        await waitForTransactionReceipt(wagmiConfig, {
+          hash,
+          confirmations: 1,
+        });
 
-      await waitForTransactionReceipt(wagmiConfig, {
-        hash,
-        confirmations: 1,
-      });
-      const privyToken = Cookies.get("privy-token");
-      await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/activity/track/trade-points`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${privyToken}`,
-          },
-          body: JSON.stringify({
-            address: user?.wallet?.address,
-            txHash: hash,
-            intentId: quoteData.intentId,
-            signalId: currentSignalId,
-          }),
+        // Trade successful - dispatch custom event to refresh points and quests
+        window.dispatchEvent(
+          new CustomEvent("tradeCompleted", {
+            detail: {
+              userAddress: user?.wallet?.address,
+              token: token.symbol,
+              amount: amount,
+              type: type,
+            },
+          })
+        );
+
+        const privyToken = Cookies.get("privy-token");
+        await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/activity/track/trade-points`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${privyToken}`,
+            },
+            body: JSON.stringify({
+              address: user?.wallet?.address,
+              txHash: hash,
+              intentId: quoteData.intentId,
+              signalId: currentSignalId,
+            }),
+          }
+        );
+
+        if (currentSignalId) {
+          setBuySignals((prevSignals) =>
+            prevSignals.map((signal) =>
+              signal._id === currentSignalId
+                ? { ...signal, userSignal: { choice: "Yes" } }
+                : signal
+            )
+          );
+          setSellSignals((prevSignals) =>
+            prevSignals.map((signal) =>
+              signal._id === currentSignalId
+                ? { ...signal, userSignal: { choice: "Yes" } }
+                : signal
+            )
+          );
+
+          try {
+            const response = await fetch(
+              `${process.env.NEXT_PUBLIC_API_URL}/signals/generated-signals/user-signal`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${privyToken}`,
+                },
+                body: JSON.stringify({
+                  userAddress: user?.wallet?.address,
+                  signalId: currentSignalId,
+                  choice: "Yes",
+                }),
+              }
+            );
+
+            if (response.ok) {
+            } else if (response.status === 400) {
+              const errorData = await response.json();
+              if (errorData.error === "User signal already exists") {
+              } else {
+                console.error(
+                  "❌ Failed to store user signal after ERC20 trade:",
+                  errorData
+                );
+              }
+            } else {
+              const errorData = await response.json();
+              console.error(
+                "❌ Failed to store user signal after ERC20 trade:",
+                errorData
+              );
+            }
+          } catch (error) {
+            console.error(
+              "❌ Error storing user signal after ERC20 trade:",
+              error
+            );
+          }
         }
-      );
 
-      if (currentSignalId) {
-        setBuySignals((prevSignals) =>
-          prevSignals.map((signal) =>
-            signal._id === currentSignalId
-              ? { ...signal, userSignal: { choice: "Yes" } }
-              : signal
-          )
+        await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/signals/generated-signals/user-signal`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${privyToken}`,
+            },
+            body: JSON.stringify({
+              userAddress: user?.wallet?.address,
+              signalId: currentSignalId,
+              choice: "Yes",
+              type: type,
+              token: token.symbol,
+              amount: amount.toString(),
+            }),
+          }
         );
-        setSellSignals((prevSignals) =>
-          prevSignals.map((signal) =>
-            signal._id === currentSignalId
-              ? { ...signal, userSignal: { choice: "Yes" } }
-              : signal
-          )
-        );
+      } catch (error) {
+        console.error("Trade execution error:", error);
+        toast.error("Trade failed");
       }
-
-      await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/signals/generated-signals/user-signal`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${privyToken}`,
-          },
-          body: JSON.stringify({
-            userAddress: user?.wallet?.address,
-            signalId: currentSignalId,
-            choice: "Yes",
-            type: type,
-            token: token.symbol,
-            amount: amount.toString(),
-          }),
-        }
-      );
 
       setIsModalOpen(false);
     },
@@ -709,9 +808,21 @@ const Signals = () => {
           }
         );
 
-        if (response.status === 400) {
+        if (response.ok) {
+        } else if (response.status === 400) {
+          const errorData = await response.json();
+          console.error(
+            "❌ Failed to store user signal for 'No' choice:",
+            errorData
+          );
           toast.error("You have already 5 No signals in the last 24 hours");
           return;
+        } else {
+          const errorData = await response.json();
+          console.error(
+            "❌ Failed to store user signal for 'No' choice:",
+            errorData
+          );
         }
 
         onNo(signalId);
@@ -738,31 +849,17 @@ const Signals = () => {
 
   return (
     <div className="w-full min-h-screen bg-gray-50 pt-2 lg:pt-0">
-      <ToastContainer
-        position="bottom-right"
-        autoClose={5000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick={true}
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="light"
-        transition={Bounce}
-      />
-
       <div className="px-2 sm:px-4 py-4 sm:py-6">
         {/* Token Stats */}
         {user?.wallet?.address && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            {tokens.map((token) => (
-              <div
-                key={token.symbol}
-                className="bg-white rounded-lg shadow p-4 flex items-center"
-              >
-                <div className="flex items-center space-x-3 w-full">
-                  <div className="w-16 h-16 rounded-full overflow-hidden flex-shrink-0 relative">
+          <div className="mb-6 w-full">
+            <div className="w-full grid grid-cols-2 md:grid-cols-4 gap-4">
+              {tokens.map((token) => (
+                <div
+                  key={token.symbol}
+                  className="bg-white rounded-xl shadow p-4 flex items-center gap-3 min-w-0"
+                >
+                  <div className="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden flex-shrink-0 relative border border-gray-100">
                     <Image
                       src={
                         token.imageUrl && token.imageUrl.length > 0
@@ -770,33 +867,30 @@ const Signals = () => {
                           : "/fav.png"
                       }
                       alt={token.name || "token image"}
-                      width={128}
-                      height={128}
-                      className="object-cover rounded-full"
+                      width={48}
+                      height={48}
+                      className="object-cover rounded-full md:w-16 md:h-16"
                     />
                   </div>
-                  <div className="flex flex-col flex-grow space-y-1">
-                    <span className="text-sm text-gray-600 font-medium">
+                  <div className="flex flex-col flex-grow min-w-0">
+                    <span className="text-xs md:text-sm text-gray-600 font-medium truncate">
                       {token.name}
                     </span>
-                    <div className="flex flex-col">
-                      <span className="text-2xl font-bold text-gray-900">
-                        {formatNumber(token.totalHolding)}{" "}
-                        <span className="text-xl font-semibold text-violet-600">
-                          {token.symbol}
-                        </span>
+                    <span className="text-lg md:text-2xl font-bold text-gray-900 truncate">
+                      {formatNumber(token.totalHolding)}{" "}
+                      <span className="text-base md:text-xl font-semibold text-violet-600">
+                        {token.symbol}
                       </span>
-                      {token.price && token.price > 0 ? (
-                        <span className="text-sm text-gray-500 mt-1">
-                          Price: ${token?.price?.toFixed(4)}
-                        </span>
-                      ) : null}
-                    </div>
+                    </span>
+                    {token.price && token.price > 0 ? (
+                      <span className="text-xs md:text-sm text-gray-500 mt-1">
+                        Price: ${token?.price?.toFixed(4)}
+                      </span>
+                    ) : null}
                   </div>
-                  <div className="flex flex-col items-end"></div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )}
 
@@ -1257,7 +1351,7 @@ const Signals = () => {
               ?.confidenceScore ||
             sellSignals.find((s) => s._id === currentSignalId)?.confidenceScore
           }
-          userAddress={user.wallet.address!}
+          userAddress={user?.wallet?.address || ""}
         />
       )}
     </div>
