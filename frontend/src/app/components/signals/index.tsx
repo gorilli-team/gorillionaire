@@ -21,7 +21,7 @@ import {
   WMONAD_ADDRESS,
 } from "@/app/utils/constants";
 import { usePrivy } from "@privy-io/react-auth";
-import { ToastContainer, toast, Bounce } from "react-toastify";
+import { toast, Bounce } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Cookies from "js-cookie";
 import { nnsClient } from "@/app/providers";
@@ -956,20 +956,6 @@ const Signals = () => {
 
   return (
     <div className="w-full min-h-screen bg-gray-50 pt-2 lg:pt-0">
-      <ToastContainer
-        position="bottom-right"
-        autoClose={5000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick={true}
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="light"
-        transition={Bounce}
-      />
-
       <div className="px-2 sm:px-4 py-4 sm:py-6">
         {/* Token Stats */}
         {user?.wallet?.address && (
