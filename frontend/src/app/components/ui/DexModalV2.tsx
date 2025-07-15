@@ -34,6 +34,15 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
   const { chainId } = useAccount();
   const { switchChain } = useSwitchChain();
 
+  const mapSymbolForDisplay = (symbol: string): string => {
+    return symbol === "WMON" ? "MON" : symbol;
+  };
+
+  const getTokenImageForDisplay = (symbol: string): string => {
+    const displaySymbol = mapSymbolForDisplay(symbol);
+    return getTokenImage(displaySymbol);
+  };
+
   const inputToken = type === "Buy" ? pairToken : token; 
   const outputToken = type === "Buy" ? token : pairToken;
 
@@ -146,7 +155,7 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
       <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 overflow-hidden">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-xl font-semibold text-gray-900">
-            {type === "Buy" ? "Buy" : "Sell"} {token.symbol}
+            {type === "Buy" ? "Buy" : "Sell"} {mapSymbolForDisplay(token.symbol)}
           </h3>
           <button
             onClick={onClose}
@@ -175,8 +184,8 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
               <div className="flex-shrink-0 mt-1">
                 <div className="w-8 h-8 relative">
                   <Image
-                    src={token.imageUrl || getTokenImage(token.symbol)}
-                    alt={token.symbol}
+                    src={token.imageUrl || getTokenImageForDisplay(token.symbol)}
+                    alt={mapSymbolForDisplay(token.symbol)}
                     width={32}
                     height={32}
                     className="rounded-full"
@@ -185,7 +194,7 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
               </div>
               <div>
                 <div className="text-sm font-medium text-gray-900">
-                  {signalText}
+                  {signalText.replace(/WMON/g, "MON")}
                 </div>
                 <div className="flex items-center mt-1 space-x-2">
                   <span
@@ -215,19 +224,19 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
         {/* Trading Pair Information */}
         <div className="grid grid-cols-2 gap-2 mb-4">
           <div className="bg-gray-50 rounded-lg p-2">
-            <div className="text-xs text-gray-500">{token.symbol} Price</div>
+            <div className="text-xs text-gray-500">{mapSymbolForDisplay(token.symbol)} Price</div>
             <div className="flex items-center">
               <div className="w-4 h-4 mr-1 relative">
                 <Image
-                  src={token.imageUrl || getTokenImage(token.symbol)}
-                  alt={token.symbol}
+                  src={token.imageUrl || getTokenImageForDisplay(token.symbol)}
+                  alt={mapSymbolForDisplay(token.symbol)}
                   width={16}
                   height={16}
                   className="rounded-full"
                 />
               </div>
               <div className="text-sm font-medium">
-                {amount.toFixed(6)} {pairToken.symbol}
+                {amount.toFixed(6)} {mapSymbolForDisplay(pairToken.symbol)}
               </div>
             </div>
           </div>
@@ -235,7 +244,7 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
             <div className="text-xs text-gray-500">Trading Pair</div>
             <div className="flex items-center">
               <div className="text-sm font-medium">
-                {token.symbol}/{pairToken.symbol}
+                {mapSymbolForDisplay(token.symbol)}/{mapSymbolForDisplay(pairToken.symbol)}
               </div>
             </div>
           </div>
@@ -259,7 +268,7 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
               <div className="flex justify-between items-center mb-2">
                 <span className="text-sm text-gray-500">From</span>
                 <span className="text-sm text-gray-500">
-                  {inputToken.symbol}
+                  {mapSymbolForDisplay(inputToken.symbol)}
                 </span>
               </div>
               <div className="flex items-center space-x-3">
@@ -275,14 +284,14 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
                 <div className="flex items-center space-x-2 bg-white rounded-full px-3 py-2 shadow-sm">
                   <div className="w-6 h-6 relative">
                     <Image
-                      src={inputToken.imageUrl || getTokenImage(inputToken.symbol)}
-                      alt={inputToken.symbol}
+                      src={inputToken.imageUrl || getTokenImageForDisplay(inputToken.symbol)}
+                      alt={mapSymbolForDisplay(inputToken.symbol)}
                       width={24}
                       height={24}
                       className="rounded-full"
                     />
                   </div>
-                  <span className="font-medium">{inputToken.symbol}</span>
+                  <span className="font-medium">{mapSymbolForDisplay(inputToken.symbol)}</span>
                 </div>
               </div>
             </div>
@@ -309,7 +318,7 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
               <div className="flex justify-between items-center mb-2">
                 <span className="text-sm text-gray-500">To</span>
                 <span className="text-sm text-gray-500">
-                  {outputToken.symbol}
+                  {mapSymbolForDisplay(outputToken.symbol)}
                 </span>
               </div>
               <div className="flex items-center space-x-3">
@@ -325,14 +334,14 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
                 <div className="flex items-center space-x-2 bg-white rounded-full px-3 py-2 shadow-sm">
                   <div className="w-6 h-6 relative">
                     <Image
-                      src={outputToken.imageUrl || getTokenImage(outputToken.symbol)}
-                      alt={outputToken.symbol}
+                      src={outputToken.imageUrl || getTokenImageForDisplay(outputToken.symbol)}
+                      alt={mapSymbolForDisplay(outputToken.symbol)}
                       width={24}
                       height={24}
                       className="rounded-full"
                     />
                   </div>
-                  <span className="font-medium">{outputToken.symbol}</span>
+                  <span className="font-medium">{mapSymbolForDisplay(outputToken.symbol)}</span>
                 </div>
               </div>
             </div>
@@ -341,7 +350,7 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
               <div className="flex items-center justify-between text-sm text-gray-500">
                 <span>Rate</span>
                 <span>
-                  1 {token.symbol} = {amount.toFixed(6)} {pairToken.symbol}
+                  1 {mapSymbolForDisplay(token.symbol)} = {amount.toFixed(6)} {mapSymbolForDisplay(pairToken.symbol)}
                 </span>
               </div>
 
