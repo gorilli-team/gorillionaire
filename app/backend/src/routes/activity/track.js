@@ -126,8 +126,6 @@ router.post("/signin", async (req, res) => {
       //update user activity - only update lastSignIn, don't affect streak
       const now = new Date();
       userActivity.lastSignIn = now;
-      console.log("✅ User sign-in updated for:", address);
-      console.log("🔥 Streak remains unchanged:", userActivity.streak);
       await userActivity.save();
       // Invalidate weekly cache since activity was updated
       invalidateWeeklyCache();
@@ -233,23 +231,9 @@ router.post("/trade-points", async (req, res) => {
         const timeDiff = now.getTime() - referredAt.getTime();
         const isWithinFirstWeek = timeDiff <= sevenDaysInMs;
 
-        // console.log("Referral check:", {
-        //   referredAt: referredAt.toISOString(),
-        //   now: now.toISOString(),
-        //   timeDiff: timeDiff,
-        //   sevenDaysInMs: sevenDaysInMs,
-        //   isWithinFirstWeek: isWithinFirstWeek,
-        // });
-
         if (isWithinFirstWeek) {
           points = points * 2; // 2x XP for first week
           is2xXpActive = true;
-          console.log(
-            "2x XP activated! Original points:",
-            Math.ceil(intent.usdValue),
-            "Final points:",
-            points
-          );
         }
       }
     }
@@ -264,12 +248,6 @@ router.post("/trade-points", async (req, res) => {
     });
     const totalPoints = userActivity.points + points;
     userActivity.points += points;
-
-    // 🔥 DAILY TRADE STREAK CALCULATION
-    console.log("🔥 DAILY TRADE STREAK CALCULATION DEBUG:");
-    console.log("📍 Address:", address);
-    console.log("💰 Trade points:", points);
-    console.log("🔥 Current streak before trade:", userActivity.streak);
 
     // Get today's date (start of day)
     const today = new Date();
@@ -301,13 +279,6 @@ router.post("/trade-points", async (req, res) => {
       );
     }).length;
 
-    console.log("📊 Today's trades (before this one):", todayTradesBeforeThis);
-    console.log("📊 Yesterday's trades:", yesterdayTrades);
-    console.log("🔍 STREAK DECISION LOGIC:");
-
-    // Streak logic based on daily trades
-    console.log("🎯 STREAK DECISION:");
-
     if (todayTradesBeforeThis === 0 && yesterdayTrades > 0) {
       // First trade of the day AND had trades yesterday = extend streak
       const oldStreak = userActivity.streak;
@@ -318,12 +289,6 @@ router.post("/trade-points", async (req, res) => {
         points: 10,
         date: new Date(),
       });
-      console.log(
-        `📈 STREAK EXTENDED: ${oldStreak} → ${userActivity.streak} days (+10 bonus points)`
-      );
-      console.log(
-        "   ✅ REASON: First trade of today + traded yesterday = extend streak"
-      );
     } else if (todayTradesBeforeThis === 0 && yesterdayTrades === 0) {
       // First trade of the day BUT no trades yesterday = check if streak should expire
       const lastTradeDate = userActivity.activitiesList

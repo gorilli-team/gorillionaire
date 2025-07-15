@@ -8,10 +8,10 @@ const {
   createAcceptedSignalUserQuests,
 } = require("../../controllers/points");
 
-router.use((req, res, next) => {
-  console.log(`[USER-SIGNAL] Route hit: ${req.method} ${req.originalUrl}`);
-  next();
-});
+// router.use((req, res, next) => {
+//   console.log(`[USER-SIGNAL] Route hit: ${req.method} ${req.originalUrl}`);
+//   next();
+// });
 
 router.get("/", async (req, res) => {
   try {
@@ -155,15 +155,11 @@ router.post("/user-signal", async (req, res) => {
   const { userAddress, signalId, choice } = req.body;
   const privyToken = req.headers.authorization.replace("Bearer ", "");
 
-  console.log("[USER-SIGNAL] Incoming POST /user-signal");
-  console.log("[USER-SIGNAL] Body:", req.body);
-
   if (!userAddress || !signalId || !choice) {
     const missing = [];
     if (!userAddress) missing.push("userAddress");
     if (!signalId) missing.push("signalId");
     if (!choice) missing.push("choice");
-    console.log("[USER-SIGNAL] Missing fields:", missing);
     return res
       .status(400)
       .json({ error: `Missing required fields: ${missing.join(", ")}` });
@@ -175,7 +171,6 @@ router.post("/user-signal", async (req, res) => {
   });
 
   if (!userAuth) {
-    console.log("[USER-SIGNAL] User not found for address:", userAddress);
     return res.status(400).json({ error: "User not found" });
   }
 
@@ -184,11 +179,7 @@ router.post("/user-signal", async (req, res) => {
       userAddress,
       signalId,
     });
-    console.log("[USER-SIGNAL] Existing userSignal:", userSignal);
     if (userSignal) {
-      console.log(
-        "[USER-SIGNAL] User signal already exists for this user/signal"
-      );
       return res.status(400).json({ error: "User signal already exists" });
     }
 
@@ -197,7 +188,6 @@ router.post("/user-signal", async (req, res) => {
       signalId,
       choice,
     });
-    console.log("[USER-SIGNAL] Created new userSignal:", newUserSignal);
 
     if (choice === "No") {
       await awardRefuseSignalPoints(userAddress, signalId);
@@ -207,7 +197,6 @@ router.post("/user-signal", async (req, res) => {
 
     res.json(newUserSignal);
   } catch (err) {
-    console.error("[USER-SIGNAL] Error in POST /user-signal:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });

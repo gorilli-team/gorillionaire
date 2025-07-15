@@ -109,9 +109,9 @@ const DailyQuestHeader = () => {
           ) {
             // Quest was just completed (whether claimed or not) - play sound
             console.log("🎉 Quest completed:", quest.questName);
-            if (audioRef.current) {
-              audioRef.current.play().catch(console.error);
-            }
+            // if (audioRef.current) {
+            //   audioRef.current.play().catch(console.error);
+            // }
             setCompletedQuests((prev) => new Set(prev).add(quest._id));
           }
         });
@@ -147,8 +147,10 @@ const DailyQuestHeader = () => {
 
       const data = await response.json();
 
+      console.log("🎉 Quest completed:", data);
+
       await fetchDailyQuests();
-      setSuccessMessage(`Quest completed! +${data.questRewardAmount} points`);
+      setSuccessMessage(`Quest completed!`);
     } catch (error) {
       console.error("Error claiming quest:", error);
     } finally {
@@ -156,19 +158,18 @@ const DailyQuestHeader = () => {
     }
   };
 
-  useEffect(() => {
-    if (authenticated && user?.wallet?.address) {
-      fetchDailyQuests();
-    }
-  }, [authenticated, user?.wallet?.address, fetchDailyQuests]);
-
-  // Auto-refresh quests every 30 seconds
+  // Initial fetch and auto-refresh combined into one effect
   useEffect(() => {
     if (!authenticated || !user?.wallet?.address) return;
 
+    // Initial fetch
+    fetchDailyQuests();
+
+    // Set up auto-refresh interval
     const interval = setInterval(fetchDailyQuests, 30000);
+
     return () => clearInterval(interval);
-  }, [authenticated, user?.wallet?.address, fetchDailyQuests]);
+  }, [authenticated, user?.wallet?.address]);
 
   // Listen for trade completion events to refresh quests
   useEffect(() => {
@@ -204,7 +205,7 @@ const DailyQuestHeader = () => {
         handleTradeCompleted as EventListener
       );
     };
-  }, [user?.wallet?.address, fetchDailyQuests]);
+  }, [user?.wallet?.address]);
 
   // Click outside to close panel
   useEffect(() => {
