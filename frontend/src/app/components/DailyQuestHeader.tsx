@@ -109,9 +109,6 @@ const DailyQuestHeader = () => {
           ) {
             // Quest was just completed (whether claimed or not) - play sound
             console.log("🎉 Quest completed:", quest.questName);
-            if (audioRef.current) {
-              audioRef.current.play().catch(console.error);
-            }
             setCompletedQuests((prev) => new Set(prev).add(quest._id));
           }
         });

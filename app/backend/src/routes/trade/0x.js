@@ -82,6 +82,14 @@ async function buildPriceRequest(
       monPrice,
       newAmount: amount,
     });
+  } else {
+    // For sell orders, amount is already the token amount, no conversion needed
+    console.log("📉 Sell order - no conversion needed:", {
+      tokenAmount: amount,
+      tokenPrice,
+      usdValue,
+      note: "Amount is already token amount for sellAmount",
+    });
   }
 
   const ZEROX_FEE_RECIPIENT = process.env.ZEROX_FEE_RECIPIENT;
@@ -185,6 +193,14 @@ router.get("/0x-quote", async (req, res) => {
     return res.status(500).json({ error: '"type" value not valid' });
 
   try {
+    console.log("🔍 Backend received quote request:", {
+      token,
+      amount,
+      type,
+      userAddress,
+      note: type === "sell" ? "Amount should be token amount" : "Amount should be token amount (will be converted to MON)"
+    });
+    
     console.log(
       `Getting quote for ${type} ${amount} ${token} for user ${userAddress}`
     );

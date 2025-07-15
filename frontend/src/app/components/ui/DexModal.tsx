@@ -144,9 +144,22 @@ const DexModal: React.FC<DexModalProps> = ({
   // Simple function to get quote from 0x API
   const getQuote = async () => {
     try {
+      const amountToSend = type === "Buy" ? outputAmount : inputAmount;
+
+      console.log("🔍 getQuote - Amount calculation:", {
+        type,
+        inputAmount,
+        outputAmount,
+        amountToSend,
+        note:
+          type === "Buy"
+            ? "Sending token amount (outputAmount)"
+            : "Sending token amount (inputAmount)",
+      });
+
       const params = new URLSearchParams({
         token: token.symbol,
-        amount: type === "Buy" ? outputAmount : inputAmount,
+        amount: amountToSend,
         type: type.toLowerCase(),
         userAddress: userAddress,
       });
@@ -234,6 +247,17 @@ const DexModal: React.FC<DexModalProps> = ({
         const usdValue = parseFloat(value) * monPrice;
         const tokenAmount = usdValue / token.price;
         const newInputAmount = tokenAmount.toFixed(6); // Apply slippage
+
+        console.log("🔍 SELL - User changed output (MON amount):", {
+          userInput: value,
+          monPrice,
+          tokenPrice: token.price,
+          usdValue,
+          calculatedTokenAmount: tokenAmount,
+          newInputAmount,
+          currentBalance: inputToken.totalHolding,
+        });
+
         // Check if calculated token amount exceeds balance
         if (parseFloat(newInputAmount) > inputToken.totalHolding) {
           const maxMonAmount =
@@ -550,9 +574,7 @@ const DexModal: React.FC<DexModalProps> = ({
                     : "bg-violet-600 hover:bg-violet-700"
                 }`}
             >
-              {isLoading
-                ? "Getting Quote..."
-                : `Get Quote (${type === "Buy" ? "Buy" : "Sell"})`}
+              {isLoading ? "Preparing Trade..." : `Trade`}
             </button>
           </>
         )}
