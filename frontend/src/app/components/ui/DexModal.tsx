@@ -86,8 +86,12 @@ const DexModal: React.FC<DexModalProps> = ({
       } else {
         // For sell: calculate amount based on percentage of total holdings
         const sellAmount = (token.totalHolding * sellPercentage) / 100;
+        const usdValue = sellAmount * token.price;
+        const monReceived = usdValue / monPrice;
+        const outputAmount = monReceived.toFixed(6);
         setInputAmount(sellAmount.toString());
-        calculateOutputForSell(sellAmount);
+        setOutputAmount(outputAmount);
+        onAmountChange?.(sellAmount.toString(), outputAmount);
       }
     }
   }, [isOpen, type, token, amount, sellPercentage, monBalance, monPrice]); //eslint-disable-line
@@ -105,19 +109,6 @@ const DexModal: React.FC<DexModalProps> = ({
     }
   };
 
-  const calculateOutputForSell = async (sourceAmount: number) => {
-    setIsLoading(true);
-    try {
-      const usdValue = sourceAmount * token.price;
-      const monReceived = usdValue / monPrice;
-      setOutputAmount(monReceived.toFixed(6));
-      setIsLoading(false);
-    } catch (error) {
-      console.error("Error calculating output amount:", error);
-      setIsLoading(false);
-    }
-  };
-
   const handleConfirm = async () => {
     setIsLoading(true);
     try {
@@ -125,7 +116,6 @@ const DexModal: React.FC<DexModalProps> = ({
       const quoteData = await getQuote();
 
       if (quoteData) {
-        console.log("Quote received:", quoteData);
         // Pass the quote data to parent component
         await onConfirm(JSON.stringify(quoteData));
       } else {
@@ -144,18 +134,10 @@ const DexModal: React.FC<DexModalProps> = ({
   // Simple function to get quote from 0x API
   const getQuote = async () => {
     try {
+      // For both buy and sell, send the token amount to the backend
+      // - For buy: send the token amount (outputAmount)
+      // - For sell: send the token amount (inputAmount)
       const amountToSend = type === "Buy" ? outputAmount : inputAmount;
-
-      console.log("🔍 getQuote - Amount calculation:", {
-        type,
-        inputAmount,
-        outputAmount,
-        amountToSend,
-        note:
-          type === "Buy"
-            ? "Sending token amount (outputAmount)"
-            : "Sending token amount (inputAmount)",
-      });
 
       const params = new URLSearchParams({
         token: token.symbol,
@@ -164,24 +146,18 @@ const DexModal: React.FC<DexModalProps> = ({
         userAddress: userAddress,
       });
 
-      console.log("Fetching quote with params:", params.toString());
-
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/trade/0x-quote?${params.toString()}`
       );
 
-      console.log("Response status:", response.status);
-
       if (!response.ok) {
         const errorText = await response.text();
-        console.error("Backend error:", errorText);
         throw new Error(
           `HTTP error! status: ${response.status}, message: ${errorText}`
         );
       }
 
       const data = await response.json();
-      console.log("Quote data received:", data);
       return data;
     } catch (error) {
       console.error("Error fetching quote:", error);
@@ -196,14 +172,24 @@ const DexModal: React.FC<DexModalProps> = ({
     if (/^\d*\.?\d*$/.test(value)) {
       // For sell orders, check if input amount exceeds total holdings
       if (type === "Sell" && parseFloat(value) > inputToken.totalHolding) {
-        setInputAmount(inputToken.totalHolding.toString());
-        calculateOutputForSell(inputToken.totalHolding);
+        const maxTokenAmount = inputToken.totalHolding;
+        const usdValue = maxTokenAmount * token.price;
+        const monReceived = usdValue / monPrice;
+        const outputAmount = monReceived.toFixed(6);
+        setInputAmount(maxTokenAmount.toString());
+        setOutputAmount(outputAmount);
+        onAmountChange?.(maxTokenAmount.toString(), outputAmount);
         return;
       }
       setInputAmount(value);
       if (value && type === "Sell") {
         // For sell: user changes input (token amount), calculate MON output
-        calculateOutputForSell(parseFloat(value));
+        const tokenAmount = parseFloat(value);
+        const usdValue = tokenAmount * token.price;
+        const monReceived = usdValue / monPrice;
+        const newOutputAmount = monReceived.toFixed(6);
+        setOutputAmount(newOutputAmount);
+        onAmountChange?.(value, newOutputAmount);
       } else if (value && type === "Buy") {
         // For buy: user changes input (MON amount), calculate token output
         const usdValue = parseFloat(value) * monPrice;
@@ -244,22 +230,13 @@ const DexModal: React.FC<DexModalProps> = ({
         onAmountChange?.(newInputAmount, value);
       } else if (value && type === "Sell") {
         // For sell: user changes output (MON amount), calculate token input
-        const usdValue = parseFloat(value) * monPrice;
-        const tokenAmount = usdValue / token.price;
-        const newInputAmount = tokenAmount.toFixed(6); // Apply slippage
-
-        console.log("🔍 SELL - User changed output (MON amount):", {
-          userInput: value,
-          monPrice,
-          tokenPrice: token.price,
-          usdValue,
-          calculatedTokenAmount: tokenAmount,
-          newInputAmount,
-          currentBalance: inputToken.totalHolding,
-        });
+        // Use the same calculation method as calculateOutputForSell but in reverse
+        const monAmount = parseFloat(value);
+        const tokenAmount = (monAmount * monPrice) / token.price;
+        const newInputAmount = tokenAmount.toFixed(6);
 
         // Check if calculated token amount exceeds balance
-        if (parseFloat(newInputAmount) > inputToken.totalHolding) {
+        if (tokenAmount > inputToken.totalHolding) {
           const maxMonAmount =
             (inputToken.totalHolding * token.price) / monPrice;
           const adjustedOutputAmount = (maxMonAmount * 0.995).toFixed(6);
