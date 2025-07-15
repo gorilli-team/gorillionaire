@@ -11,6 +11,14 @@ import { ENDPOINTS } from "@/app/const/Endpoints";
 import { getTimeAgo } from "@/app/utils/time";
 import { useSSE } from "@/app/hooks/useSSE";
 import { Pagination } from "flowbite-react";
+import { usePrivy } from "@privy-io/react-auth";
+import { useAccount, useSwitchChain } from "wagmi";
+import { Token } from "@/app/types";
+import { getTokenImage } from "@/app/utils/tokens";
+import { MONAD_CHAIN_ID } from "@/app/utils/constants";
+import { toast } from "react-toastify";
+import Cookies from 'js-cookie';
+import DexModalV2 from "@/app/components/ui/DexModalV2";
 
 type Signal = {
   id: string;
@@ -36,6 +44,25 @@ type ChartData = {
   price: number;
 };
 
+type PriceData = {
+  timestamp: string;
+  close: number;
+};
+
+type TokenData = {
+  token_id: string;
+  symbol: string;
+  name: string;
+  decimal: string;
+};
+
+const parseSignalText = (signalText: string) => {
+  const symbol = signalText.match(/CHOG|DAK|YAKI|MON/)?.[0];
+  const amountMatch = signalText.match(/\d+\.\d+/)?.[0];
+  const amount = amountMatch ? Number(amountMatch) : 0;
+  return { symbol, amount };
+};
+
 const chart = (data: ChartData[]) => {
   if (!data || data.length === 0) {
     return (
@@ -45,18 +72,15 @@ const chart = (data: ChartData[]) => {
     );
   }
 
-  // Find min and max values for scaling
   const prices = data.map((d) => d.price);
   const minPrice = Math.min(...prices);
   const maxPrice = Math.max(...prices);
   const priceRange = maxPrice - minPrice;
 
-  // SVG dimensions
   const width = 100;
   const height = 40;
   const padding = 4;
 
-  // Calculate points for the line
   const points = data
     .map((d, i) => {
       const x = (i / (data.length - 1)) * (width - padding * 2) + padding;
@@ -68,14 +92,12 @@ const chart = (data: ChartData[]) => {
     })
     .join(" ");
 
-  // Create area path
   const firstPoint = points.split(" ")[0];
   const lastPoint = points.split(" ")[points.split(" ").length - 1];
   const areaPath = `M ${firstPoint} L ${points} L ${lastPoint.split(",")[0]},${
     height - padding
   } L ${firstPoint.split(",")[0]},${height - padding} Z`;
 
-  // Determine colors based on price trend
   const firstPrice = data[0].price;
   const lastPrice = data[data.length - 1].price;
   const isPositive = lastPrice >= firstPrice;
@@ -106,11 +128,246 @@ export default function SignalsPage() {
   const [selectedPage, setSelectedPage] = useState("V2");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [signals, setSignals] = useState<Map<string, Signal>>(new Map());
+  const [tokens, setTokens] = useState<Map<string, Token>>(new Map());
   const [events, setEvents] = useState<Event[]>([]);
   const [latestEventId, setLatestEventId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 15;
   const [charts, setCharts] = useState<Map<string, ChartData[]>>(new Map());
+  const { user } = usePrivy();
+  const { chainId } = useAccount();
+  const { switchChain } = useSwitchChain();
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentDexToken, setCurrentDexToken] = useState<Token | null>(null);
+  const [currentDexPairToken, setCurrentDexPairToken] = useState<Token | null>(null);
+  const [currentDexAmount, setCurrentDexAmount] = useState(0);
+  const [currentDexType, setCurrentDexType] = useState<"Buy" | "Sell">("Buy");
+  const [currentSignalId, setCurrentSignalId] = useState<string>("");
+  const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
+
+  const getTokensFromSymbol = useCallback((symbol: string): Token[] => {
+    const symbols = symbol.split("/");
+    const validTokens: Token[] = [];
+    
+    const hardcodedTokens: Record<string, Partial<Token>> = {
+      "MON": {
+        symbol: "MON",
+        name: "Monad",
+        decimals: 18,
+        address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
+        chainId: MONAD_CHAIN_ID,
+      },
+      "DAK": {
+        symbol: "DAK",
+        name: "Molandak",
+        decimals: 18,
+        address: "0x0F0BDEbF0F83cD1EE3974779Bcb7315f9808c714",
+        chainId: MONAD_CHAIN_ID,
+      },
+      "YAKI": {
+        symbol: "YAKI",
+        name: "Moyaki",
+        decimals: 18,
+        address: "0xfe140e1dCe99Be9F4F15d657CD9b7BF622270C50",
+        chainId: MONAD_CHAIN_ID,
+      },
+      "CHOG": {
+        symbol: "CHOG",
+        name: "Chog",
+        decimals: 18,
+        address: "0xE0590015A873bF326bd645c3E1266d4db41C4E6B",
+        chainId: MONAD_CHAIN_ID,
+      },
+      "WMON": {
+        symbol: "WMON",
+        name: "Wrapped Monad",
+        decimals: 18,
+        address: "0x0000000000000000000000000000000000000000", // TODO
+        chainId: MONAD_CHAIN_ID,
+      },
+      "JAI": {
+        symbol: "JAI",
+        name: "Jai Token",
+        decimals: 18,
+        address: "0x0000000000000000000000000000000000000000", // TODO
+        chainId: MONAD_CHAIN_ID,
+      },
+      "WETH": {
+        symbol: "WETH",
+        name: "Wrapped Ethereum",
+        decimals: 18,
+        address: "0x0000000000000000000000000000000000000000", // TODO
+        chainId: MONAD_CHAIN_ID,
+      },
+      "USDC": {
+        symbol: "USDC",
+        name: "USD Coin",
+        decimals: 6,
+        address: "0x0000000000000000000000000000000000000000", // TODO
+        chainId: MONAD_CHAIN_ID,
+      },
+    };
+    
+    symbols.forEach((sym) => {
+      const token = tokens.get(sym);
+      if (token) {
+        validTokens.push(token);
+      } else {
+        console.warn(`Token not found in API: ${sym}, using hardcoded`);
+        const hardcoded = hardcodedTokens[sym.toUpperCase()];
+        
+        if (hardcoded) {
+          validTokens.push({
+            symbol: hardcoded.symbol!,
+            name: hardcoded.name!,
+            decimals: hardcoded.decimals!,
+            address: hardcoded.address!,
+            chainId: hardcoded.chainId!,
+            totalHolding: 0,
+            price: 0,
+            imageUrl: getTokenImage(sym),
+          });
+        } else {
+          validTokens.push({
+            symbol: sym,
+            name: sym,
+            decimals: 18,
+            address: "0x0000000000000000000000000000000000000000" as `0x${string}`,
+            chainId: MONAD_CHAIN_ID,
+            totalHolding: 0,
+            price: 0,
+            imageUrl: getTokenImage(sym),
+          });
+        }
+      }
+    });
+    
+    return validTokens;
+  }, [tokens]);
+
+  const onYes = useCallback(
+    async (tokenToTrade: Token, pairToken: Token, amount: number, type: "Buy" | "Sell") => {
+
+      if (!user?.wallet?.address) {
+        toast.error("Please connect your wallet");
+        return;
+      }
+
+      if (chainId !== MONAD_CHAIN_ID) {
+        toast.error("Please switch to Monad network to continue");
+        return;
+      }
+
+      setCurrentDexToken(tokenToTrade);
+      setCurrentDexPairToken(pairToken);
+      setCurrentDexAmount(amount);
+      setCurrentDexType(type);
+      setIsModalOpen(true);
+      
+    },
+    [user?.wallet?.address, chainId]
+  );
+
+  const onNo = useCallback(async (signalId: string) => {
+
+    if (!user?.wallet?.address) {
+      toast.error("Please connect your wallet");
+      return;
+    }
+
+    const privyToken = Cookies.get("privy-token");
+    if (!privyToken) {
+      toast.error("Authentication required");
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/signals/generated-signals/user-signal`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${privyToken}`,
+          },
+          body: JSON.stringify({
+            userAddress: user.wallet.address,
+            signalId: signalId,
+            choice: "No",
+          }),
+        }
+      );
+
+      console.log("Response status:", response.status);
+
+      if (response.status === 400) {
+        toast.error("You have already 5 No signals in the last 24 hours");
+      } else if (response.ok) {
+        toast.success("Signal refused successfully");
+        setEvents(prev => prev.map(event => 
+          event.signal_id === signalId 
+            ? { ...event, userChoice: "No" } 
+            : event
+        ));
+      } else {
+        toast.error("Failed to refuse signal");
+      }
+    } catch (error) {
+      console.error("Error refusing signal:", error);
+      toast.error("Network error occurred");
+    }
+  }, [user?.wallet?.address]);
+
+  const handleOptionSelect = useCallback(
+    async (event: Event, option: "Yes" | "No") => {
+
+      setSelectedOptions({
+        ...selectedOptions,
+        [event.signal_id]: option,
+      });
+
+      if (option === "Yes") {
+        const tokensFromSymbol = getTokensFromSymbol(event.symbol);
+        const token = tokensFromSymbol[0];
+
+        if (!token) {
+          toast.error("Token not found");
+          return;
+        }
+
+        setCurrentSignalId(event.signal_id);
+
+        const pairToken = tokensFromSymbol[1] || token;
+        await onYes(token, pairToken, event.price, event.action as "Buy" | "Sell");
+      } else {
+        await onNo(event.signal_id);
+      }
+    },
+    [selectedOptions, getTokensFromSymbol, onYes, onNo]
+  );
+
+  const executeTrade = useCallback(
+    async (inputAmount: string) => {
+
+      if (!currentDexToken || !user?.wallet?.address) {
+        toast.error("Missing token or wallet address");
+        return;
+      }
+
+      toast.success(`Trade ${currentDexType} ${inputAmount} ${currentDexToken.symbol} executed!`);
+      setIsModalOpen(false);
+
+      if (currentSignalId) {
+        setEvents(prev => prev.map(event => 
+          event.signal_id === currentSignalId 
+            ? { ...event, userChoice: "Yes" } 
+            : event
+        ));
+      }
+    },
+    [currentDexToken, currentDexType, user?.wallet?.address, currentSignalId]
+  );
 
   const handleEvent = useCallback(
     (data: Event) => {
@@ -125,8 +382,8 @@ export default function SignalsPage() {
             (a, b) =>
               new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
           )
-      ); // Keep last 50 signals
-      setTimeout(() => setLatestEventId(null), 3000); // Remove highlight after 3s
+      );
+      setTimeout(() => setLatestEventId(null), 3000);
     },
     [latestEventId]
   );
@@ -149,6 +406,36 @@ export default function SignalsPage() {
       setSignals(signals);
     }
   };
+
+  const fetchTokens = useCallback(async () => {
+    const response = await apiClient.get<TokenData[]>({
+      url: ENDPOINTS.TOKENS_INFO + "?type=token",
+      auth: true,
+    });
+    if (response && response.status === 200) {
+      const tokens = response.data;
+      console.log("tokens", tokens);
+      setTokens((prev) => { 
+        const newTokens = new Map(prev);
+        tokens.forEach((token: TokenData) => {
+          const token_ids = token.token_id.split(":");
+          const chainId = parseInt(token_ids[0]);
+          const tokenAddress = token_ids[1];
+          newTokens.set(token.symbol, {
+            symbol: token.symbol,
+            name: token.name,
+            decimals: parseInt(token.decimal),
+            address: tokenAddress as `0x${string}`,
+            chainId: chainId,
+            totalHolding: 0,
+            price: 0,
+            imageUrl: getTokenImage(token.symbol),
+          });
+        });
+        return newTokens;
+      });
+    }
+  }, []);
 
   const fetchCharts = useCallback(async (events: Event[]) => {
     for (const event of events) {
@@ -241,7 +528,8 @@ export default function SignalsPage() {
 
   useEffect(() => {
     fetchSignals();
-  }, []);
+    fetchTokens();
+  }, [fetchTokens]);
 
   useEffect(() => {
     fetchEvents();
@@ -549,19 +837,46 @@ export default function SignalsPage() {
                                   {getTimeAgo(event.timestamp)}
                                 </td>
                                 <td className="px-4 py-3 text-sm flex justify-end items-center">
-                                  <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden shadow-sm">
-                                    <button
-                                      className="px-3 py-1.5 text-xs flex items-center justify-center w-16 bg-white text-gray-500 transition-all duration-200 hover:bg-gray-50 border-r border-gray-200"
-                                      onClick={() => {
-                                        // TODO: Implement refuse
-                                      }}
+                                  {selectedOptions[event.signal_id] ? (
+                                    <span
+                                      className={`px-3 py-1.5 text-xs rounded-lg ${
+                                        selectedOptions[event.signal_id] === "Yes"
+                                          ? "bg-green-100 text-green-700"
+                                          : "bg-red-100 text-red-700"
+                                      }`}
                                     >
-                                      Refuse
+                                      {selectedOptions[event.signal_id] === "Yes" 
+                                        ? "Accepted" 
+                                        : "Refused"}
+                                    </span>
+                                  ) : chainId !== MONAD_CHAIN_ID ? (
+                                    <button
+                                      className="px-3 py-1.5 text-xs bg-violet-600 text-white rounded-lg hover:bg-violet-700"
+                                      onClick={() => switchChain({ chainId: MONAD_CHAIN_ID })}
+                                    >
+                                      Switch to Monad
                                     </button>
-                                    <button className="px-3 py-1.5 text-xs flex items-center justify-center w-16 bg-blue-50 text-blue-700 transition-all duration-200 hover:bg-blue-100">
-                                      Accept
-                                    </button>
-                                  </div>
+                                  ) : (
+                                    <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden shadow-sm">
+                                      <button
+                                        className="px-3 py-1.5 text-xs flex items-center justify-center w-16 bg-white text-gray-500 transition-all duration-200 hover:bg-gray-50 border-r border-gray-200"
+                                        onClick={async () => {
+                                          await handleOptionSelect(event, "No");
+                                        }}
+                                      >
+                                        Refuse
+                                      </button>
+                                      <button 
+                                        className="px-3 py-1.5 text-xs flex items-center justify-center w-16 bg-blue-50 text-blue-700 transition-all duration-200 hover:bg-blue-100"
+                                        onClick={async () => {
+                                          console.log("=== ACCEPT CLICKED ===");
+                                          await handleOptionSelect(event, "Yes");
+                                        }}
+                                      >
+                                        Accept
+                                      </button>
+                                    </div>
+                                  )}
                                 </td>
                               </tr>
                             ))}
@@ -685,19 +1000,45 @@ export default function SignalsPage() {
                               </div>
 
                               <div className="flex justify-end">
-                                <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden shadow-sm">
-                                  <button
-                                    className="px-4 py-2 text-sm flex items-center justify-center w-20 bg-white text-gray-500 transition-all duration-200 hover:bg-gray-50 border-r border-gray-200"
-                                    onClick={() => {
-                                      // TODO: Implement refuse
-                                    }}
+                                {selectedOptions[event.signal_id] ? (
+                                  <span
+                                    className={`px-4 py-2 text-sm rounded-lg ${
+                                      selectedOptions[event.signal_id] === "Yes"
+                                        ? "bg-green-100 text-green-700"
+                                        : "bg-red-100 text-red-700"
+                                    }`}
                                   >
-                                    Refuse
+                                    {selectedOptions[event.signal_id] === "Yes" 
+                                      ? "Accepted" 
+                                      : "Refused"}
+                                  </span>
+                                ) : chainId !== MONAD_CHAIN_ID ? (
+                                  <button
+                                    className="px-4 py-2 text-sm bg-violet-600 text-white rounded-lg hover:bg-violet-700"
+                                    onClick={() => switchChain({ chainId: MONAD_CHAIN_ID })}
+                                  >
+                                    Switch to Monad
                                   </button>
-                                  <button className="px-4 py-2 text-sm flex items-center justify-center w-20 bg-blue-50 text-blue-700 transition-all duration-200 hover:bg-blue-100">
-                                    Accept
-                                  </button>
-                                </div>
+                                ) : (
+                                  <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden shadow-sm">
+                                    <button
+                                      className="px-4 py-2 text-sm flex items-center justify-center w-20 bg-white text-gray-500 transition-all duration-200 hover:bg-gray-50 border-r border-gray-200"
+                                      onClick={async () => {
+                                        await handleOptionSelect(event, "No");
+                                      }}
+                                    >
+                                      Refuse
+                                    </button>
+                                    <button 
+                                      className="px-4 py-2 text-sm flex items-center justify-center w-20 bg-blue-50 text-blue-700 transition-all duration-200 hover:bg-blue-100"
+                                      onClick={async () => {
+                                        await handleOptionSelect(event, "Yes");
+                                      }}
+                                    >
+                                      Accept
+                                    </button>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           ))}
@@ -731,6 +1072,23 @@ export default function SignalsPage() {
           </div>
         </div>
       </div>
+
+      {currentDexToken && currentDexPairToken && (
+        <DexModalV2
+          isOpen={isModalOpen}
+          onClose={() => {
+            console.log("Closing modal");
+            setIsModalOpen(false);
+          }}
+          onConfirm={executeTrade}
+          token={currentDexToken}
+          pairToken={currentDexPairToken}
+          amount={currentDexAmount}
+          type={currentDexType}
+          signalText={`${currentDexType} ${currentDexToken.symbol} at ${currentDexAmount}`}
+          confidenceScore="8.5"
+        />
+      )}
     </ProtectPage>
   );
 }
