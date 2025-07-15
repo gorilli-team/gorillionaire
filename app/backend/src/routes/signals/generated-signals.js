@@ -144,7 +144,7 @@ router.get("/:id", async (req, res) => {
 });
 
 router.post("/user-signal", async (req, res) => {
-  const { userAddress, signalId, choice } = req.body;
+  let { userAddress, signalId, choice } = req.body;
   const privyToken = req.headers.authorization.replace("Bearer ", "");
 
   if (!userAddress || !signalId || !choice) {
@@ -155,6 +155,18 @@ router.post("/user-signal", async (req, res) => {
     return res
       .status(400)
       .json({ error: `Missing required fields: ${missing.join(", ")}` });
+  }
+
+  const mongoose = require('mongoose');
+  const originalSignalId = signalId;
+  
+  if (signalId && typeof signalId === 'string' && signalId.length === 32) {
+    signalId = signalId.substring(0, 24);
+  }
+  
+  if (!mongoose.Types.ObjectId.isValid(signalId)) {
+    console.error(`Invalid signalId after conversion: ${signalId}`);
+    return res.status(400).json({ error: "Invalid signalId format" });
   }
 
   const userAuth = await UserAuth.findOne({
@@ -185,23 +197,37 @@ router.post("/user-signal", async (req, res) => {
     userAddress,
     signalId,
   });
+  
   if (userSignal) {
     return res.status(400).json({ error: "User signal already exists" });
   }
 
-  const newUserSignal = await UserSignal.create({
-    userAddress,
-    signalId,
-    choice,
-  });
+  try {
+    const newUserSignal = await UserSignal.create({
+      userAddress,
+      signalId,
+      choice,
+    });
 
-  if (choice === "No") {
-    await awardRefuseSignalPoints(userAddress, signalId);
-  } else if (choice === "Yes") {
-    await createAcceptedSignalUserQuests(userAddress, signalId);
+    if (choice === "No") {
+      await awardRefuseSignalPoints(userAddress, signalId);
+    } else if (choice === "Yes") {
+      await createAcceptedSignalUserQuests(userAddress, signalId);
+    }
+
+    res.json(newUserSignal);
+  } catch (error) {
+    console.error("Error creating user signal:", error);
+    
+    if (error.name === 'CastError' || error.message.includes('Cast to ObjectId failed')) {
+      return res.status(400).json({ 
+        error: "Invalid signalId format", 
+        details: `Original: ${originalSignalId}, Converted: ${signalId}` 
+      });
+    }
+    
+    res.status(500).json({ error: "Internal server error" });
   }
-
-  res.json(newUserSignal);
 });
 
 module.exports = router;
