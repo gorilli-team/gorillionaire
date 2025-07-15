@@ -321,25 +321,28 @@ export default function SignalsPage() {
 
   const handleOptionSelect = useCallback(
     async (event: Event, option: "Yes" | "No") => {
-
+  
       setSelectedOptions({
         ...selectedOptions,
         [event.signal_id]: option,
       });
-
+  
       if (option === "Yes") {
         const tokensFromSymbol = getTokensFromSymbol(event.symbol);
         const token = tokensFromSymbol[0];
-
+  
         if (!token) {
           toast.error("Token not found");
           return;
         }
-
+  
         setCurrentSignalId(event.signal_id);
-
+  
         const pairToken = tokensFromSymbol[1] || token;
-        await onYes(token, pairToken, event.price, event.action as "Buy" | "Sell");
+
+        const actionType: "Buy" | "Sell" = event.action === "BUY" ? "Buy" : "Sell";
+        
+        await onYes(token, pairToken, event.price, actionType);
       } else {
         await onNo(event.signal_id);
       }

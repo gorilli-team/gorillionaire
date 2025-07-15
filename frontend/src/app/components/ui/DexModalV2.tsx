@@ -78,10 +78,8 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
     try {
       const amountToUse = type === "Buy" ? outputAmount : inputAmount;
       await onConfirm(amountToUse);
-      onClose();
     } catch (error) {
       console.error("Error confirming trade:", error);
-    } finally {
       setIsLoading(false);
     }
   };
@@ -360,7 +358,9 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
                 ${
                   isLoading || !inputAmount || parseFloat(inputAmount) <= 0
                     ? "bg-gray-400 cursor-not-allowed"
-                    : "bg-violet-600 hover:bg-violet-700"
+                    : type === "Buy"
+                    ? "bg-green-600 hover:bg-green-700"
+                    : "bg-red-600 hover:bg-red-700"
                 }`}
             >
               {isLoading
