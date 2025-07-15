@@ -149,7 +149,6 @@ contract SmartWallet {
     function buyTokens(address router, address tokenOut, uint256 amountOut, uint256 amountInMax) external onlyOperator onlyValidSwapParameters(router, tokenOut, amountOut) {
         uint256 currentAllowance = IERC20(i_usdc).allowance(address(this), router);
         if(currentAllowance < amountInMax) {
-            IERC20(i_usdc).approve(router, 0);
             IERC20(i_usdc).approve(router, type(uint256).max);
         }
 
