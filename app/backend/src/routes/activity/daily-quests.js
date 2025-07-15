@@ -60,35 +60,52 @@ router.get("/:address", async (req, res) => {
 
     const today = getTodayDate();
 
-    // Get or create daily quests for today
+    // Normalize address to lowercase for consistent queries
+    const normalizedAddress = address.toLowerCase();
+
+    // Get existing daily quests for today with proper duplicate prevention
     let userDailyQuests = await UserDailyQuest.find({
-      address: { $regex: new RegExp(`^${address}$`, "i") },
+      address: normalizedAddress,
       questDate: today,
     }).populate("questId");
 
-    // If no daily quests exist for today, create them
+    // If no daily quests exist for today, create them with duplicate prevention
     if (userDailyQuests.length === 0) {
       const dailyQuests = await DailyQuest.find({ isActive: true }).sort({
         questOrder: 1,
       });
 
+      // Use findOneAndUpdate with upsert to prevent duplicates
       userDailyQuests = await Promise.all(
         dailyQuests.map(async (quest, index) => {
-          const userDailyQuest = new UserDailyQuest({
-            questId: quest._id,
-            address: address.toLowerCase(),
-            questDate: today,
-            questOrder: index + 1,
-            currentProgress: 0,
-            isCompleted: false,
-          });
-          return await userDailyQuest.save();
+          const userDailyQuest = await UserDailyQuest.findOneAndUpdate(
+            {
+              questId: quest._id,
+              address: normalizedAddress,
+              questDate: today,
+            },
+            {
+              questId: quest._id,
+              address: normalizedAddress,
+              questDate: today,
+              questOrder: index + 1,
+              currentProgress: 0,
+              isCompleted: false,
+              isActive: true,
+            },
+            {
+              upsert: true,
+              new: true,
+              setDefaultsOnInsert: true,
+            }
+          );
+          return userDailyQuest;
         })
       );
 
-      // Populate the quest data
+      // Re-fetch with populated quest data to ensure consistency
       userDailyQuests = await UserDailyQuest.find({
-        address: { $regex: new RegExp(`^${address}$`, "i") },
+        address: normalizedAddress,
         questDate: today,
       }).populate("questId");
     }
@@ -194,10 +211,13 @@ router.post("/claim", async (req, res) => {
 
     const today = getTodayDate();
 
+    // Normalize address to lowercase for consistent queries
+    const normalizedAddress = address.toLowerCase();
+
     // Find the user daily quest
     const userDailyQuest = await UserDailyQuest.findOne({
       questId: questId,
-      address: { $in: [address, address.toLowerCase()] },
+      address: normalizedAddress,
       questDate: today,
     }).populate("questId");
 
@@ -271,9 +291,12 @@ router.post("/reset", async (req, res) => {
 
     const today = getTodayDate();
 
+    // Normalize address to lowercase for consistent queries
+    const normalizedAddress = address.toLowerCase();
+
     // Delete today's daily quests
     await UserDailyQuest.deleteMany({
-      address: { $in: [address, address.toLowerCase()] },
+      address: normalizedAddress,
       questDate: today,
     });
 
@@ -299,9 +322,12 @@ router.get("/:address/completed", async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
+    // Normalize address to lowercase for consistent queries
+    const normalizedAddress = address.toLowerCase();
+
     // Get all completed daily quests for this user
     const completedQuests = await UserDailyQuest.find({
-      address: { $regex: new RegExp(`^${address}$`, "i") },
+      address: normalizedAddress,
       isCompleted: true,
     })
       .populate("questId")
@@ -311,7 +337,7 @@ router.get("/:address/completed", async (req, res) => {
 
     // Get total count of completed quests
     const totalCompleted = await UserDailyQuest.countDocuments({
-      address: { $regex: new RegExp(`^${address}$`, "i") },
+      address: normalizedAddress,
       isCompleted: true,
     });
 

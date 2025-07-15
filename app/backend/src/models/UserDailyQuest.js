@@ -51,8 +51,13 @@ const userDailyQuestSchema = new mongoose.Schema(
   }
 );
 
-// Create compound index for efficient queries
-userDailyQuestSchema.index({ address: 1, questId: 1, questDate: 1 });
+// Create compound indexes for efficient queries
 userDailyQuestSchema.index({ address: 1, questDate: 1, questOrder: 1 });
+
+// Create unique compound index to prevent duplicates
+userDailyQuestSchema.index(
+  { address: 1, questId: 1, questDate: 1 },
+  { unique: true }
+);
 
 module.exports = mongoose.model("UserDailyQuest", userDailyQuestSchema);
