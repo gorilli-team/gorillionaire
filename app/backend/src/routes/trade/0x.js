@@ -35,6 +35,13 @@ async function buildPriceRequest(
 ) {
   const tokenInfo = symbolToTokenInfo[tokenSymbol];
 
+  console.log("🔍 buildPriceRequest - initial values:", {
+    tokenSymbol,
+    amount,
+    type,
+    userAddress,
+  });
+
   // If "buy" I need to convert the amount passed (which is based in token) to MON amount
   const codexOracle = new PriceOracle();
   const prices = await codexOracle.getTokenPrices([
@@ -51,10 +58,31 @@ async function buildPriceRequest(
   const monPrice = parseFloat(prices[0].priceUsd);
   const tokenPrice = parseFloat(prices[1].priceUsd);
 
+  console.log("💰 Price data:", {
+    monPrice,
+    tokenPrice,
+    originalAmount: amount,
+  });
+
   const usdValue = amount * tokenPrice;
 
+  console.log("💵 USD calculation:", {
+    amount,
+    tokenPrice,
+    usdValue,
+  });
+
   // if buy, convert amount to MON amount
-  if (type === "buy") amount = usdValue / monPrice;
+  if (type === "buy") {
+    const originalAmount = amount;
+    amount = usdValue / monPrice;
+    console.log("🔄 Buy conversion:", {
+      originalAmount,
+      usdValue,
+      monPrice,
+      newAmount: amount,
+    });
+  }
 
   const ZEROX_FEE_RECIPIENT = process.env.ZEROX_FEE_RECIPIENT;
   const ZEROX_FEE_PERCENTAGE = process.env.ZEROX_FEE_PERCENTAGE;
