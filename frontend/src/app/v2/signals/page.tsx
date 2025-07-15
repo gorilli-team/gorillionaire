@@ -19,6 +19,19 @@ import { MONAD_CHAIN_ID } from "@/app/utils/constants";
 import { toast } from "react-toastify";
 import Cookies from 'js-cookie';
 import DexModalV2 from "@/app/components/ui/DexModalV2";
+import {
+  useWriteContract,
+  useConfig,
+  useSignTypedData,
+  useSendTransaction,
+} from "wagmi";
+import { waitForTransactionReceipt } from "wagmi/actions";
+import { concat, erc20Abi, numberToHex, parseUnits, size } from "viem";
+import {
+  MON_ADDRESS,
+  PERMIT2_ADDRESS,
+  WMONAD_ADDRESS,
+} from "@/app/utils/constants";
 
 type Signal = {
   id: string;
@@ -44,24 +57,12 @@ type ChartData = {
   price: number;
 };
 
-// type PriceData = {
-//   timestamp: string;
-//   close: number;
-// };
-
 type TokenData = {
   token_id: string;
   symbol: string;
   name: string;
   decimal: string;
 };
-
-// const parseSignalText = (signalText: string) => {
-//   const symbol = signalText.match(/CHOG|DAK|YAKI|MON/)?.[0];
-//   const amountMatch = signalText.match(/\d+\.\d+/)?.[0];
-//   const amount = amountMatch ? Number(amountMatch) : 0;
-//   return { symbol, amount };
-// };
 
 const chart = (data: ChartData[]) => {
   if (!data || data.length === 0) {
@@ -138,6 +139,11 @@ export default function SignalsPage() {
   const { chainId } = useAccount();
   const { switchChain } = useSwitchChain();
 
+  const { writeContractAsync } = useWriteContract();
+  const { signTypedDataAsync } = useSignTypedData();
+  const { sendTransactionAsync } = useSendTransaction();
+  const wagmiConfig = useConfig();
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentDexToken, setCurrentDexToken] = useState<Token | null>(null);
   const [currentDexPairToken, setCurrentDexPairToken] = useState<Token | null>(null);
@@ -180,31 +186,31 @@ export default function SignalsPage() {
         chainId: MONAD_CHAIN_ID,
       },
       "WMON": {
-        symbol: "WMON",
-        name: "Wrapped Monad",
+        symbol: "MON",
+        name: "Monad",
         decimals: 18,
-        address: "0x0000000000000000000000000000000000000000", // TODO
+        address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
         chainId: MONAD_CHAIN_ID,
       },
       "JAI": {
         symbol: "JAI",
         name: "Jai Token",
         decimals: 18,
-        address: "0x0000000000000000000000000000000000000000", // TODO
+        address: "0x0000000000000000000000000000000000000000",
         chainId: MONAD_CHAIN_ID,
       },
       "WETH": {
         symbol: "WETH",
         name: "Wrapped Ethereum",
         decimals: 18,
-        address: "0x0000000000000000000000000000000000000000", // TODO
+        address: "0x0000000000000000000000000000000000000000",
         chainId: MONAD_CHAIN_ID,
       },
       "USDC": {
         symbol: "USDC",
         name: "USD Coin",
         decimals: 6,
-        address: "0x0000000000000000000000000000000000000000", // TODO
+        address: "0x0000000000000000000000000000000000000000",
         chainId: MONAD_CHAIN_ID,
       },
     };
@@ -226,7 +232,7 @@ export default function SignalsPage() {
             chainId: hardcoded.chainId!,
             totalHolding: 0,
             price: 0,
-            imageUrl: getTokenImage(sym),
+            imageUrl: getTokenImage(hardcoded.symbol!),
           });
         } else {
           validTokens.push({
@@ -245,6 +251,10 @@ export default function SignalsPage() {
     
     return validTokens;
   }, [tokens]);
+
+  const mapSymbolForDisplay = (symbol: string): string => {
+    return symbol.replace(/WMON/g, "MON");
+  };
 
   const onYes = useCallback(
     async (tokenToTrade: Token, pairToken: Token, amount: number, type: "Buy" | "Sell") => {
@@ -352,24 +362,209 @@ export default function SignalsPage() {
 
   const executeTrade = useCallback(
     async (inputAmount: string) => {
-
       if (!currentDexToken || !user?.wallet?.address) {
         toast.error("Missing token or wallet address");
         return;
       }
+  
+      try {
+        const token = currentDexToken;
+        const type = currentDexType;
+        const amount = parseFloat(inputAmount);
+  
+        const apiTokenSymbol = token.symbol === "MON" ? "WMON" : token.symbol;
+        const params = new URLSearchParams({
+          token: apiTokenSymbol,
+          amount: amount.toString(),
+          type: type.toLowerCase(),
+          userAddress: user.wallet.address,
+        });
+  
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/trade/0x-quote?${params.toString()}`
+        );
+        const quoteData = await res.json();
+  
+        if (!quoteData) {
+          toast.error("Failed to get quote");
+          return;
+        }
+  
+        if (quoteData.issues?.balance) {
+          toast.error("Insufficient balance");
+          return;
+        }
+  
+        toast("Trade request in progress...", {
+          position: "bottom-right",
+          autoClose: 10000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          draggable: true,
+          theme: "light",
+        });
 
-      toast.success(`Trade ${currentDexType} ${inputAmount} ${currentDexToken.symbol} executed!`);
-      setIsModalOpen(false);
+        const isNativeSell = quoteData.sellToken?.toLowerCase() === MON_ADDRESS.toLowerCase();
+        
+        if (isNativeSell) {
+          const txHash = await sendTransactionAsync({
+            account: user.wallet.address as `0x${string}`,
+            gas: quoteData.transaction.gas ? BigInt(quoteData.transaction.gas) : undefined,
+            to: quoteData.transaction.to,
+            data: quoteData.transaction.data,
+            value: BigInt(quoteData.transaction.value),
+            gasPrice: quoteData.transaction.gasPrice ? BigInt(quoteData.transaction.gasPrice) : undefined,
+            chainId: MONAD_CHAIN_ID,
+          });
+  
+          await waitForTransactionReceipt(wagmiConfig, {
+            hash: txHash,
+            confirmations: 1,
+          });
 
-      if (currentSignalId) {
-        setEvents(prev => prev.map(event => 
-          event.signal_id === currentSignalId 
-            ? { ...event, userChoice: "Yes" } 
-            : event
-        ));
+          await fetch(`${process.env.NEXT_PUBLIC_API_URL}/activity/track/trade-points`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${Cookies.get("privy-token")}`,
+            },
+            body: JSON.stringify({
+              address: user.wallet.address,
+              txHash,
+              intentId: quoteData.intentId,
+              signalId: currentSignalId,
+            }),
+          });
+
+          toast.success(`Trade ${currentDexType} ${inputAmount} ${token.symbol} executed!`);
+          
+          if (currentSignalId) {
+            setEvents(prev => prev.map(event => 
+              event.signal_id === currentSignalId 
+                ? { ...event, userChoice: "Yes" } 
+                : event
+            ));
+            
+            setSelectedOptions(prev => ({
+              ...prev,
+              [currentSignalId]: "Yes"
+            }));
+          }
+  
+          await fetch(`${process.env.NEXT_PUBLIC_API_URL}/signals/generated-signals/user-signal`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${Cookies.get("privy-token")}`,
+            },
+            body: JSON.stringify({
+              userAddress: user.wallet.address,
+              signalId: currentSignalId,
+              choice: "Yes",
+              type: type,
+              token: token.symbol,
+              amount: amount.toString(),
+            }),
+          });
+  
+          setIsModalOpen(false);
+          return;
+        }
+
+        if (quoteData.issues && quoteData.issues.allowance !== null) {
+          const hash = await writeContractAsync({
+            abi: erc20Abi,
+            address: type === "Sell" ? token.address : WMONAD_ADDRESS,
+            functionName: "approve",
+            args: [PERMIT2_ADDRESS, parseUnits(amount.toString(), token.decimals)],
+          });
+  
+          await waitForTransactionReceipt(wagmiConfig, {
+            hash,
+            confirmations: 1,
+          });
+        }
+  
+        const transaction = quoteData?.transaction;
+        if (!transaction) {
+          toast.error("Trade quote did not return a transaction object.");
+          return;
+        }
+  
+        let signature;
+        let signatureLengthInHex;
+        if (quoteData?.permit2?.eip712) {
+          signature = await signTypedDataAsync(quoteData.permit2.eip712);
+          signatureLengthInHex = numberToHex(size(signature), { signed: false, size: 32 });
+          transaction.data = concat([transaction.data, signatureLengthInHex, signature]);
+        }
+  
+        const hash = await sendTransactionAsync({
+          account: user.wallet.address as `0x${string}`,
+          gas: transaction.gas ? BigInt(transaction.gas) : undefined,
+          to: transaction.to,
+          data: transaction.data,
+          chainId: MONAD_CHAIN_ID,
+        });
+  
+        await waitForTransactionReceipt(wagmiConfig, {
+          hash,
+          confirmations: 1,
+        });
+
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/activity/track/trade-points`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${Cookies.get("privy-token")}`,
+          },
+          body: JSON.stringify({
+            address: user.wallet.address,
+            txHash: hash,
+            intentId: quoteData.intentId,
+            signalId: currentSignalId,
+          }),
+        });
+
+        toast.success(`Trade ${currentDexType} ${inputAmount} ${token.symbol} executed!`);
+        
+        if (currentSignalId) {
+          setEvents(prev => prev.map(event => 
+            event.signal_id === currentSignalId 
+              ? { ...event, userChoice: "Yes" } 
+              : event
+          ));
+          
+          setSelectedOptions(prev => ({
+            ...prev,
+            [currentSignalId]: "Yes"
+          }));
+        }
+
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/signals/generated-signals/user-signal`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${Cookies.get("privy-token")}`,
+          },
+          body: JSON.stringify({
+            userAddress: user.wallet.address,
+            signalId: currentSignalId,
+            choice: "Yes",
+            type: type,
+            token: token.symbol,
+            amount: amount.toString(),
+          }),
+        });
+  
+        setIsModalOpen(false);
+  
+      } catch (error) {
+        console.error("Transaction failed:", error);
+        toast.error("Transaction failed. Please try again.");
       }
     },
-    [currentDexToken, currentDexType, user?.wallet?.address, currentSignalId]
+    [currentDexToken, currentDexType, user?.wallet?.address, currentSignalId, sendTransactionAsync, signTypedDataAsync, wagmiConfig, writeContractAsync]
   );
 
   const handleEvent = useCallback(
@@ -805,7 +1000,7 @@ export default function SignalsPage() {
                                       );
                                     }}
                                   >
-                                    {event.symbol}
+                                    {mapSymbolForDisplay(event.symbol)}
                                   </a>
                                 </td>
                                 <td className="text-gray-900 px-4 py-2 text-sm font-medium">
@@ -959,9 +1154,9 @@ export default function SignalsPage() {
                                     </svg>
                                   </div>
                                   <div>
-                                    <div className="text-lg font-semibold text-gray-900">
-                                      {event.symbol}
-                                    </div>
+                                  <div className="text-lg font-semibold text-gray-900">
+                                    {mapSymbolForDisplay(event.symbol)}
+                                  </div>
                                     <div className="text-sm text-gray-600">
                                       {event.action.charAt(0).toUpperCase() +
                                         event.action.slice(1).toLowerCase()}
