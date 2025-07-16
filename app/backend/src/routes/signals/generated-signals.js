@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const GeneratedSignal = require("../../models/GeneratedSignal");
 const UserSignal = require("../../models/UserSignal");
+const UserSignalV2 = require("../../models/UserSignalV2"); // Import V2 model
 const UserAuth = require("../../models/UserAuth");
 const { awardRefuseSignalPoints, createAcceptedSignalUserQuests } = require("../../controllers/points");
 
@@ -218,6 +219,111 @@ router.post("/user-signal", async (req, res) => {
     res.json(newUserSignal);
   } catch (error) {
     console.error("Error creating user signal:", error);
+    
+    if (error.name === 'CastError' || error.message.includes('Cast to ObjectId failed')) {
+      return res.status(400).json({ 
+        error: "Invalid signalId format", 
+        details: `Original: ${originalSignalId}, Converted: ${signalId}` 
+      });
+    }
+    
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/user-signal-v2", async (req, res) => {
+  let { userAddress, signalId, choice, type, symbol, amount } = req.body;
+  const privyToken = req.headers.authorization.replace("Bearer ", "");
+
+  if (!userAddress || !signalId || !choice || !type || !symbol || !amount) {
+    const missing = [];
+    if (!userAddress) missing.push("userAddress");
+    if (!signalId) missing.push("signalId");
+    if (!choice) missing.push("choice");
+    if (!type) missing.push("type");
+    if (!symbol) missing.push("symbol");
+    if (!amount) missing.push("amount");
+    return res
+      .status(400)
+      .json({ error: `Missing required fields: ${missing.join(", ")}` });
+  }
+
+  const mongoose = require('mongoose');
+  const originalSignalId = signalId;
+  
+  if (signalId && typeof signalId === 'string' && signalId.length === 32) {
+    signalId = signalId.substring(0, 24);
+  }
+  
+  if (!mongoose.Types.ObjectId.isValid(signalId)) {
+    console.error(`Invalid signalId after conversion: ${signalId}`);
+    return res.status(400).json({ error: "Invalid signalId format" });
+  }
+
+  const userAuth = await UserAuth.findOne({
+    userAddress,
+    privyAccessToken: privyToken,
+  });
+
+  if (!userAuth) {
+    return res.status(400).json({ error: "User not found" });
+  }
+
+  if (choice === "No") {
+    const userSignalsV2 = await UserSignalV2.find({
+      userAddress,
+      choice: "No",
+      created_at: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+    });
+
+    if (userSignalsV2.length >= 5) {
+      return res
+        .status(400)
+        .json({ error: "User has already 5 No signals in the last 24 hours" });
+    }
+  }
+
+  // Check if user signal already exists in V2
+  const userSignalV2 = await UserSignalV2.findOne({
+    userAddress,
+    signalId,
+  });
+  
+  if (userSignalV2) {
+    return res.status(400).json({ error: "User signal already exists" });
+  }
+
+  try {
+    // Get the original signal to extract price information
+    const originalSignal = await GeneratedSignal.findById(signalId);
+    let priceAtSignal = parseFloat(amount);
+    
+    if (originalSignal && originalSignal.price) {
+      priceAtSignal = originalSignal.price;
+    }
+
+    const normalizedSymbol = symbol.replace(/WMON/g, "MON");
+
+    // Create V2 user signal
+    const newUserSignalV2 = await UserSignalV2.create({
+      userAddress,
+      signalId,
+      choice,
+      symbol: normalizedSymbol,
+      actionType: type,
+      priceAtSignal: priceAtSignal,
+    });
+
+    // Keep the existing points logic
+    if (choice === "No") {
+      await awardRefuseSignalPoints(userAddress, signalId);
+    } else if (choice === "Yes") {
+      await createAcceptedSignalUserQuests(userAddress, signalId);
+    }
+
+    res.json(newUserSignalV2);
+  } catch (error) {
+    console.error("Error creating user signal V2:", error);
     
     if (error.name === 'CastError' || error.message.includes('Cast to ObjectId failed')) {
       return res.status(400).json({ 
