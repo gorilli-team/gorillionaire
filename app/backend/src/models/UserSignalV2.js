@@ -16,7 +16,7 @@ const UserSignalV2Schema = new mongoose.Schema({
     enum: ["Yes", "No"],
     required: true
   },
-  tokenSymbol: {
+  symbol: {
     type: String,
     required: true
   },
