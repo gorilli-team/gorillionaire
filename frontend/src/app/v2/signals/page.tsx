@@ -149,8 +149,8 @@ export default function SignalsPage() {
   const [currentDexPairToken, setCurrentDexPairToken] = useState<Token | null>(null);
   const [currentDexAmount, setCurrentDexAmount] = useState(0);
   const [currentDexType, setCurrentDexType] = useState<"Buy" | "Sell">("Buy");
-  const [currentDexSymbol] = useState<string | null>(null);
   const [currentSignalId, setCurrentSignalId] = useState<string>("");
+  const [currentEvent, setCurrentEvent] = useState<Event | null>(null);
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   const allowedTokens = ['MON', 'DAK', 'YAKI', 'CHOG'];
 
@@ -265,9 +265,21 @@ export default function SignalsPage() {
     return symbol.replace(/WMON/g, "MON");
   };
 
+  const getTokenToTrade = useCallback((event: Event): Token | null => {
+    const symbols = event.symbol.split('/');
+    const tokenToTradeSymbol = symbols[0];
+    
+    const tokensFromSymbol = getTokensFromSymbol(event.symbol);
+    const tokenToTrade = tokensFromSymbol.find(t => 
+      t.symbol === tokenToTradeSymbol || 
+      (tokenToTradeSymbol === "WMON" && t.symbol === "MON")
+    );
+
+    return tokenToTrade || null;
+  }, [getTokensFromSymbol]);
+
   const onYes = useCallback(
     async (tokenToTrade: Token, pairToken: Token, amount: number, type: "Buy" | "Sell") => {
-
       if (!user?.wallet?.address) {
         toast.error("Please connect your wallet");
         return;
@@ -283,308 +295,269 @@ export default function SignalsPage() {
       setCurrentDexAmount(amount);
       setCurrentDexType(type);
       setIsModalOpen(true);
-      
     },
     [user?.wallet?.address, chainId]
   );
 
-
-const onNo = useCallback(async (signalId: string, event: Event) => {
-  if (!user?.wallet?.address) {
-    toast.error("Please connect your wallet");
-    return;
-  }
-
-  const privyToken = Cookies.get("privy-token");
-  if (!privyToken) {
-    toast.error("Authentication required");
-    return;
-  }
-
-  try {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/signals/generated-signals/user-signal-v2`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${privyToken}`,
-        },
-        body: JSON.stringify({
-          userAddress: user.wallet.address,
-          signalId: signalId,
-          choice: "No",
-          type: event.action === "BUY" ? "Buy" : "Sell",
-          symbol: event.symbol,
-          amount: event.price.toString(),
-        }),
-      }
-    );
-
-    console.log("Response status:", response.status);
-
-    if (response.status === 400) {
-      const errorData = await response.json();
-      toast.error(errorData.error || "You have already 5 No signals in the last 24 hours");
-    } else if (response.ok) {
-      toast.success("Signal refused successfully");
-      setEvents(prev => prev.map(e => 
-        e.signal_id === signalId 
-          ? { ...e, userChoice: "No" } 
-          : e
-      ));
-    } else {
-      toast.error("Failed to refuse signal");
+  const onNo = useCallback(async (signalId: string, event: Event) => {
+    if (!user?.wallet?.address) {
+      toast.error("Please connect your wallet");
+      return;
     }
-  } catch (error) {
-    console.error("Error refusing signal:", error);
-    toast.error("Network error occurred");
-  }
-}, [user?.wallet?.address]);
 
-
-const handleOptionSelect = useCallback(
-  async (event: Event, option: "Yes" | "No") => {
-
-    setSelectedOptions({
-      ...selectedOptions,
-      [event.signal_id]: option,
-    });
-
-    if (option === "Yes") {
-      const tokensFromSymbol = getTokensFromSymbol(event.symbol);
-      const token = tokensFromSymbol[0];
-
-      if (!token) {
-        toast.error("Token not found");
-        return;
-      }
-
-      setCurrentSignalId(event.signal_id);
-
-      const pairToken = tokensFromSymbol[1] || token;
-      const actionType: "Buy" | "Sell" = event.action === "BUY" ? "Buy" : "Sell";
-      
-      // Pass event to onYes function
-      await onYes(token, pairToken, event.price, actionType);
-    } else {
-      // Pass event to onNo function
-      await onNo(event.signal_id, event);
-    }
-  },
-  [selectedOptions, getTokensFromSymbol, onYes, onNo]
-);
-
-const executeTrade = useCallback(
-  async (inputAmount: string) => {
-    if (!currentDexToken || !user?.wallet?.address) {
-      toast.error("Missing token or wallet address");
+    const privyToken = Cookies.get("privy-token");
+    if (!privyToken) {
+      toast.error("Authentication required");
       return;
     }
 
     try {
-      const token = currentDexToken;
-      const type = currentDexType;
-      const amount = parseFloat(inputAmount);
-
-      // Normalize token symbol for consistent handling
-      const normalizedTokenSymbol = token.symbol === "WMON" ? "MON" : token.symbol;
-
-      const apiTokenSymbol = currentDexSymbol ?? (token.symbol === "MON" ? "WMON" : token.symbol);
-      const params = new URLSearchParams({
-        token: apiTokenSymbol,
-        amount: amount.toString(),
-        type: type.toLowerCase(),
-        userAddress: user.wallet.address,
-        version: "v2",
-      });
-
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/trade/0x-quote?${params.toString()}`
-      );
-      const quoteData = await res.json();
-
-      if (!quoteData) {
-        toast.error("Failed to get quote");
-        return;
-      }
-
-      if (quoteData.issues?.balance) {
-        toast.error("Insufficient balance");
-        return;
-      }
-
-      toast("Trade request in progress...", {
-        position: "bottom-right",
-        autoClose: 10000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        draggable: true,
-        theme: "light",
-      });
-
-      const isNativeSell = quoteData.sellToken?.toLowerCase() === MON_ADDRESS.toLowerCase();
-      
-      if (isNativeSell) {
-        const txHash = await sendTransactionAsync({
-          account: user.wallet.address as `0x${string}`,
-          gas: quoteData.transaction.gas ? BigInt(quoteData.transaction.gas) : undefined,
-          to: quoteData.transaction.to,
-          data: quoteData.transaction.data,
-          value: BigInt(quoteData.transaction.value),
-          gasPrice: quoteData.transaction.gasPrice ? BigInt(quoteData.transaction.gasPrice) : undefined,
-          chainId: MONAD_CHAIN_ID,
-        });
-
-        await waitForTransactionReceipt(wagmiConfig, {
-          hash: txHash,
-          confirmations: 1,
-        });
-
-        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/activity/track/trade-points`, {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/signals/generated-signals/user-signal-v2`,
+        {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${Cookies.get("privy-token")}`,
+            Authorization: `Bearer ${privyToken}`,
           },
           body: JSON.stringify({
-            address: user.wallet.address,
-            txHash,
-            intentId: quoteData.intentId,
-            signalId: currentSignalId,
+            userAddress: user?.wallet?.address || "",
+            signalId: signalId,
+            choice: "No",
+            type: event.action === "BUY" ? "Buy" : "Sell",
+            symbol: event.symbol,
+            amount: event.price.toString(),
           }),
-        });
+        }
+      );
 
-        toast.success(`Trade ${currentDexType} ${inputAmount} ${normalizedTokenSymbol} executed!`);
-        
-        if (currentSignalId) {
-          setEvents(prev => prev.map(event => 
-            event.signal_id === currentSignalId 
-              ? { ...event, userChoice: "Yes" } 
-              : event
-          ));
-          
-          setSelectedOptions(prev => ({
-            ...prev,
-            [currentSignalId]: "Yes"
-          }));
+      if (response.status === 400) {
+        const errorData = await response.json();
+        toast.error(errorData.error || "You have already 5 No signals in the last 24 hours");
+      } else if (response.ok) {
+        toast.success("Signal refused successfully");
+        setEvents(prev => prev.map(e => 
+          e.signal_id === signalId 
+            ? { ...e, userChoice: "No" } 
+            : e
+        ));
+      } else {
+        toast.error("Failed to refuse signal");
+      }
+    } catch (error) {
+      console.error("Error refusing signal:", error);
+      toast.error("Network error occurred");
+    }
+  }, [user?.wallet?.address]);
+
+  const handleOptionSelect = useCallback(
+    async (event: Event, option: "Yes" | "No") => {
+      if (option === "Yes") {
+        const tokenToTrade = getTokenToTrade(event);
+
+        if (!tokenToTrade) {
+          toast.error("Token not found");
+          return;
         }
 
-        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/signals/generated-signals/user-signal-v2`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${Cookies.get("privy-token")}`,
-          },
-          body: JSON.stringify({
-            userAddress: user.wallet.address,
-            signalId: currentSignalId,
-            choice: "Yes",
-            type: type,
-            symbol: currentDexSymbol || "MON/MON",
-            amount: amount.toString(),
-          }),
-        });
+        console.log("Token to trade:", tokenToTrade.symbol, "Event:", event.symbol, "Action:", event.action);
 
-        setIsModalOpen(false);
+        setCurrentSignalId(event.signal_id);
+        setCurrentEvent(event);
+
+        const tokensFromSymbol = getTokensFromSymbol(event.symbol);
+        const pairToken = tokensFromSymbol[1] || tokenToTrade;
+        const actionType: "Buy" | "Sell" = event.action === "BUY" ? "Buy" : "Sell";
+        
+        await onYes(tokenToTrade, pairToken, event.price, actionType);
+      } else {
+        setSelectedOptions({
+          ...selectedOptions,
+          [event.signal_id]: option,
+        });
+        await onNo(event.signal_id, event);
+      }
+    },
+    [selectedOptions, getTokenToTrade, onYes, onNo]
+  );
+
+  const executeTrade = useCallback(
+    async (inputAmount: string) => {
+      if (!currentDexToken || !user?.wallet?.address || !currentEvent) {
+        toast.error("Missing token or wallet address");
         return;
       }
 
-      if (quoteData.issues && quoteData.issues.allowance !== null) {
-        const hash = await writeContractAsync({
-          abi: erc20Abi,
-          address: type === "Sell" ? token.address : WMONAD_ADDRESS,
-          functionName: "approve",
-          args: [PERMIT2_ADDRESS, parseUnits(amount.toString(), token.decimals)],
+      try {
+        const token = currentDexToken;
+        const type = currentDexType;
+        const amount = parseFloat(inputAmount);
+
+        const apiTokenSymbol = token.symbol;
+        
+
+        const params = new URLSearchParams({
+          token: apiTokenSymbol,
+          amount: amount.toString(),
+          type: type.toLowerCase(),
+          userAddress: user?.wallet?.address || "",
+        });
+
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/trade/0x-quote?${params.toString()}`
+        );
+        const quoteData = await res.json();
+
+        if (!quoteData) {
+          toast.error("Failed to get quote");
+          return;
+        }
+
+        if (quoteData.issues?.balance) {
+          toast.error("Insufficient balance");
+          return;
+        }
+
+        toast("Trade request in progress...", {
+          position: "bottom-right",
+          autoClose: 10000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          draggable: true,
+          theme: "light",
+        });
+
+        const isNativeSell = quoteData.sellToken?.toLowerCase() === MON_ADDRESS.toLowerCase();
+        
+        // Helper function to update state after successful transaction
+        const updateSuccessState = async (txHash: string) => {
+          await fetch(`${process.env.NEXT_PUBLIC_API_URL}/activity/track/trade-points`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${Cookies.get("privy-token")}`,
+            },
+            body: JSON.stringify({
+              address: user?.wallet?.address || "",
+              txHash,
+              intentId: quoteData.intentId,
+              signalId: currentSignalId,
+            }),
+          });
+
+          // 2. Success toast
+          toast.success(`Trade ${currentDexType} ${inputAmount} ${token.symbol} executed!`);
+          
+          // 3. Update UI state
+          if (currentSignalId) {
+            setEvents(prev => prev.map(event => 
+              event.signal_id === currentSignalId 
+                ? { ...event, userChoice: "Yes" } 
+                : event
+            ));
+            
+            // FIX: Update selectedOptions only after successful transaction
+            setSelectedOptions(prev => ({
+              ...prev,
+              [currentSignalId]: "Yes"
+            }));
+          }
+
+          // 4. Save user signal V2
+          await fetch(`${process.env.NEXT_PUBLIC_API_URL}/signals/generated-signals/user-signal-v2`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${Cookies.get("privy-token")}`,
+            },
+            body: JSON.stringify({
+              userAddress: user?.wallet?.address || "",
+              signalId: currentSignalId,
+              choice: "Yes",
+              type: type,
+              symbol: currentEvent.symbol,
+              amount: amount.toString(),
+            }),
+          });
+
+          // 5. Close modal
+          setIsModalOpen(false);
+        };
+
+        if (isNativeSell) {
+          const txHash = await sendTransactionAsync({
+            account: user.wallet.address as `0x${string}`,
+            gas: quoteData.transaction.gas ? BigInt(quoteData.transaction.gas) : undefined,
+            to: quoteData.transaction.to,
+            data: quoteData.transaction.data,
+            value: BigInt(quoteData.transaction.value),
+            gasPrice: quoteData.transaction.gasPrice ? BigInt(quoteData.transaction.gasPrice) : undefined,
+            chainId: MONAD_CHAIN_ID,
+          });
+
+          await waitForTransactionReceipt(wagmiConfig, {
+            hash: txHash,
+            confirmations: 1,
+          });
+
+          await updateSuccessState(txHash);
+          return;
+        }
+
+        if (quoteData.issues && quoteData.issues.allowance !== null) {
+          const hash = await writeContractAsync({
+            abi: erc20Abi,
+            address: type === "Sell" ? token.address : WMONAD_ADDRESS,
+            functionName: "approve",
+            args: [PERMIT2_ADDRESS, parseUnits(amount.toString(), token.decimals)],
+          });
+
+          await waitForTransactionReceipt(wagmiConfig, {
+            hash,
+            confirmations: 1,
+          });
+        }
+
+        const transaction = quoteData?.transaction;
+        if (!transaction) {
+          toast.error("Trade quote did not return a transaction object.");
+          return;
+        }
+
+        let signature;
+        let signatureLengthInHex;
+        if (quoteData?.permit2?.eip712) {
+          signature = await signTypedDataAsync(quoteData.permit2.eip712);
+          signatureLengthInHex = numberToHex(size(signature), { signed: false, size: 32 });
+          transaction.data = concat([transaction.data, signatureLengthInHex, signature]);
+        }
+
+        const hash = await sendTransactionAsync({
+          account: user.wallet.address as `0x${string}`,
+          gas: transaction.gas ? BigInt(transaction.gas) : undefined,
+          to: transaction.to,
+          data: transaction.data,
+          chainId: MONAD_CHAIN_ID,
         });
 
         await waitForTransactionReceipt(wagmiConfig, {
           hash,
           confirmations: 1,
         });
+
+        await updateSuccessState(hash);
+
+      } catch (error) {
+        console.error("Transaction failed:", error);
+        toast.error("Transaction failed. Please try again.");
       }
+    },
+    [currentDexToken, currentDexType, user?.wallet?.address, currentSignalId, currentEvent, sendTransactionAsync, signTypedDataAsync, wagmiConfig, writeContractAsync]
+  );
 
-      const transaction = quoteData?.transaction;
-      if (!transaction) {
-        toast.error("Trade quote did not return a transaction object.");
-        return;
-      }
-
-      let signature;
-      let signatureLengthInHex;
-      if (quoteData?.permit2?.eip712) {
-        signature = await signTypedDataAsync(quoteData.permit2.eip712);
-        signatureLengthInHex = numberToHex(size(signature), { signed: false, size: 32 });
-        transaction.data = concat([transaction.data, signatureLengthInHex, signature]);
-      }
-
-      const hash = await sendTransactionAsync({
-        account: user.wallet.address as `0x${string}`,
-        gas: transaction.gas ? BigInt(transaction.gas) : undefined,
-        to: transaction.to,
-        data: transaction.data,
-        chainId: MONAD_CHAIN_ID,
-      });
-
-      await waitForTransactionReceipt(wagmiConfig, {
-        hash,
-        confirmations: 1,
-      });
-
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/activity/track/trade-points`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${Cookies.get("privy-token")}`,
-        },
-        body: JSON.stringify({
-          address: user.wallet.address,
-          txHash: hash,
-          intentId: quoteData.intentId,
-          signalId: currentSignalId,
-        }),
-      });
-
-      toast.success(`Trade ${currentDexType} ${inputAmount} ${normalizedTokenSymbol} executed!`);
-      
-      if (currentSignalId) {
-        setEvents(prev => prev.map(event => 
-          event.signal_id === currentSignalId 
-            ? { ...event, userChoice: "Yes" } 
-            : event
-        ));
-        
-        setSelectedOptions(prev => ({
-          ...prev,
-          [currentSignalId]: "Yes"
-        }));
-      }
-
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/signals/generated-signals/user-signal-v2`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${Cookies.get("privy-token")}`,
-        },
-        body: JSON.stringify({
-          userAddress: user.wallet.address,
-          signalId: currentSignalId,
-          choice: "Yes",
-          type: type,
-          symbol: currentDexSymbol || "MON/MON",
-          amount: amount.toString(),
-        }),
-      });
-
-      setIsModalOpen(false);
-
-    } catch (error) {
-      console.error("Transaction failed:", error);
-      toast.error("Transaction failed. Please try again.");
-    }
-  },
-  [currentDexToken, currentDexType, currentDexSymbol, user?.wallet?.address, currentSignalId, sendTransactionAsync, signTypedDataAsync, wagmiConfig, writeContractAsync]
-);
+  const handleModalClose = useCallback(() => {
+    setIsModalOpen(false);
+  }, []);
 
   const handleEvent = useCallback(
     (data: Event) => {
@@ -631,7 +604,6 @@ const executeTrade = useCallback(
     });
     if (response && response.status === 200) {
       const tokens = response.data;
-      console.log("tokens", tokens);
       setTokens((prev) => { 
         const newTokens = new Map(prev);
         tokens.forEach((token: TokenData) => {
@@ -732,7 +704,6 @@ const executeTrade = useCallback(
       const events = Array.isArray(response.data)
         ? response.data.slice(0, 50)
         : [];
-      console.log("events", events);
       setEvents(events);
       const uniqueEvents = events.filter(
         (event: Event, index: number, self: Event[]) => {
@@ -789,7 +760,6 @@ const executeTrade = useCallback(
       </span>
     );
   };
-
 
   return (
     <ProtectPage requireV2Access={true}>
@@ -1078,18 +1048,13 @@ const executeTrade = useCallback(
                                     <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden shadow-sm">
                                       <button
                                         className="px-3 py-1.5 text-xs flex items-center justify-center w-16 bg-white text-gray-500 transition-all duration-200 hover:bg-gray-50 border-r border-gray-200"
-                                        onClick={async () => {
-                                          await handleOptionSelect(event, "No");
-                                        }}
+                                        onClick={() => handleOptionSelect(event, "No")}
                                       >
                                         Refuse
                                       </button>
                                       <button 
                                         className="px-3 py-1.5 text-xs flex items-center justify-center w-16 bg-blue-50 text-blue-700 transition-all duration-200 hover:bg-blue-100"
-                                        onClick={async () => {
-                                          console.log("=== ACCEPT CLICKED ===");
-                                          await handleOptionSelect(event, "Yes");
-                                        }}
+                                        onClick={() => handleOptionSelect(event, "Yes")}
                                       >
                                         Accept
                                       </button>
@@ -1174,9 +1139,9 @@ const executeTrade = useCallback(
                                     </svg>
                                   </div>
                                   <div>
-                                  <div className="text-lg font-semibold text-gray-900">
-                                    {mapSymbolForDisplay(event.symbol)}
-                                  </div>
+                                    <div className="text-lg font-semibold text-gray-900">
+                                      {mapSymbolForDisplay(event.symbol)}
+                                    </div>
                                     <div className="text-sm text-gray-600">
                                       {event.action.charAt(0).toUpperCase() +
                                         event.action.slice(1).toLowerCase()}
@@ -1185,7 +1150,7 @@ const executeTrade = useCallback(
                                 </div>
                                 <div className="text-right">
                                   <div className="text-lg font-bold text-gray-900">
-                                    ${event.price.toFixed(6)}
+                                    {event.price.toFixed(6)}
                                   </div>
                                   <div className="text-xs text-gray-500">
                                     {getTimeAgo(event.timestamp)}
@@ -1241,17 +1206,13 @@ const executeTrade = useCallback(
                                   <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden shadow-sm">
                                     <button
                                       className="px-4 py-2 text-sm flex items-center justify-center w-20 bg-white text-gray-500 transition-all duration-200 hover:bg-gray-50 border-r border-gray-200"
-                                      onClick={async () => {
-                                        await handleOptionSelect(event, "No");
-                                      }}
+                                      onClick={() => handleOptionSelect(event, "No")}
                                     >
                                       Refuse
                                     </button>
                                     <button 
                                       className="px-4 py-2 text-sm flex items-center justify-center w-20 bg-blue-50 text-blue-700 transition-all duration-200 hover:bg-blue-100"
-                                      onClick={async () => {
-                                        await handleOptionSelect(event, "Yes");
-                                      }}
+                                      onClick={() => handleOptionSelect(event, "Yes")}
                                     >
                                       Accept
                                     </button>
@@ -1294,10 +1255,7 @@ const executeTrade = useCallback(
       {currentDexToken && currentDexPairToken && (
         <DexModalV2
           isOpen={isModalOpen}
-          onClose={() => {
-            console.log("Closing modal");
-            setIsModalOpen(false);
-          }}
+          onClose={handleModalClose}
           onConfirm={executeTrade}
           token={currentDexToken}
           pairToken={currentDexPairToken}
