@@ -7,9 +7,9 @@ import {
   useConfig,
   useSignTypedData,
   useSendTransaction,
-  useSwitchChain,
   useAccount,
 } from "wagmi";
+import { useChainSwitch } from "@/app/hooks/useChainSwitch";
 import { waitForTransactionReceipt } from "wagmi/actions";
 import { concat, erc20Abi, numberToHex, parseUnits, size } from "viem";
 import { getTimeAgo } from "@/app/utils/time";
@@ -137,7 +137,8 @@ const Signals = () => {
   const { writeContractAsync } = useWriteContract();
   const { signTypedDataAsync } = useSignTypedData();
   const { sendTransactionAsync } = useSendTransaction();
-  const { switchChain } = useSwitchChain();
+  const { handleSwitchToChain, isOnTargetChain, isChainSwitching } =
+    useChainSwitch();
   const wagmiConfig = useConfig();
   const { chainId } = useAccount();
 
@@ -381,7 +382,7 @@ const Signals = () => {
       if (!user?.wallet?.address) return;
 
       // Check if we're on Monad network
-      if (chainId !== MONAD_CHAIN_ID) {
+      if (!isOnTargetChain(MONAD_CHAIN_ID)) {
         toast.error("Please switch to Monad network to continue", {
           position: "top-right",
           autoClose: 5000,
@@ -401,7 +402,7 @@ const Signals = () => {
       setIsModalOpen(true);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [user?.wallet?.address]
+    [user?.wallet?.address, isOnTargetChain]
   );
 
   // New function to execute trade after DEX modal confirmation
@@ -1078,12 +1079,15 @@ const Signals = () => {
                     </div>
                   )}
 
-                  {!signal.userSignal && chainId !== MONAD_CHAIN_ID && (
+                  {!signal.userSignal && !isOnTargetChain(MONAD_CHAIN_ID) && (
                     <button
-                      className={`px-3 py-1 mb-3 text-sm flex items-center justify-center bg-violet-700 text-white rounded-full`}
-                      onClick={() => switchChain({ chainId: MONAD_CHAIN_ID })}
+                      className={`px-3 py-1 mb-3 text-sm flex items-center justify-center bg-violet-700 text-white rounded-full disabled:opacity-50 disabled:cursor-not-allowed`}
+                      onClick={() =>
+                        handleSwitchToChain(MONAD_CHAIN_ID, "Monad")
+                      }
+                      disabled={isChainSwitching}
                     >
-                      Switch to Monad
+                      {isChainSwitching ? "Switching..." : "Switch to Monad 1"}
                     </button>
                   )}
 
@@ -1226,12 +1230,15 @@ const Signals = () => {
                     </div>
                   )}
 
-                  {!signal.userSignal && chainId !== MONAD_CHAIN_ID && (
+                  {!signal.userSignal && !isOnTargetChain(MONAD_CHAIN_ID) && (
                     <button
-                      className={`px-3 py-1 mb-3 text-sm flex items-center justify-center bg-violet-700 text-white rounded-full`}
-                      onClick={() => switchChain({ chainId: MONAD_CHAIN_ID })}
+                      className={`px-3 py-1 mb-3 text-sm flex items-center justify-center bg-violet-700 text-white rounded-full disabled:opacity-50 disabled:cursor-not-allowed`}
+                      onClick={() =>
+                        handleSwitchToChain(MONAD_CHAIN_ID, "Monad")
+                      }
+                      disabled={isChainSwitching}
                     >
-                      Switch to Monad
+                      {isChainSwitching ? "Switching..." : "Switch to Monad 2"}
                     </button>
                   )}
 

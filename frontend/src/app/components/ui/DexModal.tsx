@@ -2,8 +2,8 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { Token } from "@/app/types";
 import { getTokenImage } from "@/app/utils/tokens";
-import { useAccount, useSwitchChain } from "wagmi";
 import { MONAD_CHAIN_ID } from "@/app/utils/constants";
+import { useChainSwitch } from "@/app/hooks/useChainSwitch";
 
 // Extend the Token type to include the properties we need
 interface ExtendedToken extends Token {
@@ -46,8 +46,8 @@ const DexModal: React.FC<DexModalProps> = ({
   const [inputAmount, setInputAmount] = useState<string>("");
   const [outputAmount, setOutputAmount] = useState<string>("0");
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const { chainId } = useAccount();
-  const { switchChain } = useSwitchChain();
+  const { handleSwitchToChain, isOnTargetChain, isChainSwitching } =
+    useChainSwitch();
 
   // Define MON token for buying, using the passed in balance and price
   const monToken: ExtendedToken = {
@@ -166,13 +166,6 @@ const DexModal: React.FC<DexModalProps> = ({
         );
       }
 
-      console.log("🔍 getQuote - Sending request:", {
-        token: token.symbol,
-        amount: numericAmount,
-        type: type.toLowerCase(),
-        userAddress: userAddress,
-      });
-
       const params = new URLSearchParams({
         token: token.symbol,
         amount: numericAmount.toString(),
@@ -192,7 +185,6 @@ const DexModal: React.FC<DexModalProps> = ({
       }
 
       const data = await response.json();
-      console.log("✅ getQuote - Received response:", data);
       return data;
     } catch (error) {
       console.error("❌ Error fetching quote:", error);
@@ -249,16 +241,6 @@ const DexModal: React.FC<DexModalProps> = ({
         // Use higher precision for calculations, then round to 6 decimals
         const newOutputAmount =
           Math.round(adjustedMonReceived * 1000000) / 1000000;
-
-        console.log("🔍 handleInputChange - Sell calculation:", {
-          tokenAmount,
-          tokenPrice: token.price,
-          monPrice,
-          calculatedMonAmount: monReceived,
-          slippageAdjustedAmount: adjustedMonReceived,
-          roundedMonAmount: newOutputAmount,
-          userBalance: inputToken.totalHolding,
-        });
 
         setOutputAmount(newOutputAmount.toString());
         onAmountChange?.(value, newOutputAmount.toString());
@@ -318,16 +300,6 @@ const DexModal: React.FC<DexModalProps> = ({
         // Use higher precision for calculations, then round to 6 decimals
         const newInputAmount =
           Math.round(adjustedTokenAmount * 1000000) / 1000000;
-
-        console.log("🔍 handleOutputChange - Sell calculation:", {
-          monAmount,
-          monPrice,
-          tokenPrice: token.price,
-          calculatedTokenAmount: tokenAmount,
-          slippageAdjustedAmount: adjustedTokenAmount,
-          roundedTokenAmount: newInputAmount,
-          userBalance: inputToken.totalHolding,
-        });
 
         // Check for minimum token amount (0.001 tokens)
         const minTokenAmount = 0.001;
@@ -505,16 +477,17 @@ const DexModal: React.FC<DexModalProps> = ({
           </div>
         </div>
 
-        {chainId !== MONAD_CHAIN_ID ? (
+        {!isOnTargetChain(MONAD_CHAIN_ID) ? (
           <div className="text-center p-4 mb-4 bg-red-50 rounded-lg">
             <p className="text-red-600">
               Please switch to Monad network to continue
             </p>
             <button
-              className="mt-2 px-4 py-2 bg-violet-600 text-white rounded-full text-sm"
-              onClick={() => switchChain({ chainId: MONAD_CHAIN_ID })}
+              className="mt-2 px-4 py-2 bg-violet-600 text-white rounded-full text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => handleSwitchToChain(MONAD_CHAIN_ID, "Monad")}
+              disabled={isChainSwitching}
             >
-              Switch to Monad
+              {isChainSwitching ? "Switching..." : "Switch to Monad"}
             </button>
           </div>
         ) : (

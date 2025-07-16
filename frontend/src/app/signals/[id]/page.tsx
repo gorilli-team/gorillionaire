@@ -14,8 +14,8 @@ import {
   useSignTypedData,
   useSendTransaction,
   useAccount,
-  useSwitchChain,
 } from "wagmi";
+import { useChainSwitch } from "@/app/hooks/useChainSwitch";
 import { waitForTransactionReceipt } from "wagmi/actions";
 import { concat, erc20Abi, numberToHex, parseUnits, size } from "viem";
 import {
@@ -89,7 +89,8 @@ export default function SignalDetails() {
     null
   );
   const { user } = usePrivy();
-  const { switchChain } = useSwitchChain();
+  const { handleSwitchToChain, isOnTargetChain, isChainSwitching } =
+    useChainSwitch();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentDexToken, setCurrentDexToken] = useState<Token | null>(null);
   const [currentDexAmount, setCurrentDexAmount] = useState(0);
@@ -308,7 +309,7 @@ export default function SignalDetails() {
       if (!user?.wallet?.address) return;
 
       // Check if we're on Monad network
-      if (chainId !== MONAD_CHAIN_ID) {
+      if (!isOnTargetChain(MONAD_CHAIN_ID)) {
         toast.error("Please switch to Monad network to continue", {
           position: "top-right",
           autoClose: 5000,
@@ -327,7 +328,7 @@ export default function SignalDetails() {
       setCurrentDexType(type);
       setIsModalOpen(true);
     },
-    [user?.wallet?.address, chainId]
+    [user?.wallet?.address, isOnTargetChain]
   );
 
   // New function to execute trade after DEX modal confirmation
@@ -894,13 +895,16 @@ export default function SignalDetails() {
                   </div>
                 )}
 
-                {signal && chainId !== MONAD_CHAIN_ID && (
+                {signal && !isOnTargetChain(MONAD_CHAIN_ID) && (
                   <div className="flex justify-center mb-6">
                     <button
-                      className="px-4 py-2 text-sm bg-violet-700 text-white rounded-full hover:bg-violet-800 transition-colors"
-                      onClick={() => switchChain({ chainId: MONAD_CHAIN_ID })}
+                      className="px-4 py-2 text-sm bg-violet-700 text-white rounded-full hover:bg-violet-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={() =>
+                        handleSwitchToChain(MONAD_CHAIN_ID, "Monad")
+                      }
+                      disabled={isChainSwitching}
                     >
-                      Switch to Monad
+                      {isChainSwitching ? "Switching..." : "Switch to Monad"}
                     </button>
                   </div>
                 )}
