@@ -153,6 +153,7 @@ export default function SignalsPage() {
   const [currentEvent, setCurrentEvent] = useState<Event | null>(null);
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   const allowedTokens = ['MON', 'DAK', 'YAKI', 'CHOG'];
+  const [currentTradeInfo, setCurrentTradeInfo] = useState<{token: Token; apiType: string} | null>(null);
 
   const filterAllowedTokens = (event: Event) => {
     const symbols = event.symbol.split('/');
@@ -265,17 +266,29 @@ export default function SignalsPage() {
     return symbol.replace(/WMON/g, "MON");
   };
 
-  const getTokenToTrade = useCallback((event: Event): Token | null => {
+  const getTokenToTrade = useCallback((event: Event): { token: Token; apiType: string } | null => {
     const symbols = event.symbol.split('/');
-    const tokenToTradeSymbol = symbols[0];
+    const firstToken = symbols[0];
+    const secondToken = symbols[1];
     
     const tokensFromSymbol = getTokensFromSymbol(event.symbol);
-    const tokenToTrade = tokensFromSymbol.find(t => 
-      t.symbol === tokenToTradeSymbol || 
-      (tokenToTradeSymbol === "WMON" && t.symbol === "MON")
-    );
 
-    return tokenToTrade || null;
+    if (firstToken === "MON" || firstToken === "WMON") {
+      if (event.action === "BUY") {
+        const tokenToTrade = tokensFromSymbol.find(t => 
+          t.symbol === secondToken || 
+          (secondToken === "WMON" && t.symbol === "MON")
+        );
+        return tokenToTrade ? { token: tokenToTrade, apiType: "sell" } : null;
+      } else {
+        const tokenToTrade = tokensFromSymbol.find(t => 
+          t.symbol === secondToken || 
+          (secondToken === "WMON" && t.symbol === "MON")
+        );
+        return tokenToTrade ? { token: tokenToTrade, apiType: "buy" } : null;
+      }
+    }
+    return null;
   }, [getTokensFromSymbol]);
 
   const onYes = useCallback(
@@ -349,27 +362,33 @@ export default function SignalsPage() {
       toast.error("Network error occurred");
     }
   }, [user?.wallet?.address]);
-
   const handleOptionSelect = useCallback(
     async (event: Event, option: "Yes" | "No") => {
       if (option === "Yes") {
-        const tokenToTrade = getTokenToTrade(event);
-
-        if (!tokenToTrade) {
+        const tradeInfo = getTokenToTrade(event);
+  
+        if (!tradeInfo) {
           toast.error("Token not found");
           return;
         }
-
-        console.log("Token to trade:", tokenToTrade.symbol, "Event:", event.symbol, "Action:", event.action);
-
         setCurrentSignalId(event.signal_id);
         setCurrentEvent(event);
-
+        setCurrentTradeInfo(tradeInfo);
+  
         const tokensFromSymbol = getTokensFromSymbol(event.symbol);
-        const pairToken = tokensFromSymbol[1] || tokenToTrade;
         const actionType: "Buy" | "Sell" = event.action === "BUY" ? "Buy" : "Sell";
         
-        await onYes(tokenToTrade, pairToken, event.price, actionType);
+        let tokenToShow, pairTokenToShow;
+        
+        if (actionType === "Buy") {
+          tokenToShow = tradeInfo.token;
+          pairTokenToShow = tokensFromSymbol.find(t => t.symbol !== tradeInfo.token.symbol) || tokensFromSymbol[0]; // MON (quello che vendi)
+        } else {
+          tokenToShow = tradeInfo.token;
+          pairTokenToShow = tokensFromSymbol.find(t => t.symbol !== tradeInfo.token.symbol) || tokensFromSymbol[1]; // MON (quello che ricevi)
+        }
+  
+        await onYes(tokenToShow, pairTokenToShow, event.price, actionType);
       } else {
         setSelectedOptions({
           ...selectedOptions,
@@ -378,29 +397,30 @@ export default function SignalsPage() {
         await onNo(event.signal_id, event);
       }
     },
-    [selectedOptions, getTokenToTrade, onYes, onNo]
+    [selectedOptions, getTokenToTrade, onYes, onNo, getTokensFromSymbol]
   );
+  
 
   const executeTrade = useCallback(
     async (inputAmount: string) => {
-      if (!currentDexToken || !user?.wallet?.address || !currentEvent) {
+      if (!currentDexToken || !user?.wallet?.address || !currentEvent || !currentTradeInfo) {
         toast.error("Missing token or wallet address");
         return;
       }
-
+  
       try {
-        const token = currentDexToken;
-        const type = currentDexType;
+        const token = currentTradeInfo.token;
+        const type = currentTradeInfo.apiType;
         const amount = parseFloat(inputAmount);
-
+  
         const apiTokenSymbol = token.symbol;
-        
-
+      
+  
         const params = new URLSearchParams({
           token: apiTokenSymbol,
           amount: amount.toString(),
           type: type.toLowerCase(),
-          userAddress: user?.wallet?.address || "",
+          userAddress: user.wallet.address,
         });
 
         const res = await fetch(
@@ -552,7 +572,7 @@ export default function SignalsPage() {
         toast.error("Transaction failed. Please try again.");
       }
     },
-    [currentDexToken, currentDexType, user?.wallet?.address, currentSignalId, currentEvent, sendTransactionAsync, signTypedDataAsync, wagmiConfig, writeContractAsync]
+    [currentDexToken, currentDexType, user?.wallet?.address, currentSignalId, currentEvent, currentTradeInfo, sendTransactionAsync, signTypedDataAsync, wagmiConfig, writeContractAsync]
   );
 
   const handleModalClose = useCallback(() => {
