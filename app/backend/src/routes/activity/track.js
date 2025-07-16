@@ -136,10 +136,25 @@ router.post("/signin", async (req, res) => {
 
 router.post("/trade-points", async (req, res) => {
   try {
-    const { address, txHash, intentId, signalId } = req.body;
+    let { address, txHash, intentId, signalId } = req.body;
 
     if (!signalId) {
       return res.status(400).json({ error: "Signal ID is required" });
+    }
+
+    const mongoose = require('mongoose');
+    const originalSignalId = signalId;
+    
+    if (signalId && typeof signalId === 'string' && signalId.length === 32) {
+      signalId = signalId.substring(0, 24);
+    }
+    
+    if (!mongoose.Types.ObjectId.isValid(signalId)) {
+      console.error(`Invalid signalId after conversion: ${signalId}`);
+      return res.status(400).json({ 
+        error: "Invalid signalId format", 
+        details: `Original: ${originalSignalId}, Converted: ${signalId}` 
+      });
     }
 
     const privyToken = req.headers.authorization.replace("Bearer ", "");
