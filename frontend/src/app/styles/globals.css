@@ -15,6 +15,7 @@
     width: 100%;
     display: flex;
     align-items: center;
+    contain: layout style paint;
   }
   
   .ticker-track {
@@ -22,24 +23,26 @@
     position: absolute;
     white-space: nowrap;
     will-change: transform;
-    animation: ticker 25s linear infinite;
+    animation: ticker 80s linear infinite;
     align-items: center;
     width: auto;
+    contain: layout style paint;
   }
   
   .ticker-item {
     flex-shrink: 0;
-    padding: 0 16px;
+    padding: 0 24px;
     display: flex;
     align-items: center;
     height: 100%;
     border-right: 1px solid #e5e7eb;
+    contain: layout style paint;
   }
   
   /* Make ticker items more compact on mobile */
   @media (max-width: 640px) {
     .ticker-item {
-      padding: 0 12px;
+      padding: 0 16px;
     }
     
     .ticker-wrapper {

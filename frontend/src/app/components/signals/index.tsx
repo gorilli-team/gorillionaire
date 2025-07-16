@@ -29,7 +29,12 @@ import { HexString } from "@/app/types";
 import { getTokenImage } from "@/app/utils/tokens";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-const DexModal = dynamic(() => import("../ui/DexModal"), { ssr: false });
+
+// Lazy load the DexModal to reduce initial bundle size
+const DexModal = dynamic(() => import("../ui/DexModal"), {
+  ssr: false,
+  loading: () => <div className="loading-placeholder" />,
+});
 
 type Token = {
   symbol: string;
@@ -99,7 +104,7 @@ const parseSignalText = (signalText: string) => {
 
 const fetchImageFromSignalText = (signalText: string) => {
   const { symbol } = parseSignalText(signalText);
-  return getTokenImage(symbol || "");
+  return getTokenImage(symbol || "MON"); // Default to MON if no symbol found
 };
 
 const formatNumber = (num: number): string => {
@@ -132,7 +137,7 @@ const mapConfidenceScoreToRisk = (confidenceScore: string) => {
   }
 };
 
-const Signals = () => {
+const Signals = React.memo(() => {
   const { user } = usePrivy();
   const { writeContractAsync } = useWriteContract();
   const { signTypedDataAsync } = useSignTypedData();
@@ -169,6 +174,31 @@ const Signals = () => {
         return;
       }
 
+      // Add cache control to prevent unnecessary requests
+      const cacheKey = `token-holders-${user.wallet.address}`;
+      const cached = sessionStorage.getItem(cacheKey);
+      const now = Date.now();
+
+      if (cached) {
+        const { data, timestamp } = JSON.parse(cached);
+        // Cache for 30 seconds
+        if (now - timestamp < 30000) {
+          data.forEach((token: ApiTokenHolder) => {
+            const balance = parseFloat(token.balance);
+            if (token.symbol === "MON") {
+              setMonBalance(balance);
+            } else if (token.symbol === "CHOG") {
+              setChogBalance(balance);
+            } else if (token.symbol === "DAK") {
+              setDakBalance(balance);
+            } else if (token.symbol === "YAKI") {
+              setMoyakiBalance(balance);
+            }
+          });
+          return;
+        }
+      }
+
       // Fetch token holders data for specific user
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/token/holders/user/${user.wallet.address}`
@@ -181,6 +211,15 @@ const Signals = () => {
         data.result.data &&
         Array.isArray(data.result.data)
       ) {
+        // Cache the response
+        sessionStorage.setItem(
+          cacheKey,
+          JSON.stringify({
+            data: data.result.data,
+            timestamp: now,
+          })
+        );
+
         data.result.data.forEach((token: ApiTokenHolder) => {
           // Convert balance string to number considering decimals
           const balance = parseFloat(token.balance);
@@ -211,12 +250,51 @@ const Signals = () => {
     }
   }, [user?.wallet?.address, fetchHolderData]);
 
-  const fetchPriceData = async () => {
+  const fetchPriceData = useCallback(async () => {
     try {
+      // Add cache control for price data
+      const cached = sessionStorage.getItem("price-data");
+      const now = Date.now();
+
+      if (cached) {
+        const { data, timestamp } = JSON.parse(cached);
+        // Cache for 60 seconds
+        if (now - timestamp < 60000) {
+          data.forEach(
+            (item: {
+              symbol: string;
+              price: {
+                price: number;
+              };
+            }) => {
+              if (item.symbol === "CHOG") {
+                setChogPrice(item.price?.price);
+              } else if (item.symbol === "DAK") {
+                setDakPrice(item.price?.price);
+              } else if (item.symbol === "YAKI") {
+                setMoyakiPrice(item.price?.price);
+              } else if (item.symbol === "WMON") {
+                setMonPrice(item.price?.price);
+              }
+            }
+          );
+          return;
+        }
+      }
+
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/events/prices/latest`
       );
       const data = await response.json();
+
+      // Cache the response
+      sessionStorage.setItem(
+        "price-data",
+        JSON.stringify({
+          data: data.data,
+          timestamp: now,
+        })
+      );
 
       data.data.forEach(
         (item: {
@@ -239,7 +317,7 @@ const Signals = () => {
     } catch (error) {
       console.error("Error fetching price data:", error);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchPriceData();
@@ -328,31 +406,58 @@ const Signals = () => {
     fetchCompletedTrades();
   }, []);
 
-  useEffect(() => {
-    const fetchSignals = async () => {
-      try {
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/signals/generated-signals?userAddress=${user?.wallet?.address}&page=${currentPage}&limit=5`
-        );
-        const data = await response.json();
-        if (data && data.buySignals && data.sellSignals) {
-          // Set all signals without filtering out user actions
+  const fetchSignals = useCallback(async () => {
+    try {
+      // Add cache control for signals
+      const cacheKey = `signals-${user?.wallet?.address}-${currentPage}`;
+      const cached = sessionStorage.getItem(cacheKey);
+      const now = Date.now();
+
+      if (cached) {
+        const { data, timestamp } = JSON.parse(cached);
+        // Cache for 10 seconds
+        if (now - timestamp < 10000) {
           setBuySignals(data.buySignals);
           setSellSignals(data.sellSignals);
-
-          // Set pagination info
           setBuyTotalPages(data.pagination.buy.pages);
           setSellTotalPages(data.pagination.sell.pages);
           setIsLoading(false);
+          return;
         }
-      } catch (error) {
-        console.error("Error fetching signals:", error);
+      }
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/signals/generated-signals?userAddress=${user?.wallet?.address}&page=${currentPage}&limit=5`
+      );
+      const data = await response.json();
+      if (data && data.buySignals && data.sellSignals) {
+        // Cache the response
+        sessionStorage.setItem(
+          cacheKey,
+          JSON.stringify({
+            data,
+            timestamp: now,
+          })
+        );
+
+        // Set all signals without filtering out user actions
+        setBuySignals(data.buySignals);
+        setSellSignals(data.sellSignals);
+
+        // Set pagination info
+        setBuyTotalPages(data.pagination.buy.pages);
+        setSellTotalPages(data.pagination.sell.pages);
         setIsLoading(false);
       }
-    };
-
-    fetchSignals();
+    } catch (error) {
+      console.error("Error fetching signals:", error);
+      setIsLoading(false);
+    }
   }, [user?.wallet?.address, currentPage]);
+
+  useEffect(() => {
+    fetchSignals();
+  }, [fetchSignals]);
 
   // State for Yes/No buttons
   const [selectedOptions, setSelectedOptions] = useState<
@@ -862,15 +967,18 @@ const Signals = () => {
                 >
                   <div className="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden flex-shrink-0 relative border border-gray-100">
                     <Image
-                      src={
-                        token.imageUrl && token.imageUrl.length > 0
-                          ? token.imageUrl
-                          : "/fav.png"
-                      }
+                      src={token.imageUrl || "/fav.png"}
                       alt={token.name || "token image"}
                       width={48}
                       height={48}
                       className="object-cover rounded-full md:w-16 md:h-16"
+                      loading="lazy"
+                      placeholder="blur"
+                      blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = "/fav.png";
+                      }}
                     />
                   </div>
                   <div className="flex flex-col flex-grow min-w-0">
@@ -905,20 +1013,17 @@ const Signals = () => {
                     <div key={index} className="ticker-item">
                       <div className="flex items-center space-x-2">
                         <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 relative border border-gray-200">
-                          {trade.userImageUrl && (
-                            <Image
-                              src={
-                                trade.userImageUrl &&
-                                trade.userImageUrl.length > 0
-                                  ? trade.userImageUrl
-                                  : "/fav.png"
-                              }
-                              alt={`${trade.user} avatar`}
-                              width={32}
-                              height={32}
-                              className="object-cover"
-                            />
-                          )}
+                          <Image
+                            src={trade.userImageUrl || "/fav.png"}
+                            alt={`${trade.user} avatar`}
+                            width={32}
+                            height={32}
+                            className="object-cover"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.src = "/fav.png";
+                            }}
+                          />
                         </div>
                         <div className="flex flex-col">
                           <div className="flex items-center">
@@ -1134,17 +1239,18 @@ const Signals = () => {
                       <div className="flex items-center">
                         <div className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0 relative mr-2">
                           <Image
-                            src={
-                              fetchImageFromSignalText(signal.signal_text) &&
-                              fetchImageFromSignalText(signal.signal_text)
-                                .length > 0
-                                ? fetchImageFromSignalText(signal.signal_text)
-                                : "/fav.png"
-                            }
+                            src={fetchImageFromSignalText(signal.signal_text)}
                             alt={signal.signal_text || "signal image"}
                             width={24}
                             height={24}
                             className="object-cover rounded-full"
+                            loading="lazy"
+                            placeholder="blur"
+                            blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.src = "/fav.png";
+                            }}
                           />
                         </div>
                         <span className="font-medium text-gray-900 group-hover:text-violet-700 transition-colors">
@@ -1303,6 +1409,7 @@ const Signals = () => {
           width: 100%;
           display: flex;
           align-items: center; /* Center content vertically */
+          contain: layout style paint;
         }
 
         .ticker-track {
@@ -1313,6 +1420,7 @@ const Signals = () => {
           animation: ticker 80s linear infinite;
           align-items: center; /* Center items vertically */
           width: auto; /* Allow content to determine width */
+          contain: layout style paint;
         }
 
         .ticker-item {
@@ -1322,6 +1430,7 @@ const Signals = () => {
           align-items: center;
           height: 100%; /* Take full height of container */
           border-right: 1px solid #e5e7eb; /* Add gray border between items */
+          contain: layout style paint;
         }
 
         .ticker-item:last-child {
@@ -1334,6 +1443,17 @@ const Signals = () => {
           }
           100% {
             transform: translateX(-50%);
+          }
+        }
+
+        /* Optimize for mobile */
+        @media (max-width: 640px) {
+          .ticker-wrapper {
+            height: 60px;
+          }
+
+          .ticker-item {
+            padding: 0 16px;
           }
         }
       `}</style>
@@ -1363,6 +1483,8 @@ const Signals = () => {
       )}
     </div>
   );
-};
+});
+
+Signals.displayName = "Signals";
 
 export default Signals;

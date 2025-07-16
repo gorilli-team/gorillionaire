@@ -19,11 +19,23 @@ export const metadata: Metadata = {
     shortcut: "/fav.png",
     apple: "/fav.png",
   },
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+  },
+  themeColor: "#3B82F6",
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 const inter = Inter({
   subsets: ["latin"],
   display: "swap",
+  preload: true,
+  fallback: ["system-ui", "arial"],
 });
 
 export default function RootLayout({
@@ -38,27 +50,55 @@ export default function RootLayout({
         <link rel="icon" type="image/png" sizes="16x16" href="/fav.png" />
         <link rel="shortcut icon" href="/fav.png" />
         <link rel="apple-touch-icon" href="/fav.png" />
+
+        {/* Preload critical resources */}
+        <link
+          rel="preconnect"
+          href="https://fonts.googleapis.com"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preconnect"
+          href="https://cdnjs.cloudflare.com"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preconnect"
+          href="https://s3.tradingview.com"
+          crossOrigin="anonymous"
+        />
+
+        {/* DNS prefetch for external domains */}
+        <link rel="dns-prefetch" href="https://cloud.umami.is" />
+        <link rel="dns-prefetch" href="https://cdn.mxpnl.com" />
+
         <link
           rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.1/css/all.min.css"
           integrity="sha512-5Hs3dF2AEPkpNAR7UiOHba+lRSJNeM2ECkwxUIxC1Q/FLycGTbNapWXB4tP889k5T5Ju8fs4b1P5z/iB4nMfSQ=="
           crossOrigin="anonymous"
         />
-        <link
-          rel="preconnect"
-          href="https://fonts.googleapis.com"
-          crossOrigin="anonymous"
-        />
+
+        {/* Load TradingView script with better performance */}
         <Script
           src="https://s3.tradingview.com/tv.js"
           strategy="afterInteractive"
           type="text/javascript"
         />
+
+        {/* Load analytics with lower priority */}
         <Script
           src="https://cloud.umami.is/script.js"
           data-website-id="1ac7b906-684c-46cb-95d7-f7719fb51940"
           strategy="lazyOnload"
         />
+
+        {/* Load Mixpanel with better performance */}
         <Script
           id="mixpanel-script"
           strategy="afterInteractive"
