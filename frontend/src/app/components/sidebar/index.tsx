@@ -91,7 +91,7 @@ export default function Sidebar({
               <span>Leaderboard</span>
             </button>
           </li>
-          {/* <li>
+          <li>
             <button
               className={`w-full text-left px-3 py-2 rounded-lg hover:bg-gray-200 ${
                 selectedPage === "Agents" ? "bg-gray-200" : ""
@@ -101,7 +101,7 @@ export default function Sidebar({
               <i className="fa-solid fa-robot pr-2"></i>
               <span>Agents</span>
             </button>
-          </li> */}
+          </li>
           <li>
             <button
               className={`w-full text-left px-3 py-2 rounded-lg hover:bg-gray-200 ${
