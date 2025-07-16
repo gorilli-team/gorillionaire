@@ -849,7 +849,7 @@ const Signals = () => {
   }
 
   return (
-    <div className="w-full min-h-screen bg-gray-50 pt-2 lg:pt-0">
+    <div className="w-full min-h-screen bg-gray-50 dark:bg-gray-900 pt-2 lg:pt-0">
       <div className="px-2 sm:px-4 py-4 sm:py-6">
         {/* Token Stats */}
         {user?.wallet?.address && (
@@ -858,7 +858,7 @@ const Signals = () => {
               {tokens.map((token) => (
                 <div
                   key={token.symbol}
-                  className="bg-white rounded-xl shadow p-4 flex items-center gap-3 min-w-0"
+                  className="bg-white dark:bg-gray-800 rounded-xl shadow p-4 flex items-center gap-3 min-w-0"
                 >
                   <div className="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden flex-shrink-0 relative border border-gray-100">
                     <Image
@@ -874,17 +874,17 @@ const Signals = () => {
                     />
                   </div>
                   <div className="flex flex-col flex-grow min-w-0">
-                    <span className="text-xs md:text-sm text-gray-600 font-medium truncate">
+                    <span className="text-xs md:text-sm text-gray-600 dark:text-gray-300 font-medium truncate">
                       {token.name}
                     </span>
-                    <span className="text-lg md:text-2xl font-bold text-gray-900 truncate">
+                    <span className="text-lg md:text-2xl font-bold text-gray-900 dark:text-white truncate">
                       {formatNumber(token.totalHolding)}{" "}
                       <span className="text-base md:text-xl font-semibold text-violet-600">
                         {token.symbol}
                       </span>
                     </span>
                     {token.price && token.price > 0 ? (
-                      <span className="text-xs md:text-sm text-gray-500 mt-1">
+                      <span className="text-xs md:text-sm text-gray-500 dark:text-gray-400 mt-1">
                         Price: ${token?.price?.toFixed(4)}
                       </span>
                     ) : null}
@@ -896,7 +896,7 @@ const Signals = () => {
         )}
 
         {/* IMPROVED RECENT TRADES TICKER */}
-        <div className="mb-6 overflow-hidden relative bg-white rounded-lg shadow">
+        <div className="mb-6 overflow-hidden relative bg-white dark:bg-gray-800 rounded-lg shadow">
           <div className="py-2 px-3">
             <div className="ticker-wrapper">
               <div className="ticker-track">
@@ -925,7 +925,7 @@ const Signals = () => {
                             <span className="text-sm font-bold">
                               <a
                                 href={`/users/${trade.userAddress}`}
-                                className="hover:text-violet-600 transition-colors duration-200"
+                                className="hover:text-violet-600 transition-colors duration-200 text-gray-900 dark:text-white"
                               >
                                 {trade.user}
                               </a>
@@ -945,7 +945,7 @@ const Signals = () => {
                             >
                               {trade.amount} {trade.token}
                             </span>
-                            <span className="text-xs text-gray-500 ml-2">
+                            <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
                               {trade.timeAgo}
                             </span>
                           </div>
@@ -961,13 +961,15 @@ const Signals = () => {
 
         {/* Main Signals Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-          <div className="bg-white rounded-lg shadow p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
             <div className="mb-4 flex items-center justify-between">
               <div className="flex items-center">
                 <span className="text-yellow-500 text-2xl mr-2">💰</span>
-                <span className="font-bold text-2xl">Buy Signals</span>
+                <span className="font-bold text-2xl text-gray-900 dark:text-white">
+                  Buy Signals
+                </span>
               </div>
-              <span className="text-sm text-gray-500">
+              <span className="text-sm text-gray-500 dark:text-gray-400">
                 Page {currentPage} of {buyTotalPages}
               </span>
             </div>
@@ -1112,13 +1114,15 @@ const Signals = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
             <div className="mb-4 flex items-center justify-between">
               <div className="flex items-center">
                 <span className="text-gray-500 text-2xl mr-2">💸</span>
-                <span className="font-bold text-2xl">Sell Signals</span>
+                <span className="font-bold text-2xl text-gray-900 dark:text-white">
+                  Sell Signals
+                </span>
               </div>
-              <span className="text-sm text-gray-500">
+              <span className="text-sm text-gray-500 dark:text-gray-400">
                 Page {currentPage} of {sellTotalPages}
               </span>
             </div>
@@ -1271,13 +1275,13 @@ const Signals = () => {
             disabled={currentPage === 1}
             className={`px-3 py-1 rounded ${
               currentPage === 1
-                ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                ? "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
                 : "bg-violet-700 text-white hover:bg-violet-800"
             }`}
           >
             Previous
           </button>
-          <span className="text-gray-600">
+          <span className="text-gray-600 dark:text-gray-300">
             Page {currentPage} of {Math.max(buyTotalPages, sellTotalPages)}
           </span>
           <button
@@ -1285,7 +1289,7 @@ const Signals = () => {
             disabled={currentPage >= Math.max(buyTotalPages, sellTotalPages)}
             className={`px-3 py-1 rounded ${
               currentPage >= Math.max(buyTotalPages, sellTotalPages)
-                ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                ? "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
                 : "bg-violet-700 text-white hover:bg-violet-800"
             }`}
           >

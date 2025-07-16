@@ -19,10 +19,10 @@ export default function AppLayout() {
   }, []);
 
   return (
-    <div className="flex h-screen bg-gray-100 text-gray-800">
+    <div className="flex h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
       {/* Mobile menu button */}
       <button
-        className="lg:hidden fixed top-4 left-4 z-40 p-2 rounded-full bg-gray-200"
+        className="lg:hidden fixed top-4 left-4 z-40 p-2 rounded-full bg-gray-200 dark:bg-gray-700"
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         aria-label="Toggle mobile menu"
       >
@@ -56,7 +56,7 @@ export default function AppLayout() {
           }
           transition-transform duration-300 ease-in-out
           z-30 lg:z-0
-          bg-white
+          bg-white dark:bg-gray-800
           shadow-xl lg:shadow-none
           h-full
         `}

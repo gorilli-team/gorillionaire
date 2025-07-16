@@ -10,6 +10,7 @@ import { useGetProfile } from "@nadnameservice/nns-wagmi-hooks";
 import { HexString } from "@/app/types";
 import { useDisconnect } from "wagmi";
 import { playTradeChime } from "@/app/utils/sound";
+import { ThemeToggle } from "../ui/ThemeToggle";
 
 interface Notification {
   type: string;
@@ -323,7 +324,7 @@ export default function Header() {
         transition={Bounce}
       />
 
-      <header className="h-16 px-4 sm:px-6 flex items-center justify-between border-b border-gray-300 bg-gray-100 sticky top-0 z-20">
+      <header className="h-16 px-4 sm:px-6 flex items-center justify-between border-b border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-800 sticky top-0 z-20">
         {/* Left space for mobile hamburger menu */}
         <div className="w-8 h-8 lg:hidden"></div>
 
@@ -333,6 +334,9 @@ export default function Header() {
           </div>
 
           <DailyQuestHeader />
+
+          {/* Theme Toggle */}
+          <ThemeToggle />
 
           {/* {monPriceFormatted !== "0.00" && (
             <div
@@ -368,12 +372,12 @@ export default function Header() {
               )}
 
               {nadProfile?.primaryName ? (
-                <div className="text-xs sm:text-sm text-gray-600 truncate max-w-[80px] sm:max-w-none">
+                <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 truncate max-w-[80px] sm:max-w-none">
                   {nadProfile.primaryName}
                 </div>
               ) : (
                 address && (
-                  <div className="text-xs sm:text-sm text-gray-600 truncate max-w-[80px] sm:max-w-none">
+                  <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 truncate max-w-[80px] sm:max-w-none">
                     {address.slice(0, 6)}...
                     {address.slice(-4)}
                   </div>

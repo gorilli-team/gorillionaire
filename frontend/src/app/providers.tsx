@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createConfig, WagmiProvider } from "wagmi";
 import { coinbaseWallet } from "wagmi/connectors";
 import { NNS } from "@nadnameservice/nns-viem-sdk";
+import { ThemeProvider } from "./contexts/ThemeContext";
 
 // Viem define chain
 export const monadChain = defineChain({
@@ -59,41 +60,43 @@ const queryClient = new QueryClient();
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
-    <WagmiProvider config={wagmiConfig}>
-      <QueryClientProvider client={queryClient}>
-        <PrivyProvider
-          appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID || ""}
-          config={{
-            appearance: {
-              theme: "light",
-              accentColor: "#3B82F6",
-            },
-            embeddedWallets: {
-              createOnLogin: "users-without-wallets",
-            },
-            supportedChains: [monadChain],
-            loginMethods: [
-              "email",
-              "google",
-              "apple",
-              "discord",
-              "twitter",
-              "wallet",
-            ],
-            fundingMethodConfig: {
-              moonpay: {
-                paymentMethod: "credit_debit_card", // Purchase with credit or debit card
-                uiConfig: {
-                  accentColor: "#696FFD",
-                  theme: "light",
+    <ThemeProvider>
+      <WagmiProvider config={wagmiConfig}>
+        <QueryClientProvider client={queryClient}>
+          <PrivyProvider
+            appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID || ""}
+            config={{
+              appearance: {
+                theme: "light",
+                accentColor: "#3B82F6",
+              },
+              embeddedWallets: {
+                createOnLogin: "users-without-wallets",
+              },
+              supportedChains: [monadChain],
+              loginMethods: [
+                "email",
+                "google",
+                "apple",
+                "discord",
+                "twitter",
+                "wallet",
+              ],
+              fundingMethodConfig: {
+                moonpay: {
+                  paymentMethod: "credit_debit_card", // Purchase with credit or debit card
+                  uiConfig: {
+                    accentColor: "#696FFD",
+                    theme: "light",
+                  },
                 },
               },
-            },
-          }}
-        >
-          {children}
-        </PrivyProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
+            }}
+          >
+            {children}
+          </PrivyProvider>
+        </QueryClientProvider>
+      </WagmiProvider>
+    </ThemeProvider>
   );
 }

@@ -30,7 +30,7 @@ export default function Sidebar({
   };
 
   return (
-    <aside className="w-64 text-gray-800 flex flex-col bg-white h-screen sticky top-0 border-r border-gray-200 overflow-y-auto">
+    <aside className="w-64 text-gray-800 dark:text-gray-200 flex flex-col bg-white dark:bg-gray-800 h-screen sticky top-0 border-r border-gray-200 dark:border-gray-700 overflow-y-auto">
       <div
         className="h-16 text-xl font-bold flex items-center ps-6 lg:ps-6 cursor-pointer"
         onClick={handleGorillionaireClick}
@@ -47,8 +47,8 @@ export default function Sidebar({
         <ul className="space-y-2">
           <li>
             <button
-              className={`w-full text-left px-3 py-2 rounded-lg hover:bg-gray-200 ${
-                selectedPage === "Signals" ? "bg-gray-200" : ""
+              className={`w-full text-left px-3 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 ${
+                selectedPage === "Signals" ? "bg-gray-200 dark:bg-gray-700" : ""
               }`}
               onClick={() => handlePageChange("Signals")}
             >
@@ -58,8 +58,8 @@ export default function Sidebar({
           </li>
           <li>
             <button
-              className={`w-full text-left px-3 py-2 rounded-lg hover:bg-gray-200 ${
-                selectedPage === "Tokens" ? "bg-gray-200" : ""
+              className={`w-full text-left px-3 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 ${
+                selectedPage === "Tokens" ? "bg-gray-200 dark:bg-gray-700" : ""
               }`}
               onClick={() => handlePageChange("Tokens")}
             >
@@ -70,8 +70,10 @@ export default function Sidebar({
           {address && (
             <li>
               <button
-                className={`w-full text-left px-3 py-2 rounded-lg hover:bg-gray-200 ${
-                  selectedPage === "Profile" ? "bg-gray-200" : ""
+                className={`w-full text-left px-3 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 ${
+                  selectedPage === "Profile"
+                    ? "bg-gray-200 dark:bg-gray-700"
+                    : ""
                 }`}
                 onClick={() => handlePageChange("Profile")}
               >
@@ -82,8 +84,10 @@ export default function Sidebar({
           )}
           <li>
             <button
-              className={`w-full text-left px-3 py-2 rounded-lg hover:bg-gray-200 ${
-                selectedPage === "Leaderboard" ? "bg-gray-200" : ""
+              className={`w-full text-left px-3 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 ${
+                selectedPage === "Leaderboard"
+                  ? "bg-gray-200 dark:bg-gray-700"
+                  : ""
               }`}
               onClick={() => handlePageChange("Leaderboard")}
             >
@@ -104,8 +108,8 @@ export default function Sidebar({
           </li> */}
           <li>
             <button
-              className={`w-full text-left px-3 py-2 rounded-lg hover:bg-gray-200 ${
-                selectedPage === "V2" ? "bg-gray-200" : ""
+              className={`w-full text-left px-3 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 ${
+                selectedPage === "V2" ? "bg-gray-200 dark:bg-gray-700" : ""
               }`}
               onClick={() => handlePageChange("V2")}
             >
@@ -138,14 +142,14 @@ export default function Sidebar({
       </nav>
 
       {/* Footer */}
-      <div className="border-t border-gray-200 p-4 mb-16">
+      <div className="border-t border-gray-200 dark:border-gray-700 p-4 mb-16">
         <ul className="space-y-2">
           <li>
             <a
               href="https://github.com/gorilli-team/gorillionaire"
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-200 flex items-center"
+              className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center"
             >
               <Image
                 src="/github.svg"
@@ -163,7 +167,7 @@ export default function Sidebar({
               href="https://x.com/gorillionaireAI"
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-200 flex items-center"
+              className="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center"
             >
               <Image
                 src="/twitter.svg"
@@ -176,7 +180,7 @@ export default function Sidebar({
             </a>
           </li>
         </ul>
-        <div className="flex items-center pl-3 mt-4 text-xs text-gray-500">
+        <div className="flex items-center pl-3 mt-4 text-xs text-gray-500 dark:text-gray-400">
           <span className="mr-2">Powered by</span>
           <Image src="/Vector.svg" alt="Gorilli" width={70} height={70} />
         </div>
