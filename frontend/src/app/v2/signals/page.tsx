@@ -149,7 +149,7 @@ export default function SignalsPage() {
   const [currentDexPairToken, setCurrentDexPairToken] = useState<Token | null>(null);
   const [currentDexAmount, setCurrentDexAmount] = useState(0);
   const [currentDexType, setCurrentDexType] = useState<"Buy" | "Sell">("Buy");
-  const [currentDexSymbol, setCurrentDexSymbol] = useState<string | null>(null);
+  const [currentDexSymbol] = useState<string | null>(null);
   const [currentSignalId, setCurrentSignalId] = useState<string>("");
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   const allowedTokens = ['MON', 'DAK', 'YAKI', 'CHOG'];
