@@ -149,6 +149,7 @@ export default function SignalsPage() {
   const [currentDexPairToken, setCurrentDexPairToken] = useState<Token | null>(null);
   const [currentDexAmount, setCurrentDexAmount] = useState(0);
   const [currentDexType, setCurrentDexType] = useState<"Buy" | "Sell">("Buy");
+  const [currentDexSymbol, setCurrentDexSymbol] = useState<string | null>(null);
   const [currentSignalId, setCurrentSignalId] = useState<string>("");
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   const allowedTokens = ['MON', 'DAK', 'YAKI', 'CHOG'];
@@ -287,236 +288,156 @@ export default function SignalsPage() {
     [user?.wallet?.address, chainId]
   );
 
-  const onNo = useCallback(async (signalId: string) => {
 
-    if (!user?.wallet?.address) {
-      toast.error("Please connect your wallet");
-      return;
+const onNo = useCallback(async (signalId: string, event: Event) => {
+  if (!user?.wallet?.address) {
+    toast.error("Please connect your wallet");
+    return;
+  }
+
+  const privyToken = Cookies.get("privy-token");
+  if (!privyToken) {
+    toast.error("Authentication required");
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/signals/generated-signals/user-signal-v2`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${privyToken}`,
+        },
+        body: JSON.stringify({
+          userAddress: user.wallet.address,
+          signalId: signalId,
+          choice: "No",
+          type: event.action === "BUY" ? "Buy" : "Sell",
+          symbol: event.symbol,
+          amount: event.price.toString(),
+        }),
+      }
+    );
+
+    console.log("Response status:", response.status);
+
+    if (response.status === 400) {
+      const errorData = await response.json();
+      toast.error(errorData.error || "You have already 5 No signals in the last 24 hours");
+    } else if (response.ok) {
+      toast.success("Signal refused successfully");
+      setEvents(prev => prev.map(e => 
+        e.signal_id === signalId 
+          ? { ...e, userChoice: "No" } 
+          : e
+      ));
+    } else {
+      toast.error("Failed to refuse signal");
     }
+  } catch (error) {
+    console.error("Error refusing signal:", error);
+    toast.error("Network error occurred");
+  }
+}, [user?.wallet?.address]);
 
-    const privyToken = Cookies.get("privy-token");
-    if (!privyToken) {
-      toast.error("Authentication required");
+
+const handleOptionSelect = useCallback(
+  async (event: Event, option: "Yes" | "No") => {
+
+    setSelectedOptions({
+      ...selectedOptions,
+      [event.signal_id]: option,
+    });
+
+    if (option === "Yes") {
+      const tokensFromSymbol = getTokensFromSymbol(event.symbol);
+      const token = tokensFromSymbol[0];
+
+      if (!token) {
+        toast.error("Token not found");
+        return;
+      }
+
+      setCurrentSignalId(event.signal_id);
+
+      const pairToken = tokensFromSymbol[1] || token;
+      const actionType: "Buy" | "Sell" = event.action === "BUY" ? "Buy" : "Sell";
+      
+      // Pass event to onYes function
+      await onYes(token, pairToken, event.price, actionType);
+    } else {
+      // Pass event to onNo function
+      await onNo(event.signal_id, event);
+    }
+  },
+  [selectedOptions, getTokensFromSymbol, onYes, onNo]
+);
+
+const executeTrade = useCallback(
+  async (inputAmount: string) => {
+    if (!currentDexToken || !user?.wallet?.address) {
+      toast.error("Missing token or wallet address");
       return;
     }
 
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/signals/generated-signals/user-signal`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${privyToken}`,
-          },
-          body: JSON.stringify({
-            userAddress: user.wallet.address,
-            signalId: signalId,
-            choice: "No",
-          }),
-        }
-      );
+      const token = currentDexToken;
+      const type = currentDexType;
+      const amount = parseFloat(inputAmount);
 
-      console.log("Response status:", response.status);
+      // Normalize token symbol for consistent handling
+      const normalizedTokenSymbol = token.symbol === "WMON" ? "MON" : token.symbol;
 
-      if (response.status === 400) {
-        toast.error("You have already 5 No signals in the last 24 hours");
-      } else if (response.ok) {
-        toast.success("Signal refused successfully");
-        setEvents(prev => prev.map(event => 
-          event.signal_id === signalId 
-            ? { ...event, userChoice: "No" } 
-            : event
-        ));
-      } else {
-        toast.error("Failed to refuse signal");
-      }
-    } catch (error) {
-      console.error("Error refusing signal:", error);
-      toast.error("Network error occurred");
-    }
-  }, [user?.wallet?.address]);
-
-  const handleOptionSelect = useCallback(
-    async (event: Event, option: "Yes" | "No") => {
-  
-      setSelectedOptions({
-        ...selectedOptions,
-        [event.signal_id]: option,
+      const apiTokenSymbol = currentDexSymbol ?? (token.symbol === "MON" ? "WMON" : token.symbol);
+      const params = new URLSearchParams({
+        token: apiTokenSymbol,
+        amount: amount.toString(),
+        type: type.toLowerCase(),
+        userAddress: user.wallet.address,
+        version: "v2",
       });
-  
-      if (option === "Yes") {
-        const tokensFromSymbol = getTokensFromSymbol(event.symbol);
-        const token = tokensFromSymbol[0];
-  
-        if (!token) {
-          toast.error("Token not found");
-          return;
-        }
-  
-        setCurrentSignalId(event.signal_id);
-  
-        const pairToken = tokensFromSymbol[1] || token;
 
-        const actionType: "Buy" | "Sell" = event.action === "BUY" ? "Buy" : "Sell";
-        
-        await onYes(token, pairToken, event.price, actionType);
-      } else {
-        await onNo(event.signal_id);
-      }
-    },
-    [selectedOptions, getTokensFromSymbol, onYes, onNo]
-  );
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/trade/0x-quote?${params.toString()}`
+      );
+      const quoteData = await res.json();
 
-  const executeTrade = useCallback(
-    async (inputAmount: string) => {
-      if (!currentDexToken || !user?.wallet?.address) {
-        toast.error("Missing token or wallet address");
+      if (!quoteData) {
+        toast.error("Failed to get quote");
         return;
       }
-  
-      try {
-        const token = currentDexToken;
-        const type = currentDexType;
-        const amount = parseFloat(inputAmount);
-  
-        const apiTokenSymbol = token.symbol === "MON" ? "WMON" : token.symbol;
-        const params = new URLSearchParams({
-          token: apiTokenSymbol,
-          amount: amount.toString(),
-          type: type.toLowerCase(),
-          userAddress: user.wallet.address,
-        });
-  
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/trade/0x-quote?${params.toString()}`
-        );
-        const quoteData = await res.json();
-  
-        if (!quoteData) {
-          toast.error("Failed to get quote");
-          return;
-        }
-  
-        if (quoteData.issues?.balance) {
-          toast.error("Insufficient balance");
-          return;
-        }
-  
-        toast("Trade request in progress...", {
-          position: "bottom-right",
-          autoClose: 10000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          draggable: true,
-          theme: "light",
-        });
 
-        const isNativeSell = quoteData.sellToken?.toLowerCase() === MON_ADDRESS.toLowerCase();
-        
-        if (isNativeSell) {
-          const txHash = await sendTransactionAsync({
-            account: user.wallet.address as `0x${string}`,
-            gas: quoteData.transaction.gas ? BigInt(quoteData.transaction.gas) : undefined,
-            to: quoteData.transaction.to,
-            data: quoteData.transaction.data,
-            value: BigInt(quoteData.transaction.value),
-            gasPrice: quoteData.transaction.gasPrice ? BigInt(quoteData.transaction.gasPrice) : undefined,
-            chainId: MONAD_CHAIN_ID,
-          });
-  
-          await waitForTransactionReceipt(wagmiConfig, {
-            hash: txHash,
-            confirmations: 1,
-          });
+      if (quoteData.issues?.balance) {
+        toast.error("Insufficient balance");
+        return;
+      }
 
-          await fetch(`${process.env.NEXT_PUBLIC_API_URL}/activity/track/trade-points`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${Cookies.get("privy-token")}`,
-            },
-            body: JSON.stringify({
-              address: user.wallet.address,
-              txHash,
-              intentId: quoteData.intentId,
-              signalId: currentSignalId,
-            }),
-          });
+      toast("Trade request in progress...", {
+        position: "bottom-right",
+        autoClose: 10000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        draggable: true,
+        theme: "light",
+      });
 
-          toast.success(`Trade ${currentDexType} ${inputAmount} ${token.symbol} executed!`);
-          
-          if (currentSignalId) {
-            setEvents(prev => prev.map(event => 
-              event.signal_id === currentSignalId 
-                ? { ...event, userChoice: "Yes" } 
-                : event
-            ));
-            
-            setSelectedOptions(prev => ({
-              ...prev,
-              [currentSignalId]: "Yes"
-            }));
-          }
-  
-          await fetch(`${process.env.NEXT_PUBLIC_API_URL}/signals/generated-signals/user-signal`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${Cookies.get("privy-token")}`,
-            },
-            body: JSON.stringify({
-              userAddress: user.wallet.address,
-              signalId: currentSignalId,
-              choice: "Yes",
-              type: type,
-              token: token.symbol,
-              amount: amount.toString(),
-            }),
-          });
-  
-          setIsModalOpen(false);
-          return;
-        }
-
-        if (quoteData.issues && quoteData.issues.allowance !== null) {
-          const hash = await writeContractAsync({
-            abi: erc20Abi,
-            address: type === "Sell" ? token.address : WMONAD_ADDRESS,
-            functionName: "approve",
-            args: [PERMIT2_ADDRESS, parseUnits(amount.toString(), token.decimals)],
-          });
-  
-          await waitForTransactionReceipt(wagmiConfig, {
-            hash,
-            confirmations: 1,
-          });
-        }
-  
-        const transaction = quoteData?.transaction;
-        if (!transaction) {
-          toast.error("Trade quote did not return a transaction object.");
-          return;
-        }
-  
-        let signature;
-        let signatureLengthInHex;
-        if (quoteData?.permit2?.eip712) {
-          signature = await signTypedDataAsync(quoteData.permit2.eip712);
-          signatureLengthInHex = numberToHex(size(signature), { signed: false, size: 32 });
-          transaction.data = concat([transaction.data, signatureLengthInHex, signature]);
-        }
-  
-        const hash = await sendTransactionAsync({
+      const isNativeSell = quoteData.sellToken?.toLowerCase() === MON_ADDRESS.toLowerCase();
+      
+      if (isNativeSell) {
+        const txHash = await sendTransactionAsync({
           account: user.wallet.address as `0x${string}`,
-          gas: transaction.gas ? BigInt(transaction.gas) : undefined,
-          to: transaction.to,
-          data: transaction.data,
+          gas: quoteData.transaction.gas ? BigInt(quoteData.transaction.gas) : undefined,
+          to: quoteData.transaction.to,
+          data: quoteData.transaction.data,
+          value: BigInt(quoteData.transaction.value),
+          gasPrice: quoteData.transaction.gasPrice ? BigInt(quoteData.transaction.gasPrice) : undefined,
           chainId: MONAD_CHAIN_ID,
         });
-  
+
         await waitForTransactionReceipt(wagmiConfig, {
-          hash,
+          hash: txHash,
           confirmations: 1,
         });
 
@@ -528,13 +449,13 @@ export default function SignalsPage() {
           },
           body: JSON.stringify({
             address: user.wallet.address,
-            txHash: hash,
+            txHash,
             intentId: quoteData.intentId,
             signalId: currentSignalId,
           }),
         });
 
-        toast.success(`Trade ${currentDexType} ${inputAmount} ${token.symbol} executed!`);
+        toast.success(`Trade ${currentDexType} ${inputAmount} ${normalizedTokenSymbol} executed!`);
         
         if (currentSignalId) {
           setEvents(prev => prev.map(event => 
@@ -549,7 +470,7 @@ export default function SignalsPage() {
           }));
         }
 
-        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/signals/generated-signals/user-signal`, {
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/signals/generated-signals/user-signal-v2`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -560,20 +481,110 @@ export default function SignalsPage() {
             signalId: currentSignalId,
             choice: "Yes",
             type: type,
-            token: token.symbol,
+            symbol: currentDexSymbol || "MON/MON",
             amount: amount.toString(),
           }),
         });
-  
+
         setIsModalOpen(false);
-  
-      } catch (error) {
-        console.error("Transaction failed:", error);
-        toast.error("Transaction failed. Please try again.");
+        return;
       }
-    },
-    [currentDexToken, currentDexType, user?.wallet?.address, currentSignalId, sendTransactionAsync, signTypedDataAsync, wagmiConfig, writeContractAsync]
-  );
+
+      if (quoteData.issues && quoteData.issues.allowance !== null) {
+        const hash = await writeContractAsync({
+          abi: erc20Abi,
+          address: type === "Sell" ? token.address : WMONAD_ADDRESS,
+          functionName: "approve",
+          args: [PERMIT2_ADDRESS, parseUnits(amount.toString(), token.decimals)],
+        });
+
+        await waitForTransactionReceipt(wagmiConfig, {
+          hash,
+          confirmations: 1,
+        });
+      }
+
+      const transaction = quoteData?.transaction;
+      if (!transaction) {
+        toast.error("Trade quote did not return a transaction object.");
+        return;
+      }
+
+      let signature;
+      let signatureLengthInHex;
+      if (quoteData?.permit2?.eip712) {
+        signature = await signTypedDataAsync(quoteData.permit2.eip712);
+        signatureLengthInHex = numberToHex(size(signature), { signed: false, size: 32 });
+        transaction.data = concat([transaction.data, signatureLengthInHex, signature]);
+      }
+
+      const hash = await sendTransactionAsync({
+        account: user.wallet.address as `0x${string}`,
+        gas: transaction.gas ? BigInt(transaction.gas) : undefined,
+        to: transaction.to,
+        data: transaction.data,
+        chainId: MONAD_CHAIN_ID,
+      });
+
+      await waitForTransactionReceipt(wagmiConfig, {
+        hash,
+        confirmations: 1,
+      });
+
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/activity/track/trade-points`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${Cookies.get("privy-token")}`,
+        },
+        body: JSON.stringify({
+          address: user.wallet.address,
+          txHash: hash,
+          intentId: quoteData.intentId,
+          signalId: currentSignalId,
+        }),
+      });
+
+      toast.success(`Trade ${currentDexType} ${inputAmount} ${normalizedTokenSymbol} executed!`);
+      
+      if (currentSignalId) {
+        setEvents(prev => prev.map(event => 
+          event.signal_id === currentSignalId 
+            ? { ...event, userChoice: "Yes" } 
+            : event
+        ));
+        
+        setSelectedOptions(prev => ({
+          ...prev,
+          [currentSignalId]: "Yes"
+        }));
+      }
+
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/signals/generated-signals/user-signal-v2`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${Cookies.get("privy-token")}`,
+        },
+        body: JSON.stringify({
+          userAddress: user.wallet.address,
+          signalId: currentSignalId,
+          choice: "Yes",
+          type: type,
+          symbol: currentDexSymbol || "MON/MON",
+          amount: amount.toString(),
+        }),
+      });
+
+      setIsModalOpen(false);
+
+    } catch (error) {
+      console.error("Transaction failed:", error);
+      toast.error("Transaction failed. Please try again.");
+    }
+  },
+  [currentDexToken, currentDexType, currentDexSymbol, user?.wallet?.address, currentSignalId, sendTransactionAsync, signTypedDataAsync, wagmiConfig, writeContractAsync]
+);
 
   const handleEvent = useCallback(
     (data: Event) => {
