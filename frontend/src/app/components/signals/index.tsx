@@ -1087,7 +1087,7 @@ const Signals = () => {
                       }
                       disabled={isChainSwitching}
                     >
-                      {isChainSwitching ? "Switching..." : "Switch to Monad 1"}
+                      {isChainSwitching ? "Switching..." : "Switch to Monad"}
                     </button>
                   )}
 
@@ -1238,7 +1238,7 @@ const Signals = () => {
                       }
                       disabled={isChainSwitching}
                     >
-                      {isChainSwitching ? "Switching..." : "Switch to Monad 2"}
+                      {isChainSwitching ? "Switching..." : "Switch to Monad"}
                     </button>
                   )}
 
