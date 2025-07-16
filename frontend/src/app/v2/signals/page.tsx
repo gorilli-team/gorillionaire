@@ -288,6 +288,21 @@ export default function SignalsPage() {
         return tokenToTrade ? { token: tokenToTrade, apiType: "buy" } : null;
       }
     }
+    
+    if (secondToken === "MON" || secondToken === "WMON") {
+      if (event.action === "BUY") {
+        const tokenToTrade = tokensFromSymbol.find(t => 
+          t.symbol === firstToken
+        );
+        return tokenToTrade ? { token: tokenToTrade, apiType: "buy" } : null;
+      } else {
+        const tokenToTrade = tokensFromSymbol.find(t => 
+          t.symbol === firstToken
+        );
+        return tokenToTrade ? { token: tokenToTrade, apiType: "sell" } : null;
+      }
+    }
+    
     return null;
   }, [getTokensFromSymbol]);
 
