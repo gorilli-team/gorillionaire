@@ -310,7 +310,7 @@ router.post("/user-signal-v2", async (req, res) => {
       signalId,
       choice,
       symbol: normalizedSymbol,
-      actionType: type,
+      actionType: type.charAt(0).toUpperCase() + type.slice(1).toLowerCase(),
       priceAtSignal: priceAtSignal,
     });
 

@@ -397,10 +397,10 @@ export default function SignalsPage() {
         
         if (actionType === "Buy") {
           tokenToShow = tradeInfo.token;
-          pairTokenToShow = tokensFromSymbol.find(t => t.symbol !== tradeInfo.token.symbol) || tokensFromSymbol[0]; // MON (quello che vendi)
+          pairTokenToShow = tokensFromSymbol.find(t => t.symbol !== tradeInfo.token.symbol) || tokensFromSymbol[0];
         } else {
           tokenToShow = tradeInfo.token;
-          pairTokenToShow = tokensFromSymbol.find(t => t.symbol !== tradeInfo.token.symbol) || tokensFromSymbol[1]; // MON (quello che ricevi)
+          pairTokenToShow = tokensFromSymbol.find(t => t.symbol !== tradeInfo.token.symbol) || tokensFromSymbol[1];
         }
   
         await onYes(tokenToShow, pairTokenToShow, event.price, actionType);
