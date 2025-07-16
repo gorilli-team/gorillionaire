@@ -22,7 +22,7 @@ const UserSignalV2Schema = new mongoose.Schema({
   },
   actionType: {
     type: String,
-    enum: ["Buy", "Sell"],
+    enum: ["buy", "sell"],
     required: true
   },
   priceAtSignal: {
