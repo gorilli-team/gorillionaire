@@ -113,21 +113,44 @@ export default function Header() {
         //make a call to the backend to track the user
         const privyToken = Cookies.get("privy-token");
 
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/activity/track/signin`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${privyToken}`,
-            },
-            body: JSON.stringify({ address: user.wallet.address }),
-          }
-        );
-        await response.json();
+        // First ensure user is authenticated via /auth/privy
+        try {
+          const authResponse = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/auth/privy`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ address: user.wallet.address, privyToken }),
+            }
+          );
+          await authResponse.json();
+        } catch (error) {
+          console.error("Error authenticating user:", error);
+          return;
+        }
 
-        // Fetch streak data after tracking user
-        await fetchStreak();
+        // Now call the signin endpoint
+        try {
+          const response = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/activity/track/signin`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${privyToken}`,
+              },
+              body: JSON.stringify({ address: user.wallet.address }),
+            }
+          );
+          await response.json();
+
+          // Fetch streak data after tracking user
+          await fetchStreak();
+        } catch (error) {
+          console.error("Error tracking user signin:", error);
+        }
       }
     };
 
