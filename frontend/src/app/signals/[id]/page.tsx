@@ -403,14 +403,16 @@ export default function SignalDetails() {
       });
 
       // Trade successful - dispatch custom event to refresh points and quests
-      window.dispatchEvent(new CustomEvent('tradeCompleted', {
-        detail: {
-          userAddress: user?.wallet?.address,
-          token: token.symbol,
-          amount: amount,
-          type: type
-        }
-      }));
+      window.dispatchEvent(
+        new CustomEvent("tradeCompleted", {
+          detail: {
+            userAddress: user?.wallet?.address,
+            token: token.symbol,
+            amount: amount,
+            type: type,
+          },
+        })
+      );
 
       const privyToken = Cookies.get("privy-token");
       await fetch(
@@ -509,14 +511,16 @@ export default function SignalDetails() {
     });
 
     // Trade successful - dispatch custom event to refresh points and quests
-    window.dispatchEvent(new CustomEvent('tradeCompleted', {
-      detail: {
-        userAddress: user?.wallet?.address,
-        token: token.symbol,
-        amount: amount,
-        type: type
-      }
-    }));
+    window.dispatchEvent(
+      new CustomEvent("tradeCompleted", {
+        detail: {
+          userAddress: user?.wallet?.address,
+          token: token.symbol,
+          amount: amount,
+          type: type,
+        },
+      })
+    );
 
     await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/activity/track/trade-points`,
@@ -736,7 +740,10 @@ export default function SignalDetails() {
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <div className="text-sm text-gray-500 mb-1">Amount</div>
                     <div className="text-lg font-medium">
-                      {signal.amount || "0"} {signal.token || ""}
+                      {signal.amount || "0"}
+                      {signal.type === "Sell"
+                        ? "%"
+                        : ` ${selectedToken?.symbol || ""}`}
                     </div>
                   </div>
                   <div className="bg-gray-50 p-4 rounded-lg">
