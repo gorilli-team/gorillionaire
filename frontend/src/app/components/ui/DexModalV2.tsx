@@ -233,8 +233,10 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
     try {
       const amountToUse = type === "Buy" ? outputAmount : inputAmount;
       await onConfirm(amountToUse);
+      onClose();
     } catch (error) {
       console.error("Error confirming trade:", error);
+    } finally {
       setIsLoading(false);
     }
   };
