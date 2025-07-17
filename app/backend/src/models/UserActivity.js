@@ -34,6 +34,11 @@ const userActivitySchema = new mongoose.Schema(
           type: ObjectId,
           ref: "GeneratedSignal",
         },
+        version: {
+          type: String,
+          enum: ["v1", "v2"],
+          default: "v1"
+        }
       },
     ],
     streak: {
