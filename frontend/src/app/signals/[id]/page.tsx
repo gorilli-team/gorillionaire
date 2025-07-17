@@ -416,6 +416,7 @@ export default function SignalDetails() {
             txHash,
             intentId: quoteData.intentId,
             signalId: signal?._id,
+            isV2: false
           }),
         }
       );
@@ -511,6 +512,7 @@ export default function SignalDetails() {
           txHash: hash,
           intentId: quoteData.intentId,
           signalId: signal?._id,
+          isV2: false
         }),
       }
     );

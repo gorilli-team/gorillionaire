@@ -492,6 +492,7 @@ const Signals = () => {
               txHash,
               intentId: quoteData.intentId,
               signalId: currentSignalId,
+              isV2: false
             }),
           }
         );
@@ -612,6 +613,7 @@ const Signals = () => {
             txHash: hash,
             intentId: quoteData.intentId,
             signalId: currentSignalId,
+            isV2: false
           }),
         }
       );

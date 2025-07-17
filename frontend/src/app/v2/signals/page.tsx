@@ -477,6 +477,7 @@ export default function SignalsPage() {
               txHash,
               intentId: quoteData.intentId,
               signalId: currentSignalId,
+              isV2: true
             }),
           });
 
