@@ -4,6 +4,18 @@ import { Token } from "@/app/types";
 import { getTokenImage } from "@/app/utils/tokens";
 import { useAccount, useSwitchChain } from "wagmi";
 import { MONAD_CHAIN_ID } from "@/app/utils/constants";
+import { usePrivy } from "@privy-io/react-auth";
+
+type ApiTokenHolder = {
+  balance: string;
+  contractAddress: string;
+  decimal: number;
+  imageURL: string;
+  name: string;
+  price: string;
+  symbol: string;
+  verified: boolean;
+};
 
 interface DexModalV2Props {
   isOpen: boolean;
@@ -36,8 +48,12 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
   const [tokenPrice, setTokenPrice] = useState<number>(0);
   const [pairTokenPrice, setPairTokenPrice] = useState<number>(0);
   const [priceLoading, setPriceLoading] = useState<boolean>(false);
+  const [tokenBalance, setTokenBalance] = useState<number>(0);
+  const [pairTokenBalance, setPairTokenBalance] = useState<number>(0);
+  const [balanceLoading, setBalanceLoading] = useState<boolean>(false);
   const { chainId } = useAccount();
   const { switchChain } = useSwitchChain();
+  const { user } = usePrivy();
 
   const mapSymbolForDisplay = (symbol: string): string => {
     return symbol === "WMON" ? "MON" : symbol;
@@ -48,8 +64,69 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
     return getTokenImage(displaySymbol);
   };
 
-  const inputToken = type === "Buy" ? pairToken : token; 
-  const outputToken = type === "Buy" ? token : pairToken;
+  const getInputOutputTokens = () => {
+    if (!eventSymbol) {
+      // Fallback to original logic if no eventSymbol
+      return {
+        inputToken: { ...token, totalHolding: tokenBalance },
+        outputToken: { ...pairToken, totalHolding: pairTokenBalance }
+      };
+    }
+
+    const symbols = eventSymbol.split('/');
+    const firstSymbol = symbols[0];
+    const secondSymbol = symbols[1];
+    
+    if (type === "Buy") {
+      const inputToken = secondSymbol === token.symbol ? 
+        { ...token, totalHolding: tokenBalance } : 
+        { ...pairToken, totalHolding: pairTokenBalance };
+      const outputToken = firstSymbol === token.symbol ? 
+        { ...token, totalHolding: tokenBalance } : 
+        { ...pairToken, totalHolding: pairTokenBalance };
+      return { inputToken, outputToken };
+    } else {
+      const inputToken = firstSymbol === token.symbol ? 
+        { ...token, totalHolding: tokenBalance } : 
+        { ...pairToken, totalHolding: pairTokenBalance };
+      const outputToken = secondSymbol === token.symbol ? 
+        { ...token, totalHolding: tokenBalance } : 
+        { ...pairToken, totalHolding: pairTokenBalance };
+      return { inputToken, outputToken };
+    }
+  };
+
+  const { inputToken, outputToken } = getInputOutputTokens();
+
+  // Fetch token balances using the same endpoint as the main signals page
+  const fetchTokenBalances = useCallback(async () => {
+    if (!user?.wallet?.address) return;
+    
+    setBalanceLoading(true);
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/token/holders/user/${user.wallet.address}`
+      );
+      const data = await response.json();
+
+      if (data.code === 0 && data.result && data.result.data && Array.isArray(data.result.data)) {
+        data.result.data.forEach((tokenData: ApiTokenHolder) => {
+          const balance = parseFloat(tokenData.balance);
+          
+          if (tokenData.symbol === token.symbol || (tokenData.symbol === "MON" && token.symbol === "WMON")) {
+            setTokenBalance(balance);
+          }
+          if (tokenData.symbol === pairToken.symbol || (tokenData.symbol === "MON" && pairToken.symbol === "WMON")) {
+            setPairTokenBalance(balance);
+          }
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching token balances:", error);
+    } finally {
+      setBalanceLoading(false);
+    }
+  }, [user?.wallet?.address, token.symbol, pairToken.symbol]);
 
   // Fetch oracle prices using the same endpoint as the main signals page
   const fetchOraclePrices = useCallback(async () => {
@@ -57,6 +134,7 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
     
     setPriceLoading(true);
     try {
+      // Use the same endpoint as the main signals page
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/events/prices/latest`
       );
@@ -138,16 +216,17 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
   useEffect(() => {
     if (isOpen) {
       fetchOraclePrices();
+      fetchTokenBalances();
     }
-  }, [isOpen, fetchOraclePrices]);
+  }, [isOpen, fetchOraclePrices, fetchTokenBalances]);
 
   useEffect(() => {
-    if (isOpen && !priceLoading && tokenPrice > 0 && pairTokenPrice > 0) {
-      // Start with empty fields
+    if (isOpen && !priceLoading && !balanceLoading && tokenPrice > 0 && pairTokenPrice > 0) {
+      // Start with empty fields - user decides what to trade
       setInputAmount("");
       setOutputAmount("");
     }
-  }, [isOpen, priceLoading, tokenPrice, pairTokenPrice]);
+  }, [isOpen, priceLoading, balanceLoading, tokenPrice, pairTokenPrice]);
 
   const handleConfirm = async () => {
     setIsLoading(true);
@@ -212,7 +291,6 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
     }
   };
 
-  
   // Format a dollar amount to a nice string
   const formatUSD = (value: number) => {
     if (value >= 100) return `$${value.toFixed(2)}`;
@@ -348,7 +426,7 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
               <div className="flex justify-between items-center mb-2">
                 <span className="text-sm text-gray-500">From</span>
                 <span className="text-sm text-gray-500">
-                  {mapSymbolForDisplay(inputToken.symbol)}
+                  Balance: {inputToken.totalHolding ? inputToken.totalHolding.toFixed(4) : "0.0000"}
                 </span>
               </div>
               <div className="flex items-center space-x-3">
@@ -403,7 +481,7 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
               <div className="flex justify-between items-center mb-2">
                 <span className="text-sm text-gray-500">To</span>
                 <span className="text-sm text-gray-500">
-                  {mapSymbolForDisplay(outputToken.symbol)}
+                  {isLoading ? "Calculating..." : ""}
                 </span>
               </div>
               <div className="flex items-center space-x-3">
@@ -463,18 +541,20 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
 
             <button
               onClick={handleConfirm}
-              disabled={isLoading || priceLoading || !inputAmount || parseFloat(inputAmount) <= 0}
+              disabled={isLoading || priceLoading || balanceLoading || !inputAmount || parseFloat(inputAmount) <= 0 || parseFloat(inputAmount) > (inputToken.totalHolding || 0)}
               className={`w-full py-3 rounded-full font-medium text-white 
                 ${
-                  isLoading || priceLoading || !inputAmount || parseFloat(inputAmount) <= 0
+                  isLoading || priceLoading || balanceLoading || !inputAmount || parseFloat(inputAmount) <= 0 || parseFloat(inputAmount) > (inputToken.totalHolding || 0)
                     ? "bg-gray-400 cursor-not-allowed"
                     : type === "Buy"
                     ? "bg-green-600 hover:bg-green-700"
                     : "bg-red-600 hover:bg-red-700"
                 }`}
             >
-              {isLoading || priceLoading
+              {isLoading || priceLoading || balanceLoading
                 ? "Loading..."
+                : parseFloat(inputAmount) > (inputToken.totalHolding || 0)
+                ? "Insufficient Balance"
                 : `Confirm ${type === "Buy" ? "Buy" : "Sell"}`}
             </button>
           </>
