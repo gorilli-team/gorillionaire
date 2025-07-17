@@ -26,11 +26,9 @@ import {
   useSendTransaction,
 } from "wagmi";
 import { waitForTransactionReceipt } from "wagmi/actions";
-import { concat, erc20Abi, numberToHex, parseUnits, size } from "viem";
+import { concat, erc20Abi, numberToHex, size } from "viem";
 import {
   MON_ADDRESS,
-  PERMIT2_ADDRESS,
-  WMONAD_ADDRESS,
 } from "@/app/utils/constants";
 
 type Signal = {
@@ -377,6 +375,7 @@ export default function SignalsPage() {
       toast.error("Network error occurred");
     }
   }, [user?.wallet?.address]);
+  
   const handleOptionSelect = useCallback(
     async (event: Event, option: "Yes" | "No") => {
       if (option === "Yes") {
@@ -539,6 +538,7 @@ export default function SignalsPage() {
           await updateSuccessState(txHash);
           return;
         }
+        
         if (quoteData.issues && quoteData.issues.allowance) {
           const allowanceIssue = quoteData.issues.allowance;
           const currentAllowance = BigInt(allowanceIssue.actual || "0");
@@ -616,25 +616,28 @@ export default function SignalsPage() {
   
         await updateSuccessState(hash);
   
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("❌ Transaction failed:", error);
         
         let errorMessage = "Transaction failed. Please try again.";
         
-        if (error?.message?.includes("insufficient funds")) {
-          errorMessage = "Insufficient funds for gas or token amount.";
-        } else if (error?.message?.includes("execution reverted")) {
-          if (error.message.includes("INSUFFICIENT_OUTPUT_AMOUNT")) {
-            errorMessage = "Trade failed due to price impact. Try a smaller amount or adjust slippage.";
-          } else if (error.message.includes("UniswapV2: INSUFFICIENT_LIQUIDITY")) {
-            errorMessage = "Insufficient liquidity for this trade size.";
-          } else if (error.message.includes("TRANSFER_FROM_FAILED")) {
-            errorMessage = "Token transfer failed. Check your balance and allowances.";
-          } else {
-            errorMessage = "Trade execution failed. This could be due to price movement, slippage, or insufficient liquidity.";
+        if (error && typeof error === 'object' && 'message' in error) {
+          const errorMsg = String(error.message);
+          if (errorMsg.includes("insufficient funds")) {
+            errorMessage = "Insufficient funds for gas or token amount.";
+          } else if (errorMsg.includes("execution reverted")) {
+            if (errorMsg.includes("INSUFFICIENT_OUTPUT_AMOUNT")) {
+              errorMessage = "Trade failed due to price impact. Try a smaller amount or adjust slippage.";
+            } else if (errorMsg.includes("UniswapV2: INSUFFICIENT_LIQUIDITY")) {
+              errorMessage = "Insufficient liquidity for this trade size.";
+            } else if (errorMsg.includes("TRANSFER_FROM_FAILED")) {
+              errorMessage = "Token transfer failed. Check your balance and allowances.";
+            } else {
+              errorMessage = "Trade execution failed. This could be due to price movement, slippage, or insufficient liquidity.";
+            }
+          } else if (errorMsg.includes("user rejected")) {
+            errorMessage = "Transaction was cancelled by user.";
           }
-        } else if (error?.message?.includes("user rejected")) {
-          errorMessage = "Transaction was cancelled by user.";
         }
         
         toast.error(errorMessage);
