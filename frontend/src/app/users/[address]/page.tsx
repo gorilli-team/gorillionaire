@@ -28,18 +28,21 @@ const formatNumber = (num: number): string => {
 const formatDate = (dateString: string): string => {
   const date = new Date(dateString);
   const now = new Date();
-  const diffTime = date.getTime() - now.getTime();
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  // Reset time to 00:00:00 for accurate day comparison
+  const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const nowOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  
+  const diffTime = dateOnly.getTime() - nowOnly.getTime();
+  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
-  if (diffDays < 0) {
-    // Past date
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
+
+  if (diffDays === -1) {
+    // Yesterday
+    return `Yesterday at ${date.toLocaleTimeString("en-US", {
       hour: "2-digit",
       minute: "2-digit",
-    });
+    })}`;
   } else if (diffDays === 0) {
     // Today
     return `Today at ${date.toLocaleTimeString("en-US", {
@@ -52,6 +55,14 @@ const formatDate = (dateString: string): string => {
       hour: "2-digit",
       minute: "2-digit",
     })}`;
+  } else if (diffDays < -1) {
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   } else {
     // Future date
     return date.toLocaleDateString("en-US", {
@@ -62,6 +73,7 @@ const formatDate = (dateString: string): string => {
     });
   }
 };
+
 interface UserActivity {
   name: string;
   points: string;
