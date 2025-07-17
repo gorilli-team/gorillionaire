@@ -62,11 +62,11 @@ const formatDate = (dateString: string): string => {
     });
   }
 };
-
 interface UserActivity {
   name: string;
   points: string;
   date: string;
+  version: string;
   intentId: {
     tokenSymbol: string;
     tokenAmount: number;
@@ -379,18 +379,18 @@ const UserProfilePage = () => {
     const fetchUserProfile = async () => {
       try {
         const address = params.address as string;
-
+   
         if (!address) return;
         const response = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/activity/track/me?address=${address}&page=${currentPage}&limit=${itemsPerPage}`
         );
         const data = await response.json();
-
+   
         let profile = undefined;
         if (typeof address === "string" && address.length > 0) {
           profile = await nnsClient.getProfile(address as HexString);
         }
-
+   
         setUserProfile({
           address: data.userActivity?.address || address,
           nadName: profile?.primaryName,
@@ -409,11 +409,11 @@ const UserProfilePage = () => {
         setIsLoading(false);
       }
     };
-
+   
     if (params.address) {
       fetchUserProfile();
     }
-  }, [params.address, currentPage, v2NFTBalance]);
+   }, [params.address, currentPage, v2NFTBalance]);
 
   useEffect(() => {
     if (params.address) {
@@ -1424,14 +1424,12 @@ const UserProfilePage = () => {
                                       </span>
                                       <span
                                         className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                                          activity.intentId.tokenPrice > 1
+                                          activity.version === "v2"
                                             ? "bg-pink-100 text-pink-600"
                                             : "bg-orange-100 text-orange-600"
                                         }`}
                                       >
-                                        {activity.intentId.tokenPrice > 1
-                                          ? "V2"
-                                          : "V1"}
+                                        {activity.version === "v2" ? "V2" : "V1"}
                                       </span>
                                     </div>
                                     <div className="flex items-center gap-2 text-sm text-gray-500">
