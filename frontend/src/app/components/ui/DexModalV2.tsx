@@ -243,18 +243,14 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
     const value = e.target.value;
     if (/^\d*\.?\d*$/.test(value)) {
       setInputAmount(value);
-      if (value && type === "Sell") {
-        calculateOutputForSell(parseFloat(value));
-      } else if (value && type === "Buy") {
-        if (tokenPrice > 0 && pairTokenPrice > 0) {
-          // Use oracle prices
-          const usdValue = parseFloat(value) * pairTokenPrice;
-          const tokenAmount = usdValue / tokenPrice;
-          setOutputAmount(tokenAmount.toFixed(6));
-        } else {
-          // Wait for oracle prices
-          setOutputAmount("0");
-        }
+      if (value && tokenPrice > 0 && pairTokenPrice > 0) {
+        // Calculate based on input token price and output token price
+        const inputTokenPrice = inputToken.symbol === token.symbol ? tokenPrice : pairTokenPrice;
+        const outputTokenPrice = outputToken.symbol === token.symbol ? tokenPrice : pairTokenPrice;
+        
+        const usdValue = parseFloat(value) * inputTokenPrice;
+        const outputAmount = usdValue / outputTokenPrice;
+        setOutputAmount(outputAmount.toFixed(6));
       } else {
         setOutputAmount("0");
       }
@@ -265,26 +261,14 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
     const value = e.target.value;
     if (/^\d*\.?\d*$/.test(value)) {
       setOutputAmount(value);
-      if (value && type === "Buy") {
-        if (tokenPrice > 0 && pairTokenPrice > 0) {
-          // Use oracle prices
-          const usdValue = parseFloat(value) * tokenPrice;
-          const inputNeeded = usdValue / pairTokenPrice;
-          setInputAmount(inputNeeded.toFixed(6));
-        } else {
-          // Wait for oracle prices
-          setInputAmount("0");
-        }
-      } else if (value && type === "Sell") {
-        if (tokenPrice > 0 && pairTokenPrice > 0) {
-          // Use oracle prices
-          const usdValue = parseFloat(value) * pairTokenPrice;
-          const inputNeeded = usdValue / tokenPrice;
-          setInputAmount(inputNeeded.toFixed(6));
-        } else {
-          // Wait for oracle prices
-          setInputAmount("0");
-        }
+      if (value && tokenPrice > 0 && pairTokenPrice > 0) {
+        // Calculate based on output token price and input token price
+        const inputTokenPrice = inputToken.symbol === token.symbol ? tokenPrice : pairTokenPrice;
+        const outputTokenPrice = outputToken.symbol === token.symbol ? tokenPrice : pairTokenPrice;
+        
+        const usdValue = parseFloat(value) * outputTokenPrice;
+        const inputAmount = usdValue / inputTokenPrice;
+        setInputAmount(inputAmount.toFixed(6));
       } else {
         setInputAmount("0");
       }
@@ -520,7 +504,11 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
                 <span>
                   {tokenPrice > 0 && pairTokenPrice > 0 ? (
                     <>
-                      1 {mapSymbolForDisplay(token.symbol)} = {(tokenPrice / pairTokenPrice).toFixed(6)} {mapSymbolForDisplay(pairToken.symbol)}
+                      1 {mapSymbolForDisplay(inputToken.symbol)} ≈ {(
+                        inputToken.symbol === token.symbol 
+                          ? tokenPrice / pairTokenPrice 
+                          : pairTokenPrice / tokenPrice
+                      ).toFixed(6)} {mapSymbolForDisplay(outputToken.symbol)}
                     </>
                   ) : (
                     "Loading..."
