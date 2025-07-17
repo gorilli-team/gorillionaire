@@ -8,6 +8,7 @@ const UserAuth = require("../../models/UserAuth");
 const { trackOnDiscordXpGained } = require("../../controllers/points");
 const Referral = require("../../models/Referral");
 const WeeklyLeaderboardService = require("../../services/WeeklyLeaderboardService");
+const UserSignalV2 = require("../../models/UserSignalV2");
 const {
   manualArchive,
   archiveSpecificWeek,
@@ -136,7 +137,7 @@ router.post("/signin", async (req, res) => {
 
 router.post("/trade-points", async (req, res) => {
   try {
-    let { address, txHash, intentId, signalId } = req.body;
+    let { address, txHash, intentId, signalId, isV2 } = req.body;
 
     if (!signalId) {
       return res.status(400).json({ error: "Signal ID is required" });
@@ -181,7 +182,7 @@ router.post("/trade-points", async (req, res) => {
       return res.status(400).json({ error: "User activity not found" });
     }
 
-    //check if the txHash is already in the userActivity.activitiesList
+    // Check if the txHash is already in the userActivity.activitiesList
     if (
       userActivity.activitiesList.some((activity) => activity.txHash === txHash)
     ) {
@@ -218,20 +219,16 @@ router.post("/trade-points", async (req, res) => {
         .json({ error: "Intent not corresponding to tx data" });
     }
 
-    //add the txHash to the userActivity.activitiesList
+    // Calculate points
     let points = Math.ceil(intent.usdValue);
-
-    // Check if user has been referred and is within 7 days of being referred
     let is2xXpActive = false;
 
-    // Check if user has been referred by looking at the Referral collection
-    const Referral = require("../../models/Referral");
+    // Check referral bonus eligibility
     const userReferral = await Referral.findOne({
       "referredUsers.address": address.toLowerCase(),
     });
 
     if (userReferral) {
-      // Find the specific referred user to get their join date
       const referredUser = userReferral.referredUsers.find(
         (user) => user.address === address.toLowerCase()
       );
@@ -243,27 +240,14 @@ router.post("/trade-points", async (req, res) => {
         const timeDiff = now.getTime() - referredAt.getTime();
         const isWithinFirstWeek = timeDiff <= sevenDaysInMs;
 
-        // console.log("Referral check:", {
-        //   referredAt: referredAt.toISOString(),
-        //   now: now.toISOString(),
-        //   timeDiff: timeDiff,
-        //   sevenDaysInMs: sevenDaysInMs,
-        //   isWithinFirstWeek: isWithinFirstWeek,
-        // });
-
         if (isWithinFirstWeek) {
-          points = points * 2; // 2x XP for first week
+          points = points * 2;
           is2xXpActive = true;
-          console.log(
-            "2x XP activated! Original points:",
-            Math.ceil(intent.usdValue),
-            "Final points:",
-            points
-          );
         }
       }
     }
 
+    // Add the trade activity with version information
     userActivity.activitiesList.push({
       name: is2xXpActive ? "Trade (2x XP)" : "Trade",
       points: points,
@@ -271,12 +255,14 @@ router.post("/trade-points", async (req, res) => {
       intentId: intentId,
       signalId: signalId,
       txHash: txHash,
+      version: isV2 ? "v2" : "v1"
     });
+
     const totalPoints = userActivity.points + points;
     userActivity.points += points;
     await userActivity.save();
 
-    // Invalidate weekly cache since new activity was added
+    // Invalidate weekly cache
     invalidateWeeklyCache();
 
     await trackOnDiscordXpGained(
@@ -351,9 +337,13 @@ router.post("/trade-points", async (req, res) => {
       data: intent.toObject(),
     });
 
-    res.json({ message: "Points added" });
+    res.json({ 
+      message: "Points added",
+      version: isV2 ? "v2" : "v1",
+      points: points
+    });
   } catch (error) {
-    console.error("Error fetching points:", error);
+    console.error("Error in trade-points:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
