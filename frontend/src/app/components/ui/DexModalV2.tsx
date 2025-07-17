@@ -39,7 +39,7 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
   amount,
   type,
   signalText = "",
-  confidenceScore = "",
+  confidenceScore = "", // eslint-disable-line @typescript-eslint/no-unused-vars
   eventSymbol = "",
 }) => {
   const [inputAmount, setInputAmount] = useState<string>("");
@@ -175,6 +175,7 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
     }
   }, [token, pairToken]);
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const calculateInputForBuy = useCallback(async (targetAmount: number) => {
     setIsLoading(true);
     try {
@@ -194,6 +195,7 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
     }
   }, [tokenPrice, pairTokenPrice]);
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const calculateOutputForSell = useCallback(async (sourceAmount: number) => {
     setIsLoading(true);
     try {
@@ -233,9 +235,11 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
     try {
       const amountToUse = type === "Buy" ? outputAmount : inputAmount;
       await onConfirm(amountToUse);
+      // Only close modal if transaction was successful
       onClose();
     } catch (error) {
       console.error("Error confirming trade:", error);
+      // Don't close modal on error, let user retry
     } finally {
       setIsLoading(false);
     }
