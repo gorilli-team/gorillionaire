@@ -15,6 +15,7 @@ interface DexModalV2Props {
   type: "Buy" | "Sell";
   signalText?: string;
   confidenceScore?: string;
+  eventSymbol?: string;
 }
 
 const DexModalV2: React.FC<DexModalV2Props> = ({
@@ -27,10 +28,14 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
   type,
   signalText = "",
   confidenceScore = "",
+  eventSymbol = "",
 }) => {
   const [inputAmount, setInputAmount] = useState<string>("");
   const [outputAmount, setOutputAmount] = useState<string>("0");
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [tokenPrice, setTokenPrice] = useState<number>(0);
+  const [pairTokenPrice, setPairTokenPrice] = useState<number>(0);
+  const [priceLoading, setPriceLoading] = useState<boolean>(false);
   const { chainId } = useAccount();
   const { switchChain } = useSwitchChain();
 
@@ -46,41 +51,103 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
   const inputToken = type === "Buy" ? pairToken : token; 
   const outputToken = type === "Buy" ? token : pairToken;
 
+  // Fetch oracle prices using the same endpoint as the main signals page
+  const fetchOraclePrices = useCallback(async () => {
+    if (!token || !pairToken) return;
+    
+    setPriceLoading(true);
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/events/prices/latest`
+      );
+      const data = await response.json();
+
+      if (data && data.data) {
+        // Map symbols to handle WMON -> MON conversion
+        const getSymbolForApi = (symbol: string) => {
+          return symbol === "MON" ? "WMON" : symbol;
+        };
+
+        const tokenSymbolForApi = getSymbolForApi(token.symbol);
+        const pairTokenSymbolForApi = getSymbolForApi(pairToken.symbol);
+
+        // Find prices for both tokens
+        const tokenPriceData = data.data.find(
+          (item: { symbol: string; price: { price: number } }) =>
+            item.symbol === tokenSymbolForApi
+        );
+        const pairTokenPriceData = data.data.find(
+          (item: { symbol: string; price: { price: number } }) =>
+            item.symbol === pairTokenSymbolForApi
+        );
+
+        setTokenPrice(tokenPriceData?.price?.price || 0);
+        setPairTokenPrice(pairTokenPriceData?.price?.price || 0);
+      } else {
+        console.warn("Oracle price fetch failed, no data");
+        setTokenPrice(0);
+        setPairTokenPrice(0);
+      }
+    } catch (error) {
+      console.error("Error fetching oracle prices:", error);
+      setTokenPrice(0);
+      setPairTokenPrice(0);
+    } finally {
+      setPriceLoading(false);
+    }
+  }, [token, pairToken]);
+
   const calculateInputForBuy = useCallback(async (targetAmount: number) => {
     setIsLoading(true);
     try {
-      const estimatedInput = targetAmount * amount;
-      setInputAmount(estimatedInput.toFixed(6));
+      if (tokenPrice > 0 && pairTokenPrice > 0) {
+        // Calculate based on oracle prices
+        const usdValue = targetAmount * tokenPrice;
+        const pairTokenNeeded = usdValue / pairTokenPrice;
+        setInputAmount(pairTokenNeeded.toFixed(6));
+      } else {
+        // Wait for oracle prices to load
+        setInputAmount("0");
+      }
       setIsLoading(false);
     } catch (error) {
       console.error("Error calculating input amount:", error);
       setIsLoading(false);
     }
-  }, [amount]);
+  }, [tokenPrice, pairTokenPrice]);
 
   const calculateOutputForSell = useCallback(async (sourceAmount: number) => {
     setIsLoading(true);
     try {
-      const estimatedOutput = sourceAmount * amount;
-      setOutputAmount(estimatedOutput.toFixed(6));
+      if (tokenPrice > 0 && pairTokenPrice > 0) {
+        // Calculate based on oracle prices
+        const usdValue = sourceAmount * tokenPrice;
+        const pairTokenReceived = usdValue / pairTokenPrice;
+        setOutputAmount(pairTokenReceived.toFixed(6));
+      } else {
+        // Wait for oracle prices to load
+        setOutputAmount("0");
+      }
       setIsLoading(false);
     } catch (error) {
       console.error("Error calculating output amount:", error);
       setIsLoading(false);
     }
-  }, [amount]);
+  }, [tokenPrice, pairTokenPrice]);
 
   useEffect(() => {
     if (isOpen) {
-      if (type === "Buy") {
-        setOutputAmount(amount.toString());
-        calculateInputForBuy(amount);
-      } else {
-        setInputAmount(amount.toString());
-        calculateOutputForSell(amount);
-      }
+      fetchOraclePrices();
     }
-  }, [isOpen, type, token, pairToken, amount, calculateInputForBuy, calculateOutputForSell]);
+  }, [isOpen, fetchOraclePrices]);
+
+  useEffect(() => {
+    if (isOpen && !priceLoading && tokenPrice > 0 && pairTokenPrice > 0) {
+      // Start with empty fields
+      setInputAmount("");
+      setOutputAmount("");
+    }
+  }, [isOpen, priceLoading, tokenPrice, pairTokenPrice]);
 
   const handleConfirm = async () => {
     setIsLoading(true);
@@ -100,8 +167,15 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
       if (value && type === "Sell") {
         calculateOutputForSell(parseFloat(value));
       } else if (value && type === "Buy") {
-        const tokenAmount = parseFloat(value) / amount;
-        setOutputAmount(tokenAmount.toFixed(6));
+        if (tokenPrice > 0 && pairTokenPrice > 0) {
+          // Use oracle prices
+          const usdValue = parseFloat(value) * pairTokenPrice;
+          const tokenAmount = usdValue / tokenPrice;
+          setOutputAmount(tokenAmount.toFixed(6));
+        } else {
+          // Wait for oracle prices
+          setOutputAmount("0");
+        }
       } else {
         setOutputAmount("0");
       }
@@ -113,38 +187,40 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
     if (/^\d*\.?\d*$/.test(value)) {
       setOutputAmount(value);
       if (value && type === "Buy") {
-        const inputNeeded = parseFloat(value) * amount;
-        setInputAmount(inputNeeded.toFixed(6));
+        if (tokenPrice > 0 && pairTokenPrice > 0) {
+          // Use oracle prices
+          const usdValue = parseFloat(value) * tokenPrice;
+          const inputNeeded = usdValue / pairTokenPrice;
+          setInputAmount(inputNeeded.toFixed(6));
+        } else {
+          // Wait for oracle prices
+          setInputAmount("0");
+        }
       } else if (value && type === "Sell") {
-        const inputNeeded = parseFloat(value) / amount;
-        setInputAmount(inputNeeded.toFixed(6));
+        if (tokenPrice > 0 && pairTokenPrice > 0) {
+          // Use oracle prices
+          const usdValue = parseFloat(value) * pairTokenPrice;
+          const inputNeeded = usdValue / tokenPrice;
+          setInputAmount(inputNeeded.toFixed(6));
+        } else {
+          // Wait for oracle prices
+          setInputAmount("0");
+        }
       } else {
         setInputAmount("0");
       }
     }
   };
 
-  const mapConfidenceToRisk = (score: string) => {
-    if (!score) return "Aggressive";
-    const parsedScore = parseFloat(score);
-    if (parsedScore >= 9) return "Conservative";
-    if (parsedScore >= 8.5) return "Moderate";
-    return "Aggressive";
-  };
-
-  const getRiskTagColor = (risk: string) => {
-    switch (risk) {
-      case "Conservative":
-        return "bg-green-100 text-green-800";
-      case "Moderate":
-        return "bg-yellow-100 text-yellow-800";
-      default:
-        return "bg-red-100 text-red-800";
-    }
+  
+  // Format a dollar amount to a nice string
+  const formatUSD = (value: number) => {
+    if (value >= 100) return `$${value.toFixed(2)}`;
+    if (value >= 1) return `$${value.toFixed(3)}`;
+    return `$${value.toFixed(4)}`;
   };
 
   if (!token || !token.symbol || !pairToken || !pairToken.symbol) {
-    console.error("Invalid tokens passed to DexModalV2:", { token, pairToken });
     return null;
   }
 
@@ -155,7 +231,7 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
       <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 overflow-hidden">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-xl font-semibold text-gray-900">
-            {type === "Buy" ? "Buy" : "Sell"} {mapSymbolForDisplay(token.symbol)}
+            {type === "Buy" ? "Buy" : "Sell"} {eventSymbol ? mapSymbolForDisplay(eventSymbol.split('/')[0]) : mapSymbolForDisplay(token.symbol)}
           </h3>
           <button
             onClick={onClose}
@@ -184,8 +260,8 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
               <div className="flex-shrink-0 mt-1">
                 <div className="w-8 h-8 relative">
                   <Image
-                    src={token.imageUrl || getTokenImageForDisplay(token.symbol)}
-                    alt={mapSymbolForDisplay(token.symbol)}
+                    src={eventSymbol ? getTokenImageForDisplay(eventSymbol.split('/')[0]) : (token.imageUrl || getTokenImageForDisplay(token.symbol))}
+                    alt={eventSymbol ? mapSymbolForDisplay(eventSymbol.split('/')[0]) : mapSymbolForDisplay(token.symbol)}
                     width={32}
                     height={32}
                     className="rounded-full"
@@ -194,7 +270,7 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
               </div>
               <div>
                 <div className="text-sm font-medium text-gray-900">
-                  {signalText.replace(/WMON/g, "MON")}
+                  {type === "Buy" ? "Buy" : "Sell"} {eventSymbol ? mapSymbolForDisplay(eventSymbol.split('/')[0]) : mapSymbolForDisplay(token.symbol)} at {amount}
                 </div>
                 <div className="flex items-center mt-1 space-x-2">
                   <span
@@ -206,25 +282,18 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
                   >
                     {type}
                   </span>
-                  {confidenceScore && (
-                    <span
-                      className={`px-2 py-1 text-xs rounded-full ${getRiskTagColor(
-                        mapConfidenceToRisk(confidenceScore)
-                      )}`}
-                    >
-                      {mapConfidenceToRisk(confidenceScore)}
-                    </span>
-                  )}
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* Trading Pair Information */}
+        {/* Market Information */}
         <div className="grid grid-cols-2 gap-2 mb-4">
           <div className="bg-gray-50 rounded-lg p-2">
-            <div className="text-xs text-gray-500">{mapSymbolForDisplay(token.symbol)} Price</div>
+            <div className="text-xs text-gray-500">
+              {mapSymbolForDisplay(token.symbol)} Price
+            </div>
             <div className="flex items-center">
               <div className="w-4 h-4 mr-1 relative">
                 <Image
@@ -236,15 +305,26 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
                 />
               </div>
               <div className="text-sm font-medium">
-                {amount.toFixed(6)} {mapSymbolForDisplay(pairToken.symbol)}
+                {priceLoading ? "Loading..." : formatUSD(tokenPrice)}
               </div>
             </div>
           </div>
           <div className="bg-gray-50 rounded-lg p-2">
-            <div className="text-xs text-gray-500">Trading Pair</div>
+            <div className="text-xs text-gray-500">
+              {mapSymbolForDisplay(pairToken.symbol)} Price
+            </div>
             <div className="flex items-center">
+              <div className="w-4 h-4 mr-1 relative">
+                <Image
+                  src={pairToken.imageUrl || getTokenImageForDisplay(pairToken.symbol)}
+                  alt={mapSymbolForDisplay(pairToken.symbol)}
+                  width={16}
+                  height={16}
+                  className="rounded-full"
+                />
+              </div>
               <div className="text-sm font-medium">
-                {mapSymbolForDisplay(token.symbol)}/{mapSymbolForDisplay(pairToken.symbol)}
+                {priceLoading ? "Loading..." : formatUSD(pairTokenPrice)}
               </div>
             </div>
           </div>
@@ -280,6 +360,11 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
                     className="w-full bg-transparent text-lg font-semibold focus:outline-none text-gray-900"
                     placeholder="0.0"
                   />
+                  {inputAmount && (
+                    <div className="text-xs text-gray-500 mt-1">
+                      ≈ {formatUSD(parseFloat(inputAmount) * (inputToken.symbol === token.symbol ? tokenPrice : pairTokenPrice))}
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center space-x-2 bg-white rounded-full px-3 py-2 shadow-sm">
                   <div className="w-6 h-6 relative">
@@ -330,6 +415,11 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
                     className="w-full bg-transparent text-lg font-semibold focus:outline-none text-gray-900"
                     placeholder="0.0"
                   />
+                  {outputAmount && (
+                    <div className="text-xs text-gray-500 mt-1">
+                      ≈ {formatUSD(parseFloat(outputAmount) * (outputToken.symbol === token.symbol ? tokenPrice : pairTokenPrice))}
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center space-x-2 bg-white rounded-full px-3 py-2 shadow-sm">
                   <div className="w-6 h-6 relative">
@@ -350,8 +440,19 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
               <div className="flex items-center justify-between text-sm text-gray-500">
                 <span>Rate</span>
                 <span>
-                  1 {mapSymbolForDisplay(token.symbol)} = {amount.toFixed(6)} {mapSymbolForDisplay(pairToken.symbol)}
+                  {tokenPrice > 0 && pairTokenPrice > 0 ? (
+                    <>
+                      1 {mapSymbolForDisplay(token.symbol)} = {(tokenPrice / pairTokenPrice).toFixed(6)} {mapSymbolForDisplay(pairToken.symbol)}
+                    </>
+                  ) : (
+                    "Loading..."
+                  )}
                 </span>
+              </div>
+
+              <div className="flex items-center justify-between text-sm text-gray-500">
+                <span>Price Source</span>
+                <span>Live Oracle</span>
               </div>
 
               <div className="flex items-center justify-between text-sm text-gray-500">
@@ -362,17 +463,17 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
 
             <button
               onClick={handleConfirm}
-              disabled={isLoading || !inputAmount || parseFloat(inputAmount) <= 0}
+              disabled={isLoading || priceLoading || !inputAmount || parseFloat(inputAmount) <= 0}
               className={`w-full py-3 rounded-full font-medium text-white 
                 ${
-                  isLoading || !inputAmount || parseFloat(inputAmount) <= 0
+                  isLoading || priceLoading || !inputAmount || parseFloat(inputAmount) <= 0
                     ? "bg-gray-400 cursor-not-allowed"
                     : type === "Buy"
                     ? "bg-green-600 hover:bg-green-700"
                     : "bg-red-600 hover:bg-red-700"
                 }`}
             >
-              {isLoading
+              {isLoading || priceLoading
                 ? "Loading..."
                 : `Confirm ${type === "Buy" ? "Buy" : "Sell"}`}
             </button>

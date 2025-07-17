@@ -1298,6 +1298,7 @@ export default function SignalsPage() {
           type={currentDexType}
           signalText={`${currentDexType} ${currentDexToken.symbol} at ${currentDexAmount}`}
           confidenceScore="8.5"
+          eventSymbol={currentEvent?.symbol}
         />
       )}
     </ProtectPage>
