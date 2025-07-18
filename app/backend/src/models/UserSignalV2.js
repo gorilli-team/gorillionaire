@@ -36,6 +36,4 @@ const UserSignalV2Schema = new mongoose.Schema({
   }
 });
 
-UserSignalV2Schema.index({ userAddress: 1, signalId: 1 }, { unique: true });
-
 module.exports = mongoose.model("User-Signal-V2", UserSignalV2Schema);
