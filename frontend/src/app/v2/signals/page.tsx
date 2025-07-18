@@ -149,7 +149,6 @@ export default function SignalsPage() {
   const [currentDexType, setCurrentDexType] = useState<"Buy" | "Sell">("Buy");
   const [currentSignalId, setCurrentSignalId] = useState<string>("");
   const [currentEvent, setCurrentEvent] = useState<Event | null>(null);
-  const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   const allowedTokens = ['MON', 'DAK', 'YAKI', 'CHOG'];
   const [currentTradeInfo, setCurrentTradeInfo] = useState<{token: Token; apiType: string} | null>(null);
   
@@ -378,11 +377,6 @@ export default function SignalsPage() {
         toast.error(errorData.error || "You have already 5 No signals in the last 24 hours");
       } else if (response.ok) {
         toast.success("Signal refused successfully");
-        setEvents(prev => prev.map(e => 
-          e.signal_id === signalId 
-            ? { ...e, userChoice: "No" } 
-            : e
-        ));
       } else {
         toast.error("Failed to refuse signal");
       }
@@ -420,14 +414,10 @@ export default function SignalsPage() {
   
         await onYes(tokenToShow, pairTokenToShow, event.price, actionType);
       } else {
-        setSelectedOptions({
-          ...selectedOptions,
-          [event.signal_id]: option,
-        });
         await onNo(event.signal_id, event);
       }
     },
-    [selectedOptions, getTokenToTrade, onYes, onNo, getTokensFromSymbol]
+    [getTokenToTrade, onYes, onNo, getTokensFromSymbol]
   );
   
 
@@ -497,19 +487,6 @@ export default function SignalsPage() {
             });
   
             toast.success(`Trade ${currentDexType} ${inputAmount} ${token.symbol} executed!`);
-            
-            if (currentSignalId) {
-              setEvents(prev => prev.map(event => 
-                event.signal_id === currentSignalId 
-                  ? { ...event, userChoice: "Yes" } 
-                  : event
-              ));
-              
-              setSelectedOptions(prev => ({
-                ...prev,
-                [currentSignalId]: "Yes"
-              }));
-            }
   
             await fetch(`${process.env.NEXT_PUBLIC_API_URL}/signals/generated-signals/user-signal-v2`, {
               method: "POST",
@@ -1138,19 +1115,7 @@ export default function SignalsPage() {
                                   {getTimeAgo(event.timestamp)}
                                 </td>
                                 <td className="px-4 py-3 text-sm flex justify-end items-center">
-                                  {selectedOptions[event.signal_id] ? (
-                                    <span
-                                      className={`px-3 py-1.5 text-xs rounded-lg ${
-                                        selectedOptions[event.signal_id] === "Yes"
-                                          ? "bg-green-100 text-green-700"
-                                          : "bg-red-100 text-red-700"
-                                      }`}
-                                    >
-                                      {selectedOptions[event.signal_id] === "Yes" 
-                                        ? "Accepted" 
-                                        : "Refused"}
-                                    </span>
-                                  ) : chainId !== MONAD_CHAIN_ID ? (
+                                  {chainId !== MONAD_CHAIN_ID ? (
                                     <button
                                       className="px-3 py-1.5 text-xs bg-violet-600 text-white rounded-lg hover:bg-violet-700"
                                       onClick={() => switchChain({ chainId: MONAD_CHAIN_ID })}
@@ -1296,19 +1261,7 @@ export default function SignalsPage() {
                               </div>
 
                               <div className="flex justify-end">
-                                {selectedOptions[event.signal_id] ? (
-                                  <span
-                                    className={`px-4 py-2 text-sm rounded-lg ${
-                                      selectedOptions[event.signal_id] === "Yes"
-                                        ? "bg-green-100 text-green-700"
-                                        : "bg-red-100 text-red-700"
-                                    }`}
-                                  >
-                                    {selectedOptions[event.signal_id] === "Yes" 
-                                      ? "Accepted" 
-                                      : "Refused"}
-                                  </span>
-                                ) : chainId !== MONAD_CHAIN_ID ? (
+                                {chainId !== MONAD_CHAIN_ID ? (
                                   <button
                                     className="px-4 py-2 text-sm bg-violet-600 text-white rounded-lg hover:bg-violet-700"
                                     onClick={() => switchChain({ chainId: MONAD_CHAIN_ID })}
