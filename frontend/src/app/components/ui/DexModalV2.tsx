@@ -28,6 +28,8 @@ interface DexModalV2Props {
   signalText?: string;
   confidenceScore?: string;
   eventSymbol?: string;
+  signalTimestamp?: string;
+  signalPrice?: number;
 }
 
 const DexModalV2: React.FC<DexModalV2Props> = ({
@@ -41,6 +43,8 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
   signalText = "",
   confidenceScore = "", // eslint-disable-line @typescript-eslint/no-unused-vars
   eventSymbol = "",
+  signalTimestamp = "",
+  signalPrice = 0,
 }) => {
   const [inputAmount, setInputAmount] = useState<string>("");
   const [outputAmount, setOutputAmount] = useState<string>("0");
@@ -62,6 +66,30 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
   const getTokenImageForDisplay = (symbol: string): string => {
     const displaySymbol = mapSymbolForDisplay(symbol);
     return getTokenImage(displaySymbol);
+  };
+
+  const formatTimestamp = (timestamp: string): string => {
+    if (!timestamp) return "";
+    try {
+      const date = new Date(timestamp);
+      return date.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+    } catch (error) {
+      return timestamp;
+    }
+  };
+
+  // Format USD price
+  const formatSignalPrice = (price: number): string => {
+    if (price >= 100) return `$${price.toFixed(2)}`;
+    if (price >= 1) return `$${price.toFixed(4)}`;
+    if (price >= 0.01) return `$${price.toFixed(6)}`;
+    return `$${price.toFixed(8)}`;
   };
 
   const getInputOutputTokens = () => {
@@ -325,8 +353,8 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
       </div>
 
         {/* Signal Information */}
-        {signalText && (
-          <div className="bg-indigo-50 rounded-lg p-3 mb-4">
+        {(signalText || eventSymbol || signalTimestamp || signalPrice > 0) && (
+          <div className="bg-indigo-50 rounded-lg p-4 mb-4">
             <div className="flex items-start space-x-3">
               <div className="flex-shrink-0 mt-1">
                 <div className="w-8 h-8 relative">
@@ -339,11 +367,42 @@ const DexModalV2: React.FC<DexModalV2Props> = ({
                   />
                 </div>
               </div>
-              <div>
-                <div className="text-sm font-medium text-gray-900">
-                  {type === "Buy" ? "Buy" : "Sell"} {eventSymbol ? mapSymbolForDisplay(eventSymbol.split('/')[0]) : mapSymbolForDisplay(token.symbol)} at {amount}
+              <div className="flex-1">
+                <div className="text-sm font-medium text-gray-900 mb-2">
+                  {type === "Buy" ? "Buy" : "Sell"} Signal for {eventSymbol ? mapSymbolForDisplay(eventSymbol) : mapSymbolForDisplay(token.symbol)}
                 </div>
-                <div className="flex items-center mt-1 space-x-2">
+                
+                {/* Signal details grid */}
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  {eventSymbol && (
+                    <div>
+                      <span className="text-gray-500">Pair:</span>
+                      <div className="font-medium text-gray-900">
+                        {mapSymbolForDisplay(eventSymbol)}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {signalPrice > 0 && (
+                    <div>
+                      <span className="text-gray-500">Signal Price:</span>
+                      <div className="font-medium text-gray-900">
+                        {formatSignalPrice(signalPrice)} USD
+                      </div>
+                    </div>
+                  )}
+                  
+                  {signalTimestamp && (
+                    <div className="col-span-2">
+                      <span className="text-gray-500">Signal Time:</span>
+                      <div className="font-medium text-gray-900">
+                        {formatTimestamp(signalTimestamp)}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="flex items-center mt-3 space-x-2">
                   <span
                     className={`px-2 py-1 text-xs rounded-full ${
                       type === "Buy"
