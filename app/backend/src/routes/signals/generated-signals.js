@@ -283,16 +283,6 @@ router.post("/user-signal-v2", async (req, res) => {
     }
   }
 
-  // Check if user signal already exists in V2
-  const userSignalV2 = await UserSignalV2.findOne({
-    userAddress,
-    signalId,
-  });
-  
-  if (userSignalV2) {
-    return res.status(400).json({ error: "User signal already exists" });
-  }
-
   try {
     // Get the original signal to extract price information
     const originalSignal = await GeneratedSignal.findById(signalId);
