@@ -686,7 +686,10 @@ export default function SignalDetails() {
                     />
                   </div>
                   <div>
-                    <h1 className="text-2xl font-bold">{signal.signal_text}</h1>
+                    <div className="flex">
+                      <h1 className="text-2xl font-bold mr-2">{signal.signal_text}</h1>
+                      <span className="px-2.5 py-1 rounded-full text-sm font-medium bg-orange-100 text-orange-600">V1</span>
+                    </div>
                     <div className="flex items-center gap-2 mt-2">
                       <span
                         className={`px-3 py-1 rounded-full text-sm ${
