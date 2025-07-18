@@ -152,13 +152,29 @@ export default function SignalsPage() {
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   const allowedTokens = ['MON', 'DAK', 'YAKI', 'CHOG'];
   const [currentTradeInfo, setCurrentTradeInfo] = useState<{token: Token; apiType: string} | null>(null);
+  
+  const [actionFilter, setActionFilter] = useState<"ALL" | "BUY" | "SELL">("ALL");
 
   const filterAllowedTokens = (event: Event) => {
     const symbols = event.symbol.split('/');
-    return symbols.some(symbol => allowedTokens.includes(symbol.toUpperCase()));
+    const hasAllowedToken = symbols.some(symbol => allowedTokens.includes(symbol.toUpperCase()));
+
+    if (!hasAllowedToken) {
+      return false;
+    }
+    
+    if (actionFilter === "ALL") {
+      return true;
+    }
+    
+    return event.action === actionFilter;
   };
 
   const filteredEvents = events.filter(filterAllowedTokens);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [actionFilter]);
 
   const getTokensFromSymbol = useCallback((symbol: string): Token[] => {
     const symbols = symbol.split("/");
@@ -921,7 +937,7 @@ export default function SignalsPage() {
                     V2 Signals
                   </h2>
                   <div className="flex flex-col md:flex-row items-start md:items-center gap-3">
-                    <div className="flex flex-wrap gap-2">
+                    {/* <div className="flex flex-wrap gap-2">
                       <select className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 hover:border-gray-300">
                         <option value="">All Actions</option>
                         <option value="BUY">Buy</option>
@@ -943,30 +959,36 @@ export default function SignalsPage() {
                         <option value="ACTIVITY_SPIKE">Activity Spike</option>
                         <option value="HOLDER_CHANGE">Holder Change</option>
                       </select>
-                    </div>
+                    </div> */}
 
                     <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden shadow-sm">
                       <button
-                        className="px-4 py-2 text-sm flex items-center justify-center w-16 bg-blue-50 text-blue-700 border-r border-gray-200 transition-all duration-200 hover:bg-blue-100"
-                        onClick={() => {
-                          /* TODO: Implement filter */
-                        }}
+                        className={`px-4 py-2 text-sm flex items-center justify-center w-16 border-r border-gray-200 transition-all duration-200 ${
+                          actionFilter === "ALL"
+                            ? "bg-blue-50 text-blue-700"
+                            : "bg-white text-gray-600 hover:bg-gray-50"
+                        }`}
+                        onClick={() => setActionFilter("ALL")}
                       >
                         All
                       </button>
                       <button
-                        className="px-4 py-2 text-sm flex items-center justify-center w-16 bg-white text-gray-600 transition-all duration-200 hover:bg-gray-50 border-r border-gray-200"
-                        onClick={() => {
-                          /* TODO: Implement filter */
-                        }}
+                        className={`px-4 py-2 text-sm flex items-center justify-center w-16 border-r border-gray-200 transition-all duration-200 ${
+                          actionFilter === "BUY"
+                            ? "bg-green-50 text-green-700"
+                            : "bg-white text-gray-600 hover:bg-gray-50"
+                        }`}
+                        onClick={() => setActionFilter("BUY")}
                       >
                         Buy
                       </button>
                       <button
-                        className="px-4 py-2 text-sm flex items-center justify-center w-16 bg-white text-gray-600 transition-all duration-200 hover:bg-gray-50"
-                        onClick={() => {
-                          /* TODO: Implement filter */
-                        }}
+                        className={`px-4 py-2 text-sm flex items-center justify-center w-16 transition-all duration-200 ${
+                          actionFilter === "SELL"
+                            ? "bg-red-50 text-red-700"
+                            : "bg-white text-gray-600 hover:bg-gray-50"
+                        }`}
+                        onClick={() => setActionFilter("SELL")}
                       >
                         Sell
                       </button>
@@ -1320,10 +1342,15 @@ export default function SignalsPage() {
                           <span className="font-normal">Showing</span>{" "}
                           <span className="font-bold">
                             {(currentPage - 1) * rowsPerPage + 1}-
-                            {Math.min(currentPage * rowsPerPage, events.length)}
+                            {Math.min(currentPage * rowsPerPage, filteredEvents.length)}
                           </span>{" "}
                           <span className="font-normal">of</span>{" "}
-                          <span className="font-bold">{events.length}</span>
+                          <span className="font-bold">{filteredEvents.length}</span>
+                          {actionFilter !== "ALL" && (
+                            <span className="text-xs text-gray-400 ml-1">
+                              ({actionFilter.toLowerCase()} signals)
+                            </span>
+                          )}
                         </div>
                         <div className="flex-grow flex justify-center">
                           <Pagination
