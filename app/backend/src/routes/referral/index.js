@@ -165,17 +165,7 @@ router.post("/process", async (req, res) => {
         referralId: referrer._id,
       });
 
-      // Update streak when activity is added
-      await updateUserStreak(
-        referrerAddress,
-        "Referral Bonus",
-        REFERRAL_BONUS_POINTS,
-        {
-          referralId: referral._id,
-          referredUserAddress: address.toLowerCase(),
-        }
-      );
-
+      // Add referral bonus directly (no streak update for referral bonuses)
       await referrerActivity.save();
 
       // Track on Discord

@@ -259,23 +259,15 @@ router.post("/claim", async (req, res) => {
     // Award points based on quest reward
     if (quest.questRewardType === "points" && quest.questRewardAmount) {
       const rewardPoints = quest.questRewardAmount;
+
+      // Add points and activity directly (no streak update for quests)
       userActivity.points += rewardPoints;
       userActivity.activitiesList.push({
         name: `Daily Quest Completed: ${quest.questName}`,
         points: rewardPoints,
         date: new Date(),
-        questId: questId,
+        questId: quest._id,
       });
-
-      // Update streak when activity is added
-      await updateUserStreak(
-        address,
-        `Daily Quest Completed: ${dailyQuest.questName}`,
-        rewardPoints,
-        {
-          questId: dailyQuest._id,
-        }
-      );
 
       await userActivity.save();
 
@@ -290,7 +282,7 @@ router.post("/claim", async (req, res) => {
     res.json({
       message: "Quest reward claimed successfully",
       rewardPoints: quest.questRewardAmount,
-      newTotalPoints: userActivity.points,
+      newTotalPoints: updatedUserActivity.points,
     });
   } catch (error) {
     console.error("Error claiming daily quest:", error);

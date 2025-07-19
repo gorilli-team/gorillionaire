@@ -128,24 +128,22 @@ router.post("/verify", async (req, res) => {
         if (userActivity) {
           const rewardPoints = discordQuest.questRewardAmount;
 
-          // Update streak when activity is added
-          const updateStreakResult = await updateUserStreak(
-            address,
-            `Quest Completed: ${discordQuest.questName}`,
-            rewardPoints,
-            {
-              questId: discordQuest._id,
-            }
-          );
+          // Add points directly (no streak update for Discord quest)
+          userActivity.points += rewardPoints;
+          userActivity.activitiesList.push({
+            name: `Quest Completed: ${discordQuest.questName}`,
+            points: rewardPoints,
+            date: new Date(),
+            questId: discordQuest._id,
+          });
 
-          // Note: userActivity is already saved in updateUserStreak utility
-          const updatedUserActivity = updateStreakResult.userActivity;
+          await userActivity.save();
 
           await trackOnDiscordXpGained(
             `Quest Completed: ${discordQuest.questName}`,
             address,
             rewardPoints,
-            updatedUserActivity.points
+            userActivity.points
           );
         }
       } catch (questError) {

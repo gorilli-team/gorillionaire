@@ -306,19 +306,18 @@ router.post("/trade-points", async (req, res) => {
           originalTradePoints: points,
         });
 
-        // Update streak when activity is added
-        await updateUserStreak(
-          referral.referrerAddress,
-          "Referral Trade Bonus",
-          referralBonus,
-          {
-            referralId: referral._id,
-            referredUserAddress: address.toLowerCase(),
-            originalTradePoints: points,
-          }
-        );
+        // Add referral bonus directly (no streak update for referral bonuses)
+        referrerActivity.points += referralBonus;
+        referrerActivity.activitiesList.push({
+          name: "Referral Trade Bonus",
+          points: referralBonus,
+          date: new Date(),
+          referralId: referral._id,
+          referredUserAddress: address.toLowerCase(),
+          originalTradePoints: points,
+        });
 
-        // Note: referrerActivity is already saved in updateUserStreak utility
+        await referrerActivity.save();
 
         // Invalidate weekly cache since referral activity was added
         invalidateWeeklyCache();

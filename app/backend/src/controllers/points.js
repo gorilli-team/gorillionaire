@@ -15,23 +15,22 @@ async function awardRefuseSignalPoints(address, signalId) {
     throw new Error("User activity not found");
   }
 
-  // Update streak when activity is added
-  const updateStreakResult = await updateUserStreak(
-    address,
-    "Signal Refused",
-    5,
-    {
-      signalId: signalId,
-    }
-  );
+  // Add points directly (no streak update for signal refusal)
+  userActivity.points += 5;
+  userActivity.activitiesList.push({
+    name: "Signal Refused",
+    points: 5,
+    date: new Date(),
+    signalId: signalId,
+  });
 
-  // Note: userActivity is already saved in updateUserStreak utility
-  const updatedUserActivity = updateStreakResult.userActivity;
+  await userActivity.save();
+
   await trackOnDiscordXpGained(
     "Signal Refused",
     address,
     5,
-    updatedUserActivity.points
+    userActivity.points
   );
 }
 
@@ -186,21 +185,21 @@ async function awardDiscordConnectionPoints(address) {
     throw new Error("User activity not found");
   }
 
-  // Update streak when activity is added
-  const updateStreakResult = await updateUserStreak(
-    address,
-    "Discord Connected",
-    DISCORD_CONNECTION_POINTS,
-    {}
-  );
+  // Add points directly (no streak update for Discord connection)
+  userActivity.points += DISCORD_CONNECTION_POINTS;
+  userActivity.activitiesList.push({
+    name: "Discord Connected",
+    points: DISCORD_CONNECTION_POINTS,
+    date: new Date(),
+  });
 
-  // Note: userActivity is already saved in updateUserStreak utility
-  const updatedUserActivity = updateStreakResult.userActivity;
+  await userActivity.save();
+
   await trackOnDiscordXpGained(
     "Discord Connected",
     address,
     DISCORD_CONNECTION_POINTS,
-    updatedUserActivity.points
+    userActivity.points
   );
 }
 

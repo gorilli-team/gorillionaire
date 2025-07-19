@@ -124,16 +124,6 @@ router.post("/claim", async (req, res) => {
         questId: questId,
       });
 
-      // Update streak when activity is added
-      await updateUserStreak(
-        address,
-        `Quest Completed: ${quest.questName}`,
-        rewardPoints,
-        {
-          questId: questId,
-        }
-      );
-
       await userActivity.save();
 
       await trackOnDiscordXpGained(
