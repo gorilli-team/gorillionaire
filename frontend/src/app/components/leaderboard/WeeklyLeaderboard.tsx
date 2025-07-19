@@ -17,6 +17,7 @@ interface Trader {
   points: number;
   weeklyPoints?: number;
   weeklyActivities?: number;
+  streak?: number;
   activitiesList: Activity[];
   pagination: {
     total: number;
@@ -237,6 +238,7 @@ const WeeklyLeaderboardComponent = () => {
           points: data.weeklyPoints || 0, // Use weekly points from API
           weeklyPoints: data.weeklyPoints || 0,
           weeklyActivities: data.weeklyActivities || 0,
+          streak: data.streak || 0,
           activitiesList: [], // Not needed for weekly view
           pagination: {
             total: 0,
@@ -261,6 +263,7 @@ const WeeklyLeaderboardComponent = () => {
           points: data.weeklyPoints || 0,
           weeklyPoints: data.weeklyPoints || 0,
           weeklyActivities: data.weeklyActivities || 0,
+          streak: data.streak || 0,
           activitiesList: [],
           pagination: {
             total: 0,
@@ -441,6 +444,9 @@ const WeeklyLeaderboardComponent = () => {
                             <th className="pb-2 pr-2 font-medium">
                               WEEKLY POINTS
                             </th>
+                            <th className="pb-2 pr-2 font-medium text-center">
+                              STREAK 🔥
+                            </th>
                             {hasReferrals && (
                               <th className="pb-2 pr-2 font-medium text-center">
                                 WEEKLY REFERRALS
@@ -523,6 +529,17 @@ const WeeklyLeaderboardComponent = () => {
                                   Level {getLevelInfo(myTrader.points).level}
                                 </span>
                               </div>
+                            </td>
+                            <td className="py-3 h-14 text-center text-violet-700 pr-2">
+                              {myTrader.streak && myTrader.streak > 0 ? (
+                                <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium rounded-full bg-orange-50 text-orange-700 border border-orange-200">
+                                  🔥 {myTrader.streak}
+                                </span>
+                              ) : (
+                                <span className="text-violet-400 text-xs">
+                                  -
+                                </span>
+                              )}
                             </td>
                             {hasReferrals && (
                               <td className="py-3 h-14 text-center text-violet-700 pr-2">
@@ -646,6 +663,11 @@ const WeeklyLeaderboardComponent = () => {
                                 {myTrader.weeklyActivities || 0} weekly
                                 activities
                               </span>
+                              {myTrader.streak && myTrader.streak > 0 && (
+                                <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700 border border-orange-200 mt-1">
+                                  🔥 {myTrader.streak} day streak
+                                </span>
+                              )}
                             </div>
                           </div>
                           <div className="flex flex-col items-end">
@@ -715,6 +737,9 @@ const WeeklyLeaderboardComponent = () => {
                         WEEKLY ACTIVITIES
                       </th>
                       <th className="pb-2 pr-2 font-medium">WEEKLY POINTS</th>
+                      <th className="pb-2 pr-2 font-medium text-center">
+                        STREAK 🔥
+                      </th>
                       {hasReferrals && (
                         <th className="pb-2 pr-2 font-medium text-center">
                           WEEKLY REFERRALS
@@ -796,6 +821,15 @@ const WeeklyLeaderboardComponent = () => {
                               Level {getLevelInfo(trader.points).level}
                             </span>
                           </div>
+                        </td>
+                        <td className="py-4 h-16 text-center text-gray-700 pr-2">
+                          {trader.streak && trader.streak > 0 ? (
+                            <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium rounded-full bg-orange-50 text-orange-700 border border-orange-200">
+                              🔥 {trader.streak}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400 text-xs">-</span>
+                          )}
                         </td>
                         {hasReferrals && (
                           <td className="py-4 h-16 text-center text-gray-700 pr-2">
@@ -919,6 +953,11 @@ const WeeklyLeaderboardComponent = () => {
                             <span className="text-[10px] text-gray-500">
                               {trader.weeklyActivities || 0} weekly activities
                             </span>
+                            {trader.streak && trader.streak > 0 && (
+                              <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700 border border-orange-200 mt-1">
+                                🔥 {trader.streak} day streak
+                              </span>
+                            )}
                             {hasReferrals && (
                               <>
                                 {(trader.totalReferred &&

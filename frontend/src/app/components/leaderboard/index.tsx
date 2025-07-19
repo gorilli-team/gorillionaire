@@ -16,6 +16,7 @@ interface Trader {
   nadName?: string;
   nadAvatar?: string;
   points: number;
+  streak: number;
   activitiesList: Activity[];
   pagination: {
     total: number;
@@ -159,6 +160,7 @@ const LeaderboardComponent = () => {
             nadProfile[0]?.avatar ||
             `/avatar_${data.userActivity?.rank % 6}.png`,
           points: data.userActivity?.points || 0,
+          streak: data.userActivity?.streak || 0,
           activitiesList: data.userActivity?.activitiesList || [],
           pagination: data.userActivity?.pagination || {
             total: 0,
@@ -181,6 +183,7 @@ const LeaderboardComponent = () => {
           nadName: undefined,
           nadAvatar: `/avatar_${data.userActivity?.rank % 6}.png`,
           points: data.userActivity?.points || 0,
+          streak: data.userActivity?.streak || 0,
           activitiesList: data.userActivity?.activitiesList || [],
           pagination: data.userActivity?.pagination || {
             total: 0,
@@ -245,6 +248,9 @@ const LeaderboardComponent = () => {
                         ACTIVITIES
                       </th>
                       <th className="pb-2 pr-2 font-medium">POINTS</th>
+                      <th className="pb-2 pr-2 font-medium text-center">
+                        STREAK
+                      </th>
                       <th className="pb-2 pr-2 font-medium text-center">
                         REFERRALS
                       </th>
@@ -314,6 +320,15 @@ const LeaderboardComponent = () => {
                             </div>
                           </td>
                           <td className="py-4 h-16 text-center text-gray-700 pr-2">
+                            {myTrader.streak > 0 ? (
+                              <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium rounded-full bg-orange-50 text-orange-700">
+                                🔥 {myTrader.streak} days
+                              </span>
+                            ) : (
+                              <span className="text-gray-300">-</span>
+                            )}
+                          </td>
+                          <td className="py-4 h-16 text-center text-gray-700 pr-2">
                             {(myTrader.totalReferred &&
                               myTrader.totalReferred > 0) ||
                             (myTrader.totalReferralPoints &&
@@ -358,7 +373,7 @@ const LeaderboardComponent = () => {
                           </td>
                         </tr>
                         <tr>
-                          <td colSpan={7} style={{ height: 16 }}></td>
+                          <td colSpan={8} style={{ height: 16 }}></td>
                         </tr>
                       </>
                     )}
@@ -438,6 +453,15 @@ const LeaderboardComponent = () => {
                               Level {getLevelInfo(trader.points).level}
                             </span>
                           </div>
+                        </td>
+                        <td className="py-4 h-16 text-center text-gray-700 pr-2">
+                          {trader.streak > 0 ? (
+                            <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium rounded-full bg-orange-50 text-orange-700">
+                              🔥 {trader.streak} days
+                            </span>
+                          ) : (
+                            <span className="text-gray-300">-</span>
+                          )}
                         </td>
                         <td className="py-4 h-16 text-center text-gray-700 pr-2">
                           {(trader.totalReferred && trader.totalReferred > 0) ||
@@ -584,6 +608,13 @@ const LeaderboardComponent = () => {
                                 Level {getLevelInfo(myTrader.points).level}
                               </span>
                             </div>
+                            {myTrader.streak > 0 ? (
+                              <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium rounded-full bg-orange-50 text-orange-700">
+                                🔥 {myTrader.streak} days
+                              </span>
+                            ) : (
+                              <span className="text-gray-300">-</span>
+                            )}
                             {myTrader.activitiesList &&
                               myTrader.activitiesList.length > 0 && (
                                 <span className="text-[10px] text-gray-500 text-right mt-0.5">
@@ -689,6 +720,13 @@ const LeaderboardComponent = () => {
                               Level {getLevelInfo(trader.points).level}
                             </span>
                           </div>
+                          {trader.streak > 0 ? (
+                            <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-medium rounded-full bg-orange-50 text-orange-700">
+                              🔥 {trader.streak} days
+                            </span>
+                          ) : (
+                            <span className="text-gray-300">-</span>
+                          )}
                           {trader.activitiesList &&
                             trader.activitiesList.length > 0 && (
                               <span className="text-[10px] text-gray-500 text-right mt-0.5">
