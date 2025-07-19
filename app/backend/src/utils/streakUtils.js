@@ -15,17 +15,23 @@ async function updateUserStreak(
   points = 0,
   metadata = {}
 ) {
-  console.log(`🔄 Updating streak for address: ${address}`);
+  // Normalize address to lowercase for consistency
+  const normalizedAddress = address.toLowerCase();
+  console.log(`🔄 Updating streak for address: ${normalizedAddress}`);
   console.log(`📝 Activity: ${activityName}, Base points: ${points}`);
 
   try {
     // Find or create user activity
-    let userActivity = await UserActivity.findOne({ address });
+    let userActivity = await UserActivity.findOne({
+      address: normalizedAddress,
+    });
 
     if (!userActivity) {
-      console.log(`👤 Creating new user activity for address: ${address}`);
+      console.log(
+        `👤 Creating new user activity for address: ${normalizedAddress}`
+      );
       userActivity = new UserActivity({
-        address,
+        address: normalizedAddress,
         points: 0,
         streak: 0,
         streakLastUpdate: null,
@@ -112,7 +118,7 @@ async function updateUserStreak(
       broadcastNotification({
         type: "STREAK_UPDATE",
         data: {
-          userAddress: userActivity.address,
+          userAddress: normalizedAddress,
           streak: userActivity.streak,
           streakLastUpdate: userActivity.streakLastUpdate,
         },
@@ -135,7 +141,9 @@ async function updateUserStreak(
     });
 
     // Verify the save by fetching from database
-    const verification = await UserActivity.findOne({ address });
+    const verification = await UserActivity.findOne({
+      address: normalizedAddress,
+    });
     console.log(`🔍 Database verification:`, {
       address: verification?.address,
       streak: verification?.streak,
