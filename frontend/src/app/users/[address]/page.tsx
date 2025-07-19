@@ -122,6 +122,7 @@ interface UserProfile {
   profileBgImage?: string;
   todayTransactionCount?: number;
   dailyTransactionTarget?: number;
+  streak?: number;
 }
 
 interface Quest {
@@ -453,6 +454,7 @@ const UserProfilePage = () => {
           todayTransactionCount: data.userActivity?.todayTransactionCount || 0,
           dailyTransactionTarget:
             data.userActivity?.dailyTransactionTarget || 3,
+          streak: data.userActivity?.streak || 0,
         });
       } catch (error) {
         console.error("Error fetching user profile:", error);
@@ -850,7 +852,7 @@ const UserProfilePage = () => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                     <div>
                       <h3 className="text-sm font-medium text-gray-500 mb-1">
                         Total Volume
@@ -882,6 +884,19 @@ const UserProfilePage = () => {
                       <div className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">
                         {userProfile.rank}
                         {getOrdinalSuffix(userProfile.rank)}
+                      </div>
+                    </div>
+
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-500 mb-1">
+                        Current Streak
+                      </h3>
+                      <div className="text-xl sm:text-2xl font-bold text-gray-900 mb-1 flex items-center gap-2">
+                        <span>{userProfile.streak || 0}</span>
+                        <span className="text-orange-500">🔥</span>
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {userProfile.streak === 1 ? "day" : "days"}
                       </div>
                     </div>
                   </div>
@@ -1473,14 +1488,6 @@ const UserProfilePage = () => {
                     isOwnProfile={isOwnProfile}
                     backgroundImage={userProfile.profileBgImage}
                   />
-                  {/* Debug log */}
-                  {(() => {
-                    console.log(
-                      "UserProfilePage - Passing backgroundImage:",
-                      userProfile.profileBgImage
-                    );
-                    return null;
-                  })()}
                 </div>
                 {/* )} */}
 

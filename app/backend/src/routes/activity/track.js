@@ -251,7 +251,6 @@ router.post("/trade-points", async (req, res) => {
     }
 
     // --- NEW STREAK LOGIC ---
-    console.log(`🎯 Trade completed, updating streak for user: ${address}`);
     const updateStreakResult = await updateUserStreak(
       address,
       is2xXpActive ? "Trade (2x XP)" : "Trade",
@@ -262,7 +261,6 @@ router.post("/trade-points", async (req, res) => {
         txHash: txHash,
       }
     );
-    console.log(`✅ Streak update result: ${updateStreakResult}`);
 
     // Get the updated userActivity from the result
     const updatedUserActivity = updateStreakResult.userActivity;
@@ -358,48 +356,6 @@ router.post("/trade-points", async (req, res) => {
   }
 });
 
-// Manual streak endpoint for testing/fixing
-router.post("/manual-streak", async (req, res) => {
-  try {
-    const { address, streak, streakLastUpdate } = req.body;
-
-    if (!address || streak === undefined) {
-      return res.status(400).json({
-        error: "Address and streak are required",
-      });
-    }
-
-    const userActivity = await UserActivity.findOne({
-      address: address.toLowerCase(),
-    });
-
-    if (!userActivity) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    // Set manual streak values
-    userActivity.streak = streak;
-    userActivity.streakLastUpdate = streakLastUpdate || new Date();
-
-    await userActivity.save();
-
-    console.log(`🔧 Manual streak set for ${address}: ${streak} days`);
-
-    res.json({
-      success: true,
-      message: `Streak manually set to ${streak} days`,
-      userActivity: {
-        address: userActivity.address,
-        streak: userActivity.streak,
-        streakLastUpdate: userActivity.streakLastUpdate,
-      },
-    });
-  } catch (error) {
-    console.error("Error setting manual streak:", error);
-    res.status(500).json({ error: "Failed to set manual streak" });
-  }
-});
-
 // Update profile background image
 router.post("/profile-bg", async (req, res) => {
   try {
@@ -459,130 +415,6 @@ router.get("/points", async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching points:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-// Debug endpoint to check daily trade streaks
-router.get("/debug/streak", async (req, res) => {
-  try {
-    const { address } = req.query;
-    if (!address) {
-      return res.status(400).json({ error: "No address provided" });
-    }
-
-    const userActivity = await UserActivity.findOne({
-      address: address.toLowerCase(),
-    });
-
-    if (!userActivity) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    const now = new Date();
-    const today = new Date(now);
-    today.setHours(0, 0, 0, 0);
-
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    // Count today's trades
-    const todayTrades = userActivity.activitiesList.filter((activity) => {
-      const activityDate = new Date(activity.date);
-      activityDate.setHours(0, 0, 0, 0);
-      return (
-        activityDate.getTime() === today.getTime() &&
-        (activity.name === "Trade" || activity.name === "Trade (2x XP)")
-      );
-    }).length;
-
-    // Count yesterday's trades
-    const yesterdayTrades = userActivity.activitiesList.filter((activity) => {
-      const activityDate = new Date(activity.date);
-      activityDate.setHours(0, 0, 0, 0);
-      return (
-        activityDate.getTime() === yesterday.getTime() &&
-        (activity.name === "Trade" || activity.name === "Trade (2x XP)")
-      );
-    }).length;
-
-    res.json({
-      address: userActivity.address,
-      currentStreak: userActivity.streak,
-      todayTrades: todayTrades,
-      yesterdayTrades: yesterdayTrades,
-      lastSignIn: userActivity.lastSignIn,
-      streakBasedOn: "Daily trades (not sign-ins)",
-    });
-  } catch (error) {
-    console.error("Error debugging streak:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-// Debug endpoint to get activities for last 30 days
-router.get("/debug/activities-30-days", async (req, res) => {
-  try {
-    const { address } = req.query;
-    if (!address) {
-      return res.status(400).json({ error: "No address provided" });
-    }
-
-    const userActivity = await UserActivity.findOne({
-      address: address.toLowerCase(),
-    });
-
-    if (!userActivity) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    const now = new Date();
-    const thirtyDaysAgo = new Date(now);
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-    // Filter activities for last 30 days
-    const recentActivities = userActivity.activitiesList.filter((activity) => {
-      const activityDate = new Date(activity.date);
-      return activityDate >= thirtyDaysAgo;
-    });
-
-    // Group by date
-    const activitiesByDate = {};
-    recentActivities.forEach((activity) => {
-      const date = new Date(activity.date);
-      date.setHours(0, 0, 0, 0);
-      const dateKey = date.toISOString().split("T")[0];
-
-      if (!activitiesByDate[dateKey]) {
-        activitiesByDate[dateKey] = [];
-      }
-      activitiesByDate[dateKey].push(activity);
-    });
-
-    // Count trades per day
-    const tradesByDate = {};
-    Object.keys(activitiesByDate).forEach((date) => {
-      const trades = activitiesByDate[date].filter(
-        (activity) =>
-          activity.name === "Trade" || activity.name === "Trade (2x XP)"
-      );
-      tradesByDate[date] = trades.length;
-    });
-
-    res.json({
-      address: userActivity.address,
-      currentStreak: userActivity.streak,
-      streakLastUpdate: userActivity.streakLastUpdate,
-      activitiesByDate,
-      tradesByDate,
-      totalActivities: recentActivities.length,
-      totalTrades: recentActivities.filter(
-        (activity) =>
-          activity.name === "Trade" || activity.name === "Trade (2x XP)"
-      ).length,
-    });
-  } catch (error) {
-    console.error("Error fetching activities:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });

@@ -4,7 +4,6 @@ const Referral = require("../../models/Referral");
 const UserActivity = require("../../models/UserActivity");
 const { trackOnDiscordXpGained } = require("../../controllers/points");
 const crypto = require("crypto");
-const { updateUserStreak } = require("../../utils/streakUtils");
 
 // Generate a unique referral code for a user
 router.post("/generate-code", async (req, res) => {

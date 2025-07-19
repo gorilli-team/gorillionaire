@@ -4,7 +4,6 @@ const DailyQuest = require("../../models/DailyQuest");
 const UserDailyQuest = require("../../models/UserDailyQuest");
 const UserActivity = require("../../models/UserActivity");
 const { trackOnDiscordXpGained } = require("../../controllers/points");
-const { updateUserStreak } = require("../../utils/streakUtils");
 
 // Helper function to get today's date in YYYY-MM-DD format
 const getTodayDate = () => {
