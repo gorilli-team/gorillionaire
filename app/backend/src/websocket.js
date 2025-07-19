@@ -121,20 +121,38 @@ function broadcastEvent(tokenName, event) {
 
 // Function to broadcast notifications to subscribed clients
 function broadcastNotification(notification) {
+  console.log("📡 Received notification:", notification);
+  
+  // Validate notification data
+  if (!notification || typeof notification !== "object") {
+    console.error("❌ Invalid notification data:", notification);
+    return;
+  }
+
+  // Ensure data is properly structured
+  const sanitizedNotification = {
+    type: notification.type || "NOTIFICATION",
+    data: notification.data || notification,
+    timestamp: new Date().toISOString(),
+  };
+
   let recipientCount = 0;
 
   clients.forEach((client, ws) => {
     if (ws.readyState === WebSocket.OPEN && client.notifications) {
-      ws.send(
-        JSON.stringify({
-          type: "NOTIFICATION",
-          data: notification,
-          timestamp: new Date().toISOString(),
-        })
-      );
-      recipientCount++;
+      try {
+        ws.send(JSON.stringify(sanitizedNotification));
+        recipientCount++;
+      } catch (error) {
+        console.error("❌ Error sending notification to client:", error);
+      }
     }
   });
+
+  console.log(
+    `📡 Broadcast notification to ${recipientCount} clients:`,
+    sanitizedNotification.type
+  );
 }
 
 module.exports = {

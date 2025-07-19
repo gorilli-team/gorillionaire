@@ -163,6 +163,8 @@ router.post("/process", async (req, res) => {
         date: new Date(),
         referralId: referrer._id,
       });
+
+      // Add referral bonus directly (no streak update for referral bonuses)
       await referrerActivity.save();
 
       // Track on Discord

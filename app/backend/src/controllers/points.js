@@ -4,6 +4,7 @@ const UserQuest = require("../models/UserQuest");
 const { WebhookClient } = require("discord.js");
 const { defineChain, createPublicClient, http } = require("viem");
 const { NNS } = require("@nadnameservice/nns-viem-sdk");
+const { updateUserStreak } = require("../utils/streakUtils");
 
 async function awardRefuseSignalPoints(address, signalId) {
   const userActivity = await UserActivity.findOne({
@@ -14,7 +15,7 @@ async function awardRefuseSignalPoints(address, signalId) {
     throw new Error("User activity not found");
   }
 
-  const totalPoints = userActivity.points + 5;
+  // Add points directly (no streak update for signal refusal)
   userActivity.points += 5;
   userActivity.activitiesList.push({
     name: "Signal Refused",
@@ -22,8 +23,15 @@ async function awardRefuseSignalPoints(address, signalId) {
     date: new Date(),
     signalId: signalId,
   });
+
   await userActivity.save();
-  await trackOnDiscordXpGained("Signal Refused", address, 5, totalPoints);
+
+  await trackOnDiscordXpGained(
+    "Signal Refused",
+    address,
+    5,
+    userActivity.points
+  );
 }
 
 /**
@@ -59,20 +67,10 @@ async function createAcceptedSignalUserQuests(address, signalId) {
             isCompleted: false,
             lastProgressUpdate: new Date(),
           });
-
-          console.log(`Created UserQuest for ${address}: ${quest.questName}`);
         } else {
           if (!userQuest.isCompleted) {
             userQuest.currentProgress += 1;
             userQuest.lastProgressUpdate = new Date();
-
-            console.log(
-              `Updated UserQuest for ${address}: ${quest.questName} (${userQuest.currentProgress}/${quest.questRequirement})`
-            );
-          } else {
-            console.log(
-              `Quest already completed for ${address}: ${quest.questName} - skipping progress update`
-            );
             continue;
           }
         }
@@ -187,19 +185,21 @@ async function awardDiscordConnectionPoints(address) {
     throw new Error("User activity not found");
   }
 
-  const totalPoints = userActivity.points + DISCORD_CONNECTION_POINTS;
+  // Add points directly (no streak update for Discord connection)
   userActivity.points += DISCORD_CONNECTION_POINTS;
   userActivity.activitiesList.push({
     name: "Discord Connected",
     points: DISCORD_CONNECTION_POINTS,
     date: new Date(),
   });
+
   await userActivity.save();
+
   await trackOnDiscordXpGained(
     "Discord Connected",
     address,
     DISCORD_CONNECTION_POINTS,
-    totalPoints
+    userActivity.points
   );
 }
 

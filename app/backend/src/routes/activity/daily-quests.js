@@ -1,12 +1,18 @@
 const express = require("express");
 const router = express.Router();
-const UserDailyQuest = require("../../models/UserDailyQuest");
 const DailyQuest = require("../../models/DailyQuest");
+const UserDailyQuest = require("../../models/UserDailyQuest");
 const UserActivity = require("../../models/UserActivity");
 const { trackOnDiscordXpGained } = require("../../controllers/points");
 
-// Helper function to get today's date (start of day)
+// Helper function to get today's date in YYYY-MM-DD format
 const getTodayDate = () => {
+  const today = new Date();
+  return today.toISOString().split("T")[0];
+};
+
+// Helper function to get today's date as Date object
+const getTodayDateObject = () => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   return today;
@@ -14,7 +20,7 @@ const getTodayDate = () => {
 
 // Helper function to count today's transactions for a user
 const getTodayTransactionCount = (activitiesList) => {
-  const today = getTodayDate();
+  const today = getTodayDateObject();
 
   return activitiesList.filter((activity) => {
     const activityDate = new Date(activity.date);
@@ -28,7 +34,7 @@ const getTodayTransactionCount = (activitiesList) => {
 
 // Helper function to calculate today's total volume
 const getTodayVolume = (activitiesList) => {
-  const today = getTodayDate();
+  const today = getTodayDateObject();
 
   return activitiesList
     .filter((activity) => {
@@ -252,13 +258,16 @@ router.post("/claim", async (req, res) => {
     // Award points based on quest reward
     if (quest.questRewardType === "points" && quest.questRewardAmount) {
       const rewardPoints = quest.questRewardAmount;
+
+      // Add points and activity directly (no streak update for quests)
       userActivity.points += rewardPoints;
       userActivity.activitiesList.push({
         name: `Daily Quest Completed: ${quest.questName}`,
         points: rewardPoints,
         date: new Date(),
-        questId: questId,
+        questId: quest._id,
       });
+
       await userActivity.save();
 
       await trackOnDiscordXpGained(

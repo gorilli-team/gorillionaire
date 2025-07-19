@@ -12,6 +12,7 @@ const {
   manualArchive,
   archiveSpecificWeek,
 } = require("../../cron/weeklyLeaderboard");
+const { updateUserStreak } = require("../../utils/streakUtils");
 
 // Simple in-memory cache for weekly leaderboard
 const weeklyCache = {
@@ -74,6 +75,20 @@ const getDailyTransactionTarget = (level) => {
   // Goal per level = level × 10 transactions daily
   return level * 10;
 };
+
+// Helper to check if streak is current (today or yesterday)
+function getCurrentStreak(streak, streakLastUpdate) {
+  if (!streakLastUpdate) return 0;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  if (streakLastUpdate.getTime() >= yesterday.getTime()) {
+    return streak;
+  }
+  return 0;
+}
 
 //track user signin
 router.post("/signin", async (req, res) => {
@@ -235,88 +250,23 @@ router.post("/trade-points", async (req, res) => {
       }
     }
 
-    userActivity.activitiesList.push({
-      name: is2xXpActive ? "Trade (2x XP)" : "Trade",
-      points: points,
-      date: new Date(),
-      intentId: intentId,
-      signalId: signalId,
-      txHash: txHash,
-    });
-    const totalPoints = userActivity.points + points;
-    userActivity.points += points;
-
-    // Get today's date (start of day)
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    // Get yesterday's date (start of day)
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    // Count today's trades (excluding this current trade)
-    const todayTradesBeforeThis = userActivity.activitiesList.filter(
-      (activity) => {
-        const activityDate = new Date(activity.date);
-        activityDate.setHours(0, 0, 0, 0);
-        return (
-          activityDate.getTime() === today.getTime() &&
-          (activity.name === "Trade" || activity.name === "Trade (2x XP)")
-        );
+    // --- NEW STREAK LOGIC ---
+    const updateStreakResult = await updateUserStreak(
+      address,
+      is2xXpActive ? "Trade (2x XP)" : "Trade",
+      points,
+      {
+        intentId: intentId,
+        signalId: signalId,
+        txHash: txHash,
       }
-    ).length;
+    );
 
-    // Count yesterday's trades
-    const yesterdayTrades = userActivity.activitiesList.filter((activity) => {
-      const activityDate = new Date(activity.date);
-      activityDate.setHours(0, 0, 0, 0);
-      return (
-        activityDate.getTime() === yesterday.getTime() &&
-        (activity.name === "Trade" || activity.name === "Trade (2x XP)")
-      );
-    }).length;
+    // Get the updated userActivity from the result
+    const updatedUserActivity = updateStreakResult.userActivity;
+    const totalPoints = updatedUserActivity.points;
 
-    if (todayTradesBeforeThis === 0 && yesterdayTrades > 0) {
-      // First trade of the day AND had trades yesterday = extend streak
-      const oldStreak = userActivity.streak;
-      userActivity.streak += 1;
-      userActivity.points += 10; // Bonus points for extending streak
-      userActivity.activitiesList.push({
-        name: "Daily Trade Streak Extended",
-        points: 10,
-        date: new Date(),
-      });
-    } else if (todayTradesBeforeThis === 0 && yesterdayTrades === 0) {
-      // First trade of the day BUT no trades yesterday = check if streak should expire
-      const lastTradeDate = userActivity.activitiesList
-        .filter(
-          (activity) =>
-            activity.name === "Trade" || activity.name === "Trade (2x XP)"
-        )
-        .sort((a, b) => new Date(b.date) - new Date(a.date))[0]?.date;
-
-      if (lastTradeDate) {
-        const daysSinceLastTrade = Math.floor(
-          (new Date() - new Date(lastTradeDate)) / (1000 * 60 * 60 * 24)
-        );
-
-        if (daysSinceLastTrade > 1 && userActivity.streak > 0) {
-          // More than 1 day since last trade, reset streak to 0
-          const oldStreak = userActivity.streak;
-          userActivity.streak = 0;
-        } else {
-          // Less than 2 days since last trade, start new streak at 1
-          const oldStreak = userActivity.streak;
-          userActivity.streak = 1;
-        }
-      } else {
-        // No previous trades, start new streak at 1
-        const oldStreak = userActivity.streak;
-        userActivity.streak = 1;
-      }
-    }
-
-    await userActivity.save();
+    // Note: userActivity is already saved in updateUserStreak utility
 
     // Invalidate weekly cache since new activity was added
     invalidateWeeklyCache();
@@ -344,6 +294,7 @@ router.post("/trade-points", async (req, res) => {
       });
 
       if (referrerActivity) {
+        // Add referral bonus directly (no streak update for referral bonuses)
         referrerActivity.points += referralBonus;
         referrerActivity.activitiesList.push({
           name: "Referral Trade Bonus",
@@ -353,6 +304,7 @@ router.post("/trade-points", async (req, res) => {
           referredUserAddress: address.toLowerCase(),
           originalTradePoints: points,
         });
+
         await referrerActivity.save();
 
         // Invalidate weekly cache since referral activity was added
@@ -386,7 +338,15 @@ router.post("/trade-points", async (req, res) => {
     //broadcast notification to all clients
     broadcastNotification({
       type: "NOTIFICATION",
-      data: intent.toObject(),
+      data: {
+        data: {
+          action: intent.action,
+          tokenAmount: intent.tokenAmount,
+          tokenPrice: intent.tokenPrice,
+          tokenSymbol: intent.tokenSymbol,
+          userAddress: intent.userAddress,
+        },
+      },
     });
 
     res.json({ message: "Points added" });
@@ -459,63 +419,6 @@ router.get("/points", async (req, res) => {
   }
 });
 
-// Debug endpoint to check daily trade streaks
-router.get("/debug/streak", async (req, res) => {
-  try {
-    const { address } = req.query;
-    if (!address) {
-      return res.status(400).json({ error: "No address provided" });
-    }
-
-    const userActivity = await UserActivity.findOne({
-      address: address.toLowerCase(),
-    });
-
-    if (!userActivity) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    const now = new Date();
-    const today = new Date(now);
-    today.setHours(0, 0, 0, 0);
-
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    // Count today's trades
-    const todayTrades = userActivity.activitiesList.filter((activity) => {
-      const activityDate = new Date(activity.date);
-      activityDate.setHours(0, 0, 0, 0);
-      return (
-        activityDate.getTime() === today.getTime() &&
-        (activity.name === "Trade" || activity.name === "Trade (2x XP)")
-      );
-    }).length;
-
-    // Count yesterday's trades
-    const yesterdayTrades = userActivity.activitiesList.filter((activity) => {
-      const activityDate = new Date(activity.date);
-      activityDate.setHours(0, 0, 0, 0);
-      return (
-        activityDate.getTime() === yesterday.getTime() &&
-        (activity.name === "Trade" || activity.name === "Trade (2x XP)")
-      );
-    }).length;
-
-    res.json({
-      address: userActivity.address,
-      currentStreak: userActivity.streak,
-      todayTrades: todayTrades,
-      yesterdayTrades: yesterdayTrades,
-      lastSignIn: userActivity.lastSignIn,
-      streakBasedOn: "Daily trades (not sign-ins)",
-    });
-  } catch (error) {
-    console.error("Error debugging streak:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
 router.get("/leaderboard", async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -555,6 +458,7 @@ router.get("/leaderboard", async (req, res) => {
       // Create a new object with all user properties plus the rank and referral data
       return {
         ...user.toObject(), // Convert Mongoose document to plain object
+        streak: getCurrentStreak(user.streak, user.streakLastUpdate),
         rank: skip + index + 1, // Adjust rank based on pagination
         totalReferred: referralData.totalReferred,
         totalReferralPoints: referralData.totalReferralPoints,
@@ -640,6 +544,7 @@ router.get("/leaderboard/weekly", async (req, res) => {
           ...user,
           rank: skip + index + 1,
           points: user.weeklyPoints,
+          streak: getCurrentStreak(user.streak, user.streakLastUpdate),
           totalReferred: referralData.totalReferred,
           totalReferralPoints: referralData.totalReferralPoints,
         };
@@ -686,6 +591,7 @@ router.get("/leaderboard/weekly", async (req, res) => {
           points: { $first: "$points" },
           lastSignIn: { $first: "$lastSignIn" },
           streak: { $first: "$streak" },
+          streakLastUpdate: { $first: "$streakLastUpdate" },
           isRewarded: { $first: "$isRewarded" },
           discordUsername: { $first: "$discordUsername" },
           updatedAt: { $first: "$updatedAt" },
@@ -773,6 +679,7 @@ router.get("/leaderboard/weekly", async (req, res) => {
         ...user,
         rank: skip + index + 1,
         points: user.weeklyPoints, // Use weekly points instead of total points
+        streak: getCurrentStreak(user.streak, user.streakLastUpdate),
         totalReferred: referralData.totalReferred,
         totalReferralPoints: referralData.totalReferralPoints,
       };
@@ -823,6 +730,7 @@ router.get("/me", async (req, res) => {
         createdAt: 1,
         profileBgImage: 1,
         streak: 1,
+        streakLastUpdate: 1,
       }
     )
       .sort({ "activitiesList.date": -1 })
@@ -869,6 +777,10 @@ router.get("/me", async (req, res) => {
     //rank is the number of users with more points than the user + 1
     const result = {
       ...userActivity.toObject(),
+      streak: getCurrentStreak(
+        userActivity.streak,
+        userActivity.streakLastUpdate
+      ),
       rank: count + 1,
     };
 
@@ -1043,6 +955,16 @@ router.get("/me/weekly", async (req, res) => {
     const rankResult = await UserActivity.aggregate(rankPipeline);
     const myRank = rankResult.length > 0 ? rankResult[0].rank : null;
 
+    // Get user's streak data
+    const userActivity = await UserActivity.findOne(
+      { address: address.toLowerCase() },
+      { streak: 1, streakLastUpdate: 1 }
+    );
+
+    const myStreak = userActivity
+      ? getCurrentStreak(userActivity.streak, userActivity.streakLastUpdate)
+      : 0;
+
     // Get referral data for this user (filtered by weekly period)
     let totalReferred = 0;
     let totalReferralPoints = 0;
@@ -1095,6 +1017,7 @@ router.get("/me/weekly", async (req, res) => {
       weeklyPoints: myWeeklyPoints,
       weeklyActivities: myWeeklyActivities,
       rank: myRank,
+      streak: myStreak,
       totalReferred,
       totalReferralPoints,
     });

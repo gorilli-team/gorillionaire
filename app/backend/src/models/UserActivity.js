@@ -40,6 +40,10 @@ const userActivitySchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    streakLastUpdate: {
+      type: Date,
+      default: null,
+    },
     isRewarded: {
       type: Boolean,
       default: false,

@@ -21,6 +21,9 @@ interface Notification {
       tokenSymbol?: string;
       userAddress?: string;
     };
+    userAddress?: string;
+    streak?: number;
+    streakLastUpdate?: string;
   };
   message?: string;
   title?: string;
@@ -77,6 +80,7 @@ export default function Header() {
   const [monPriceFormatted, setMonPriceFormatted] = useState<string>("0.00");
   const [isFlashing, setIsFlashing] = useState(false); //eslint-disable-line
   const [streak, setStreak] = useState<number>(0);
+  const [isStreakUpdating, setIsStreakUpdating] = useState<boolean>(false);
 
   // WebSocket notification state
   const wsRef = useRef<WebSocket | null>(null);
@@ -122,7 +126,10 @@ export default function Header() {
               headers: {
                 "Content-Type": "application/json",
               },
-              body: JSON.stringify({ address: user.wallet.address, privyToken }),
+              body: JSON.stringify({
+                address: user.wallet.address,
+                privyToken,
+              }),
             }
           );
           await authResponse.json();
@@ -192,13 +199,84 @@ export default function Header() {
           // Choose emoji based on action
           const actionEmoji = action === "buy" ? "💰" : "💸";
 
-          // Format the message for notification - using const instead of let
-          const notificationMessage = `${actionEmoji} ${action?.toUpperCase()} ${tokenAmount} ${tokenSymbol} @ $${
-            tokenPrice ? tokenPrice.toFixed(2) : "N/A"
-          }`;
+          // Format price with better precision
+          const formatPrice = (price: number) => {
+            if (!price) return "N/A";
+
+            // Convert to string to avoid scientific notation
+            const priceStr = price.toString();
+
+            // If price is less than 0.01, show more precision
+            if (price < 0.01) {
+              // Find the first non-zero digit after decimal
+              const match = priceStr.match(/0\.0*([1-9])/);
+              if (match) {
+                const firstNonZeroIndex = match[1];
+                const decimalIndex = priceStr.indexOf(".");
+                const precision = decimalIndex + 2 + firstNonZeroIndex.length;
+                return price.toFixed(Math.min(precision, 8));
+              }
+            }
+
+            // For prices >= 0.01, show at least 3 significant digits
+            const significantDigits = Math.max(
+              3,
+              priceStr.replace(".", "").replace(/^0+/, "").length
+            );
+            return price.toFixed(Math.min(significantDigits, 6));
+          };
+
+          // Format the message for notification
+          const notificationMessage = `${actionEmoji} ${action?.toUpperCase()} ${tokenAmount} ${tokenSymbol} @ $${formatPrice(
+            tokenPrice || 0
+          )}`;
 
           // Show toast notification with formatted message
           showCustomNotification(notificationMessage, "Trade Signal");
+        } else if (
+          message.type === "STREAK_UPDATE" &&
+          message.data?.userAddress &&
+          address &&
+          message.data.userAddress.toLowerCase() === address.toLowerCase()
+        ) {
+          // Handle streak update notification
+          const { streak: newStreak } = message.data;
+          const oldStreak = streak;
+
+          console.log(
+            `🔥 WebSocket streak update: ${oldStreak} → ${newStreak}`
+          );
+
+          // Update the streak in the header
+          if (newStreak !== undefined) {
+            setStreak(newStreak);
+            // Trigger animation
+            setIsStreakUpdating(true);
+            setTimeout(() => setIsStreakUpdating(false), 2000);
+          }
+
+          // Show streak update notification
+          if (newStreak !== undefined && newStreak > oldStreak) {
+            const streakXp = newStreak * 10;
+            const streakMessage =
+              newStreak === 1
+                ? "🔥 Started a new streak! +10 XP"
+                : `🔥 Streak extended to ${newStreak} days! +${streakXp} XP`;
+
+            showCustomNotification(streakMessage, "Streak Updated!");
+            console.log("🎉 Showing WebSocket streak update notification");
+          } else if (
+            newStreak !== undefined &&
+            newStreak === 1 &&
+            oldStreak === 0
+          ) {
+            // First trade of the day
+            showCustomNotification(
+              "🔥 Started a new streak! +10 XP",
+              "Streak Started!"
+            );
+            console.log("🎉 Showing WebSocket new streak notification");
+          }
         }
       } catch (error) {
         console.error("Error processing WebSocket message:", error);
@@ -212,7 +290,7 @@ export default function Header() {
         wsRef.current = null;
       }
     };
-  }, [authenticated, address]);
+  }, [authenticated, address, streak, showCustomNotification]);
 
   // Play sound for every trade
   useEffect(() => {
@@ -225,11 +303,69 @@ export default function Header() {
     };
   }, []);
 
+  // Handle trade completion and streak updates
+  useEffect(() => {
+    const handleTradeCompleted = async () => {
+      console.log("🎯 Trade completed, checking for streak updates...");
+
+      // Wait a moment for the backend to process the trade
+      setTimeout(async () => {
+        try {
+          // Fetch updated streak data
+          const response = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/activity/track/me?address=${address}`
+          );
+          const data = await response.json();
+
+          console.log("📊 Updated streak data:", data);
+
+          if (data.userActivity?.streak) {
+            const newStreak = data.userActivity.streak;
+            const oldStreak = streak;
+
+            console.log(`🔥 Streak update: ${oldStreak} → ${newStreak}`);
+
+            // Update the streak in the header
+            setStreak(newStreak);
+            // Trigger animation
+            setIsStreakUpdating(true);
+            setTimeout(() => setIsStreakUpdating(false), 2000);
+
+            // Show streak update notification
+            if (newStreak > oldStreak) {
+              const streakXp = newStreak * 10;
+              const streakMessage =
+                newStreak === 1
+                  ? "🔥 Started a new streak! +10 XP"
+                  : `🔥 Streak extended to ${newStreak} days! +${streakXp} XP`;
+
+              showCustomNotification(streakMessage, "Streak Updated!");
+
+              console.log("🎉 Showing streak update notification");
+            } else if (newStreak === 1 && oldStreak === 0) {
+              // First trade of the day
+              showCustomNotification(
+                "🔥 Started a new streak! +10 XP",
+                "Streak Started!"
+              );
+              console.log("🎉 Showing new streak notification");
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching updated streak data:", error);
+        }
+      }, 2000); // Wait 2 seconds for backend processing
+    };
+
+    window.addEventListener("tradeCompleted", handleTradeCompleted);
+    return () => {
+      window.removeEventListener("tradeCompleted", handleTradeCompleted);
+    };
+  }, [address, streak]);
+
   // Fetch user streak data
   const fetchStreak = useCallback(async () => {
     if (!authenticated || !address) return;
-
-    console.log("🔍 Fetching streak data for address:", address);
 
     try {
       const response = await fetch(
@@ -237,13 +373,8 @@ export default function Header() {
       );
       const data = await response.json();
 
-      console.log("📊 Streak API response:", data);
-
       if (data.userActivity?.streak) {
-        console.log("🔥 Setting streak to:", data.userActivity.streak);
         setStreak(data.userActivity.streak);
-      } else {
-        console.log("❌ No streak data found in response");
       }
     } catch (error) {
       console.error("Error fetching streak data:", error);
@@ -304,32 +435,6 @@ export default function Header() {
     }
   }, [authenticated, address, fetchStreak]);
 
-  // Show streak extension notification
-  useEffect(() => {
-    console.log("🎯 Streak check triggered - current streak value:", streak);
-
-    if (streak > 0) {
-      // Show a subtle notification when streak is active
-      const streakMessage =
-        streak === 1 ? "🔥 1 day streak!" : `🔥 ${streak} day streak!`;
-
-      console.log("📢 Streak message:", streakMessage);
-
-      if (streak >= 3) {
-        console.log("🎉 Showing streak notification for streak >= 3");
-        showCustomNotification(streakMessage, "Streak Active!");
-      } else {
-        console.log("📝 Streak < 3, no notification shown");
-      }
-    } else if (streak === 0) {
-      console.log(
-        "💤 No active streak (streak = 0) - user didn't trade yesterday"
-      );
-    } else {
-      console.log("❓ Unexpected streak value:", streak);
-    }
-  }, [streak]);
-
   return (
     <>
       <ToastContainer
@@ -382,7 +487,11 @@ export default function Header() {
             <div className="flex items-center gap-2 sm:gap-4">
               {/* Streak Display */}
               {streak > 0 && (
-                <div className="flex items-center gap-1 px-2 py-1 bg-orange-100 rounded-md border border-orange-200">
+                <div
+                  className={`flex items-center gap-1 px-2 py-1 bg-orange-100 rounded-md border border-orange-200 transition-all duration-300 ${
+                    isStreakUpdating ? "animate-pulse scale-110" : ""
+                  }`}
+                >
                   <span className="text-orange-600 text-xs font-bold">🔥</span>
                   <span className="text-orange-700 text-xs font-semibold">
                     {streak} day{streak > 1 ? "s" : ""}

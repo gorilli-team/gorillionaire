@@ -4,6 +4,7 @@ const UserQuest = require("../../models/UserQuest");
 const Quest = require("../../models/Quest");
 const UserActivity = require("../../models/UserActivity");
 const { trackOnDiscordXpGained } = require("../../controllers/points");
+const { updateUserStreak } = require("../../utils/streakUtils");
 
 router.get("/:address", async (req, res) => {
   const { address } = req.params;
@@ -122,6 +123,7 @@ router.post("/claim", async (req, res) => {
         date: new Date(),
         questId: questId,
       });
+
       await userActivity.save();
 
       await trackOnDiscordXpGained(
