@@ -77,7 +77,6 @@ const getDailyTransactionTarget = (level) => {
 
 // Helper to check if streak is current (today or yesterday)
 function getCurrentStreak(streak, streakLastUpdate) {
-  console.log("getCurrentStreak", streak, streakLastUpdate);
   if (!streakLastUpdate) return 0;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -86,17 +85,97 @@ function getCurrentStreak(streak, streakLastUpdate) {
   const lastUpdate = new Date(streakLastUpdate);
   lastUpdate.setHours(0, 0, 0, 0);
 
-  console.log(`🔍 Streak Debug:`, {
-    streak,
-    streakLastUpdate: streakLastUpdate,
-    lastUpdate: lastUpdate.toISOString(),
-    twodaysago: twodaysago.toISOString(),
-  });
-
   if (lastUpdate.getTime() > twodaysago.getTime()) {
     return streak;
   }
   return 0;
+}
+
+// Helper function to update user streak when activity is added
+async function updateUserStreak(userActivity) {
+  console.log(`🔍 Updating streak for user: ${userActivity.address}`);
+  console.log(`📊 Current streak: ${userActivity.streak}`);
+  console.log(`📅 Current streakLastUpdate: ${userActivity.streakLastUpdate}`);
+
+  const now = new Date();
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  console.log(`📅 Today: ${today}`);
+  console.log(`📅 Yesterday: ${yesterday}`);
+
+  let updateStreak = false;
+  if (!userActivity.streakLastUpdate) {
+    // No streak ever, start new streak
+    console.log(`🆕 No streak history, starting new streak`);
+    userActivity.streak = 1;
+    userActivity.streakLastUpdate = today;
+    updateStreak = true;
+  } else {
+    const lastUpdate = new Date(userActivity.streakLastUpdate);
+    lastUpdate.setHours(0, 0, 0, 0);
+    console.log(`📅 Last update: ${lastUpdate}`);
+    console.log(`📅 Last update time: ${lastUpdate.getTime()}`);
+    console.log(`📅 Today time: ${today.getTime()}`);
+    console.log(`📅 Yesterday time: ${yesterday.getTime()}`);
+
+    if (lastUpdate.getTime() === today.getTime()) {
+      // Already updated today, but if streak is 0, we should start a new streak
+      if (userActivity.streak === 0) {
+        console.log(`🆕 Streak is 0 but updated today, starting new streak`);
+        userActivity.streak = 1;
+        userActivity.streakLastUpdate = today;
+        updateStreak = true;
+      } else {
+        console.log(`✅ Already updated today, no change needed`);
+      }
+    } else if (lastUpdate.getTime() === yesterday.getTime()) {
+      // Last update was yesterday, increment streak
+      console.log(`📈 Last update was yesterday, incrementing streak`);
+      userActivity.streak += 1;
+      userActivity.streakLastUpdate = today;
+      updateStreak = true;
+    } else {
+      // Last update was more than one day ago, reset streak
+      console.log(`🔄 Last update was more than 1 day ago, resetting streak`);
+      userActivity.streak = 1;
+      userActivity.streakLastUpdate = today;
+      updateStreak = true;
+    }
+  }
+
+  if (updateStreak) {
+    console.log(`🔄 Streak updated to: ${userActivity.streak}`);
+
+    // Add streak extension activity with XP rewards
+    const streakXp = userActivity.streak * 10;
+    userActivity.points += streakXp;
+    userActivity.activitiesList.push({
+      name: `Streak extended to ${userActivity.streak} 🔥`,
+      points: streakXp,
+      date: new Date(),
+    });
+
+    console.log(
+      `🎉 Awarded ${streakXp} XP for ${userActivity.streak}-day streak`
+    );
+
+    // Broadcast streak update via WebSocket
+    broadcastNotification({
+      type: "STREAK_UPDATE",
+      data: {
+        userAddress: userActivity.address,
+        streak: userActivity.streak,
+        streakLastUpdate: userActivity.streakLastUpdate,
+      },
+    });
+  } else {
+    console.log(`⏭️ No streak update needed`);
+  }
+
+  return updateStreak;
 }
 
 //track user signin
@@ -271,42 +350,9 @@ router.post("/trade-points", async (req, res) => {
     userActivity.points += points;
 
     // --- NEW STREAK LOGIC ---
-    const now = new Date();
-    const today = new Date(now);
-    today.setHours(0, 0, 0, 0);
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    let updateStreak = false;
-    if (!userActivity.streakLastUpdate) {
-      // No streak ever, start new streak
-      userActivity.streak = 1;
-      userActivity.streakLastUpdate = today;
-      updateStreak = true;
-    } else {
-      const lastUpdate = new Date(userActivity.streakLastUpdate);
-      lastUpdate.setHours(0, 0, 0, 0);
-      if (lastUpdate.getTime() === today.getTime()) {
-        // Already updated today, do nothing
-      } else if (lastUpdate.getTime() === yesterday.getTime()) {
-        // Last update was yesterday, increment streak
-        userActivity.streak += 1;
-        userActivity.streakLastUpdate = today;
-        updateStreak = true;
-      } else {
-        // Last update was more than one day ago, reset streak
-        userActivity.streak = 1;
-        userActivity.streakLastUpdate = today;
-        updateStreak = true;
-      }
-    }
-    if (updateStreak) {
-      userActivity.activitiesList.push({
-        name: "Daily Trade Streak Updated",
-        points: 0,
-        date: new Date(),
-      });
-    }
+    console.log(`🎯 Trade completed, updating streak for user: ${address}`);
+    const updateStreakResult = await updateUserStreak(userActivity);
+    console.log(`✅ Streak update result: ${updateStreakResult}`);
 
     await userActivity.save();
 
@@ -345,6 +391,10 @@ router.post("/trade-points", async (req, res) => {
           referredUserAddress: address.toLowerCase(),
           originalTradePoints: points,
         });
+
+        // Update streak when activity is added
+        await updateUserStreak(referrerActivity);
+
         await referrerActivity.save();
 
         // Invalidate weekly cache since referral activity was added
@@ -972,8 +1022,6 @@ router.get("/me", async (req, res) => {
       ],
     });
 
-    console.log("test");
-
     //rank is the number of users with more points than the user + 1
     const result = {
       ...userActivity.toObject(),
@@ -983,8 +1031,6 @@ router.get("/me", async (req, res) => {
       ),
       rank: count + 1,
     };
-
-    console.log("result streak", result.streak);
 
     // Get today's transaction count
     const todayTransactionCount = getTodayTransactionCount(

@@ -5,6 +5,52 @@ const { WebhookClient } = require("discord.js");
 const { defineChain, createPublicClient, http } = require("viem");
 const { NNS } = require("@nadnameservice/nns-viem-sdk");
 
+// Helper function to update user streak when activity is added
+async function updateUserStreak(userActivity) {
+  const now = new Date();
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  let updateStreak = false;
+  if (!userActivity.streakLastUpdate) {
+    // No streak ever, start new streak
+    userActivity.streak = 1;
+    userActivity.streakLastUpdate = today;
+    updateStreak = true;
+  } else {
+    const lastUpdate = new Date(userActivity.streakLastUpdate);
+    lastUpdate.setHours(0, 0, 0, 0);
+    if (lastUpdate.getTime() === today.getTime()) {
+      // Already updated today, do nothing
+    } else if (lastUpdate.getTime() === yesterday.getTime()) {
+      // Last update was yesterday, increment streak
+      userActivity.streak += 1;
+      userActivity.streakLastUpdate = today;
+      updateStreak = true;
+    } else {
+      // Last update was more than one day ago, reset streak
+      userActivity.streak = 1;
+      userActivity.streakLastUpdate = today;
+      updateStreak = true;
+    }
+  }
+
+  if (updateStreak) {
+    // Add streak extension activity with XP rewards
+    const streakXp = userActivity.streak * 10;
+    userActivity.points += streakXp;
+    userActivity.activitiesList.push({
+      name: `Streak extended to ${userActivity.streak} 🔥`,
+      points: streakXp,
+      date: new Date(),
+    });
+  }
+
+  return updateStreak;
+}
+
 async function awardRefuseSignalPoints(address, signalId) {
   const userActivity = await UserActivity.findOne({
     address: address.toLowerCase(),
@@ -22,6 +68,10 @@ async function awardRefuseSignalPoints(address, signalId) {
     date: new Date(),
     signalId: signalId,
   });
+
+  // Update streak when activity is added
+  await updateUserStreak(userActivity);
+
   await userActivity.save();
   await trackOnDiscordXpGained("Signal Refused", address, 5, totalPoints);
 }
@@ -194,6 +244,10 @@ async function awardDiscordConnectionPoints(address) {
     points: DISCORD_CONNECTION_POINTS,
     date: new Date(),
   });
+
+  // Update streak when activity is added
+  await updateUserStreak(userActivity);
+
   await userActivity.save();
   await trackOnDiscordXpGained(
     "Discord Connected",

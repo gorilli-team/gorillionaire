@@ -31,12 +31,12 @@ async function calculateAndUpdateStreaks(activityTypes = null) {
 
     console.log("✅ Connected to MongoDB");
 
-    // Get top 10 users by points
+    // Get top 20 users by points
     const users = await UserActivity.find({
       streakLastUpdate: { $exists: false },
     })
       .sort({ points: -1 })
-      .limit(20);
+      .limit(3300);
     console.log(`📊 Found ${users.length} top users to process (by points)`);
 
     let updatedCount = 0;
@@ -58,7 +58,8 @@ async function calculateAndUpdateStreaks(activityTypes = null) {
           console.log(
             `  ⚠️  No matching activities found for user ${user.address}`
           );
-          //store streakLastUpdate to now
+          // Set streak to 0 and streakLastUpdate to now for users with no activities
+          user.streak = 0;
           user.streakLastUpdate = new Date();
           await user.save();
           skippedCount++;
@@ -130,7 +131,7 @@ async function calculateAndUpdateStreaks(activityTypes = null) {
         } else {
           // Streak is not current
           finalStreak = 0;
-          streakLastUpdate = null;
+          streakLastUpdate = new Date(); // Set to now when streak is 0
         }
 
         // Update the user
