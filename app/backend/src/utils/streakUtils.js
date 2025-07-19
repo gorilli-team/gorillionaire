@@ -1,8 +1,94 @@
 const UserActivity = require("../models/UserActivity");
 const { broadcastNotification } = require("../websocket");
 
+// Configuration constants
+const STREAK_CONFIG = {
+  XP_MULTIPLIER: 10,
+  GRACE_PERIOD_HOURS: 6, // Allow 6 hours past midnight for "yesterday's" activity
+  MAX_STREAK_BONUS_DAYS: 365, // Cap streak bonus to prevent overflow
+};
+
 /**
- * Updates user streak and adds XP rewards
+ * Validates input parameters
+ * @param {string} address - User's wallet address
+ * @param {string} activityName - Name of the activity
+ * @param {number} points - Points for the activity
+ * @returns {Object} - Validation result
+ */
+function validateInputs(address, activityName, points) {
+  const errors = [];
+
+  if (!address || typeof address !== "string" || address.trim().length === 0) {
+    errors.push("Invalid address: must be a non-empty string");
+  }
+
+  if (
+    !activityName ||
+    typeof activityName !== "string" ||
+    activityName.trim().length === 0
+  ) {
+    errors.push("Invalid activityName: must be a non-empty string");
+  }
+
+  if (typeof points !== "number" || points < 0 || !Number.isFinite(points)) {
+    errors.push("Invalid points: must be a non-negative finite number");
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+  };
+}
+
+/**
+ * Normalizes date to start of day in UTC
+ * @param {Date} date - Date to normalize
+ * @returns {Date} - Normalized date
+ */
+function normalizeToStartOfDay(date = new Date()) {
+  const normalized = new Date(date);
+  normalized.setUTCHours(0, 0, 0, 0);
+  return normalized;
+}
+
+/**
+ * Determines streak status based on dates
+ * @param {Date|null} lastUpdate - Last update date (normalized)
+ * @param {Date} today - Today's date (normalized)
+ * @returns {Object} - Streak status
+ */
+function determineStreakStatus(lastUpdate, today) {
+  if (!lastUpdate) {
+    return { type: "FIRST_TIME", shouldUpdate: true };
+  }
+
+  const timeDiff = today.getTime() - lastUpdate.getTime();
+  const daysDiff = timeDiff / (24 * 60 * 60 * 1000);
+
+  if (daysDiff === 0) {
+    return { type: "SAME_DAY", shouldUpdate: false };
+  } else if (daysDiff === 1) {
+    return { type: "CONSECUTIVE", shouldUpdate: true };
+  } else if (daysDiff <= 1 + STREAK_CONFIG.GRACE_PERIOD_HOURS / 24) {
+    // Allow grace period for timezone differences and late activity
+    return { type: "GRACE_PERIOD", shouldUpdate: true };
+  } else {
+    return { type: "RESET", shouldUpdate: true };
+  }
+}
+
+/**
+ * Calculates streak XP based on current streak
+ * @param {number} streak - Current streak count
+ * @returns {number} - XP to award
+ */
+function calculateStreakXP(streak) {
+  const cappedStreak = Math.min(streak, STREAK_CONFIG.MAX_STREAK_BONUS_DAYS);
+  return cappedStreak * STREAK_CONFIG.XP_MULTIPLIER;
+}
+
+/**
+ * Updates user streak and adds XP rewards with proper concurrency handling
  * @param {string} address - User's wallet address
  * @param {string} activityName - Name of the activity that triggered the streak update
  * @param {number} points - Points for the activity (before streak bonus)
@@ -15,155 +101,207 @@ async function updateUserStreak(
   points = 0,
   metadata = {}
 ) {
+  // Validate inputs
+  const validation = validateInputs(address, activityName, points);
+  if (!validation.isValid) {
+    const error = new Error(
+      `Input validation failed: ${validation.errors.join(", ")}`
+    );
+    error.name = "ValidationError";
+    throw error;
+  }
+
   // Normalize address to lowercase for consistency
-  const normalizedAddress = address.toLowerCase();
+  const normalizedAddress = address.toLowerCase().trim();
   console.log(`🔄 Updating streak for address: ${normalizedAddress}`);
   console.log(`📝 Activity: ${activityName}, Base points: ${points}`);
 
+  // Get normalized today date
+  const today = normalizeToStartOfDay();
+  console.log(`📅 Today (normalized): ${today.toISOString()}`);
+
+  let session;
   try {
-    // Find or create user activity
-    let userActivity = await UserActivity.findOne({
-      address: normalizedAddress,
-    });
+    // Start a database session for atomic operations
+    session = await UserActivity.startSession();
 
-    if (!userActivity) {
-      console.log(
-        `👤 Creating new user activity for address: ${normalizedAddress}`
-      );
-      userActivity = new UserActivity({
+    return await session.withTransaction(async () => {
+      // Find user with session for atomic read-write
+      let userActivity = await UserActivity.findOne({
         address: normalizedAddress,
-        points: 0,
-        streak: 0,
-        streakLastUpdate: null,
-        activitiesList: [],
-      });
-    }
+      }).session(session);
 
-    // Get today's date normalized to start of day
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+      if (!userActivity) {
+        console.log(
+          `👤 Creating new user activity for address: ${normalizedAddress}`
+        );
+        userActivity = new UserActivity({
+          address: normalizedAddress,
+          points: 0,
+          streak: 0,
+          streakLastUpdate: null,
+          activitiesList: [],
+        });
+      }
 
-    // Get last update date normalized to start of day
-    const lastUpdate = userActivity.streakLastUpdate
-      ? new Date(userActivity.streakLastUpdate)
-      : null;
-    const lastUpdateNormalized = lastUpdate
-      ? new Date(lastUpdate.setHours(0, 0, 0, 0))
-      : null;
-
-    console.log(`📅 Today: ${today.toISOString()}`);
-    console.log(
-      `📅 Last update: ${lastUpdateNormalized?.toISOString() || "None"}`
-    );
-    console.log(`🔥 Current streak: ${userActivity.streak}`);
-
-    let updateStreak = false;
-    let oldStreak = userActivity.streak;
-
-    // Check if we need to update the streak
-    if (!lastUpdateNormalized) {
-      // First time user - start streak
-      console.log(`🎯 First time user, starting streak`);
-      userActivity.streak = 1;
-      userActivity.streakLastUpdate = today;
-      updateStreak = true;
-    } else if (lastUpdateNormalized.getTime() === today.getTime()) {
-      // Already updated today
-      console.log(`✅ Already updated today, no change needed`);
-      updateStreak = false;
-    } else if (
-      lastUpdateNormalized.getTime() ===
-      today.getTime() - 24 * 60 * 60 * 1000
-    ) {
-      // Consecutive day - extend streak
-      console.log(`🔥 Consecutive day, extending streak`);
-      userActivity.streak += 1;
-      userActivity.streakLastUpdate = today;
-      updateStreak = true;
-    } else {
-      // Gap in streak - reset to 1
-      console.log(`💔 Gap in streak, resetting to 1`);
-      userActivity.streak = 1;
-      userActivity.streakLastUpdate = today;
-      updateStreak = true;
-    }
-
-    // Add the base activity
-    userActivity.points += points;
-    userActivity.activitiesList.push({
-      name: activityName,
-      points: points,
-      date: new Date(),
-      ...metadata,
-    });
-
-    // Add streak extension activity with XP rewards if streak was updated
-    if (updateStreak) {
-      console.log(`🔄 Streak updated to: ${userActivity.streak}`);
-
-      // Add streak extension activity with XP rewards
-      const streakXp = userActivity.streak * 10;
-      userActivity.points += streakXp;
-      userActivity.activitiesList.push({
-        name: `Streak extended to ${userActivity.streak} 🔥`,
-        points: streakXp,
-        date: new Date(),
-      });
+      // Get last update date normalized to start of day
+      const lastUpdateNormalized = userActivity.streakLastUpdate
+        ? normalizeToStartOfDay(userActivity.streakLastUpdate)
+        : null;
 
       console.log(
-        `🎉 Awarded ${streakXp} XP for ${userActivity.streak}-day streak`
+        `📅 Last update (normalized): ${
+          lastUpdateNormalized?.toISOString() || "None"
+        }`
+      );
+      console.log(`🔥 Current streak: ${userActivity.streak}`);
+
+      // Determine streak status
+      const streakStatus = determineStreakStatus(lastUpdateNormalized, today);
+      console.log(`📊 Streak status: ${streakStatus.type}`);
+
+      let oldStreak = userActivity.streak;
+      let streakChanged = false;
+
+      // Update streak based on status
+      switch (streakStatus.type) {
+        case "FIRST_TIME":
+          console.log(`🎯 First time user, starting streak`);
+          userActivity.streak = 1;
+          streakChanged = true;
+          break;
+
+        case "CONSECUTIVE":
+        case "GRACE_PERIOD":
+          console.log(`🔥 Consecutive day activity, extending streak`);
+          userActivity.streak += 1;
+          streakChanged = true;
+          break;
+
+        case "RESET":
+          console.log(`💔 Gap in streak detected, resetting to 1`);
+          userActivity.streak = 1;
+          streakChanged = true;
+          break;
+
+        case "SAME_DAY":
+          console.log(`✅ Additional activity today, no streak change`);
+          streakChanged = false;
+          break;
+      }
+
+      // Always update streakLastUpdate when there's activity
+      if (streakStatus.shouldUpdate || streakStatus.type === "SAME_DAY") {
+        userActivity.streakLastUpdate = today;
+      }
+
+      // Add the base activity (always recorded)
+      const baseActivity = {
+        name: activityName,
+        points: points,
+        date: new Date(),
+        ...metadata,
+      };
+
+      userActivity.points += points;
+      userActivity.activitiesList.push(baseActivity);
+      console.log(
+        `➕ Added base activity: ${activityName} (+${points} points)`
       );
 
-      // Broadcast streak update via WebSocket
-      broadcastNotification({
-        type: "STREAK_UPDATE",
-        data: {
-          userAddress: normalizedAddress,
+      // Add streak bonus if streak was updated
+      let streakXp = 0;
+      if (streakChanged) {
+        console.log(
+          `🔄 Streak updated from ${oldStreak} to ${userActivity.streak}`
+        );
+
+        streakXp = calculateStreakXP(userActivity.streak);
+        userActivity.points += streakXp;
+
+        const streakActivity = {
+          name: `Streak extended to ${userActivity.streak} 🔥`,
+          points: streakXp,
+          date: new Date(),
+          type: "streak_bonus",
+        };
+
+        userActivity.activitiesList.push(streakActivity);
+        console.log(
+          `🎉 Awarded ${streakXp} XP for ${userActivity.streak}-day streak`
+        );
+      }
+
+      // Save the updated user activity (atomic within transaction)
+      await userActivity.save({ session });
+      console.log(`💾 User activity saved successfully`);
+
+      const result = {
+        userActivity: {
+          address: userActivity.address,
           streak: userActivity.streak,
+          points: userActivity.points,
           streakLastUpdate: userActivity.streakLastUpdate,
+          activitiesCount: userActivity.activitiesList.length,
         },
-      });
-    } else {
-      console.log(`⏭️ No streak update needed, updating last update date`);
-      userActivity.streakLastUpdate = new Date();
-      await userActivity.save();
-    }
+        streakChanged,
+        oldStreak,
+        newStreak: userActivity.streak,
+        streakXpAwarded: streakXp,
+        basePointsAwarded: points,
+        streakStatus: streakStatus.type,
+      };
 
-    // Save the updated user activity
-    await userActivity.save();
-    console.log(`💾 User activity saved successfully`);
-    console.log(`📊 Final userActivity state:`, {
-      address: userActivity.address,
-      streak: userActivity.streak,
-      points: userActivity.points,
-      streakLastUpdate: userActivity.streakLastUpdate,
-      activitiesCount: userActivity.activitiesList.length,
-    });
+      console.log(`📊 Final result:`, result);
 
-    // Verify the save by fetching from database
-    const verification = await UserActivity.findOne({
-      address: normalizedAddress,
-    });
-    console.log(`🔍 Database verification:`, {
-      address: verification?.address,
-      streak: verification?.streak,
-      points: verification?.points,
-      streakLastUpdate: verification?.streakLastUpdate,
-      activitiesCount: verification?.activitiesList?.length,
-    });
+      // Broadcast streak update via WebSocket (outside transaction to avoid blocking)
+      if (streakChanged) {
+        // Note: Broadcasting after transaction commits
+        setImmediate(() => {
+          broadcastNotification({
+            type: "STREAK_UPDATE",
+            data: {
+              userAddress: normalizedAddress,
+              streak: userActivity.streak,
+              streakLastUpdate: userActivity.streakLastUpdate,
+              streakXpAwarded: streakXp,
+              oldStreak,
+              newStreak: userActivity.streak,
+            },
+          });
+        });
+      }
 
-    return {
-      userActivity,
-      updateStreak,
-      oldStreak,
-      newStreak: userActivity.streak,
-    };
+      return result;
+    });
   } catch (error) {
     console.error(`❌ Error updating user streak for ${address}:`, error);
-    throw error;
+
+    // Add context to the error
+    if (error.name === "ValidationError") {
+      throw error; // Re-throw validation errors as-is
+    }
+
+    const enhancedError = new Error(
+      `Failed to update user streak: ${error.message}`
+    );
+    enhancedError.originalError = error;
+    enhancedError.userAddress = normalizedAddress;
+    throw enhancedError;
+  } finally {
+    // Clean up session
+    if (session) {
+      await session.endSession();
+    }
   }
 }
 
 module.exports = {
   updateUserStreak,
+  // Export for testing
+  validateInputs,
+  normalizeToStartOfDay,
+  determineStreakStatus,
+  calculateStreakXP,
+  STREAK_CONFIG,
 };
