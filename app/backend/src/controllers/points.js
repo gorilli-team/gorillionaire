@@ -15,20 +15,24 @@ async function awardRefuseSignalPoints(address, signalId) {
     throw new Error("User activity not found");
   }
 
-  const totalPoints = userActivity.points + 5;
-  userActivity.points += 5;
-  userActivity.activitiesList.push({
-    name: "Signal Refused",
-    points: 5,
-    date: new Date(),
-    signalId: signalId,
-  });
-
   // Update streak when activity is added
-  await updateUserStreak(address, "Signal Refused", 5);
+  const updateStreakResult = await updateUserStreak(
+    address,
+    "Signal Refused",
+    5,
+    {
+      signalId: signalId,
+    }
+  );
 
-  await userActivity.save();
-  await trackOnDiscordXpGained("Signal Refused", address, 5, totalPoints);
+  // Note: userActivity is already saved in updateUserStreak utility
+  const updatedUserActivity = updateStreakResult.userActivity;
+  await trackOnDiscordXpGained(
+    "Signal Refused",
+    address,
+    5,
+    updatedUserActivity.points
+  );
 }
 
 /**
@@ -64,20 +68,10 @@ async function createAcceptedSignalUserQuests(address, signalId) {
             isCompleted: false,
             lastProgressUpdate: new Date(),
           });
-
-          console.log(`Created UserQuest for ${address}: ${quest.questName}`);
         } else {
           if (!userQuest.isCompleted) {
             userQuest.currentProgress += 1;
             userQuest.lastProgressUpdate = new Date();
-
-            console.log(
-              `Updated UserQuest for ${address}: ${quest.questName} (${userQuest.currentProgress}/${quest.questRequirement})`
-            );
-          } else {
-            console.log(
-              `Quest already completed for ${address}: ${quest.questName} - skipping progress update`
-            );
             continue;
           }
         }
@@ -192,27 +186,21 @@ async function awardDiscordConnectionPoints(address) {
     throw new Error("User activity not found");
   }
 
-  const totalPoints = userActivity.points + DISCORD_CONNECTION_POINTS;
-  userActivity.points += DISCORD_CONNECTION_POINTS;
-  userActivity.activitiesList.push({
-    name: "Discord Connected",
-    points: DISCORD_CONNECTION_POINTS,
-    date: new Date(),
-  });
-
   // Update streak when activity is added
-  await updateUserStreak(
+  const updateStreakResult = await updateUserStreak(
     address,
     "Discord Connected",
-    DISCORD_CONNECTION_POINTS
+    DISCORD_CONNECTION_POINTS,
+    {}
   );
 
-  await userActivity.save();
+  // Note: userActivity is already saved in updateUserStreak utility
+  const updatedUserActivity = updateStreakResult.userActivity;
   await trackOnDiscordXpGained(
     "Discord Connected",
     address,
     DISCORD_CONNECTION_POINTS,
-    totalPoints
+    updatedUserActivity.points
   );
 }
 

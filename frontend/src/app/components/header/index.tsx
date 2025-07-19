@@ -263,7 +263,7 @@ export default function Header() {
         wsRef.current = null;
       }
     };
-  }, [authenticated, address]);
+  }, [authenticated, address, streak, showCustomNotification]);
 
   // Play sound for every trade
   useEffect(() => {
@@ -278,7 +278,7 @@ export default function Header() {
 
   // Handle trade completion and streak updates
   useEffect(() => {
-    const handleTradeCompleted = async (event: Event) => {
+    const handleTradeCompleted = async () => {
       console.log("🎯 Trade completed, checking for streak updates...");
 
       // Wait a moment for the backend to process the trade
@@ -439,7 +439,7 @@ export default function Header() {
     } else {
       console.log("❓ Unexpected streak value:", streak);
     }
-  }, [streak]);
+  }, [streak, showCustomNotification]);
 
   return (
     <>

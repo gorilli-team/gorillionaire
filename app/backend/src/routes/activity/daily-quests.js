@@ -271,7 +271,10 @@ router.post("/claim", async (req, res) => {
       await updateUserStreak(
         address,
         `Daily Quest Completed: ${dailyQuest.questName}`,
-        rewardPoints
+        rewardPoints,
+        {
+          questId: dailyQuest._id,
+        }
       );
 
       await userActivity.save();

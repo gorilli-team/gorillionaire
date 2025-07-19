@@ -252,27 +252,25 @@ router.post("/trade-points", async (req, res) => {
       }
     }
 
-    userActivity.activitiesList.push({
-      name: is2xXpActive ? "Trade (2x XP)" : "Trade",
-      points: points,
-      date: new Date(),
-      intentId: intentId,
-      signalId: signalId,
-      txHash: txHash,
-    });
-    const totalPoints = userActivity.points + points;
-    userActivity.points += points;
-
     // --- NEW STREAK LOGIC ---
     console.log(`🎯 Trade completed, updating streak for user: ${address}`);
     const updateStreakResult = await updateUserStreak(
       address,
       is2xXpActive ? "Trade (2x XP)" : "Trade",
-      points
+      points,
+      {
+        intentId: intentId,
+        signalId: signalId,
+        txHash: txHash,
+      }
     );
     console.log(`✅ Streak update result: ${updateStreakResult}`);
 
-    await userActivity.save();
+    // Get the updated userActivity from the result
+    const updatedUserActivity = updateStreakResult.userActivity;
+    const totalPoints = updatedUserActivity.points;
+
+    // Note: userActivity is already saved in updateUserStreak utility
 
     // Invalidate weekly cache since new activity was added
     invalidateWeeklyCache();
@@ -314,10 +312,15 @@ router.post("/trade-points", async (req, res) => {
         await updateUserStreak(
           referral.referrerAddress,
           "Referral Trade Bonus",
-          referralBonus
+          referralBonus,
+          {
+            referralId: referral._id,
+            referredUserAddress: address.toLowerCase(),
+            originalTradePoints: points,
+          }
         );
 
-        await referrerActivity.save();
+        // Note: referrerActivity is already saved in updateUserStreak utility
 
         // Invalidate weekly cache since referral activity was added
         invalidateWeeklyCache();

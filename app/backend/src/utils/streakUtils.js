@@ -1,13 +1,20 @@
 const UserActivity = require("../models/UserActivity");
+const { broadcastNotification } = require("../websocket");
 
 /**
  * Updates user streak and adds XP rewards
  * @param {string} address - User's wallet address
  * @param {string} activityName - Name of the activity that triggered the streak update
  * @param {number} points - Points for the activity (before streak bonus)
+ * @param {Object} metadata - Additional metadata for the activity (optional)
  * @returns {Promise<Object>} - Updated user activity data
  */
-async function updateUserStreak(address, activityName, points = 0) {
+async function updateUserStreak(
+  address,
+  activityName,
+  points = 0,
+  metadata = {}
+) {
   console.log(`🔄 Updating streak for address: ${address}`);
   console.log(`📝 Activity: ${activityName}, Base points: ${points}`);
 
@@ -81,6 +88,7 @@ async function updateUserStreak(address, activityName, points = 0) {
       name: activityName,
       points: points,
       date: new Date(),
+      ...metadata,
     });
 
     // Add streak extension activity with XP rewards if streak was updated
@@ -99,6 +107,16 @@ async function updateUserStreak(address, activityName, points = 0) {
       console.log(
         `🎉 Awarded ${streakXp} XP for ${userActivity.streak}-day streak`
       );
+
+      // Broadcast streak update via WebSocket
+      broadcastNotification({
+        type: "STREAK_UPDATE",
+        data: {
+          userAddress: userActivity.address,
+          streak: userActivity.streak,
+          streakLastUpdate: userActivity.streakLastUpdate,
+        },
+      });
     } else {
       console.log(`⏭️ No streak update needed`);
     }
@@ -106,6 +124,23 @@ async function updateUserStreak(address, activityName, points = 0) {
     // Save the updated user activity
     await userActivity.save();
     console.log(`💾 User activity saved successfully`);
+    console.log(`📊 Final userActivity state:`, {
+      address: userActivity.address,
+      streak: userActivity.streak,
+      points: userActivity.points,
+      streakLastUpdate: userActivity.streakLastUpdate,
+      activitiesCount: userActivity.activitiesList.length,
+    });
+
+    // Verify the save by fetching from database
+    const verification = await UserActivity.findOne({ address });
+    console.log(`🔍 Database verification:`, {
+      address: verification?.address,
+      streak: verification?.streak,
+      points: verification?.points,
+      streakLastUpdate: verification?.streakLastUpdate,
+      activitiesCount: verification?.activitiesList?.length,
+    });
 
     return {
       userActivity,

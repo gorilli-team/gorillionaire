@@ -169,7 +169,11 @@ router.post("/process", async (req, res) => {
       await updateUserStreak(
         referrerAddress,
         "Referral Bonus",
-        REFERRAL_BONUS_POINTS
+        REFERRAL_BONUS_POINTS,
+        {
+          referralId: referral._id,
+          referredUserAddress: address.toLowerCase(),
+        }
       );
 
       await referrerActivity.save();
