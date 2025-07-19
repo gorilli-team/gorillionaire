@@ -83,10 +83,20 @@ function getCurrentStreak(streak, streakLastUpdate) {
   today.setHours(0, 0, 0, 0);
   const twodaysago = new Date(today);
   twodaysago.setDate(twodaysago.getDate() - 2);
-  const lastUpdate = new Date(streakLastUpdate);
-  lastUpdate.setHours(0, 0, 0, 0);
 
-  if (lastUpdate.getTime() > twodaysago.getTime()) {
+  console.log("streak", streak);
+  console.log("streakLastUpdate", streakLastUpdate);
+  console.log("twodaysago", twodaysago);
+  console.log("today", today);
+  console.log("streakLastUpdate.getTime()", streakLastUpdate.getTime());
+  console.log("twodaysago.getTime()", twodaysago.getTime());
+  console.log(
+    "streakLastUpdate.getTime() > twodaysago.getTime()",
+    streakLastUpdate.getTime() > twodaysago.getTime()
+  );
+
+  if (streakLastUpdate.getTime() > twodaysago.getTime()) {
+    console.log("streakLastUpdate.getTime() > twodaysago.getTime()");
     return streak;
   }
   return 0;

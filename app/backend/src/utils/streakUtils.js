@@ -118,7 +118,9 @@ async function updateUserStreak(
         },
       });
     } else {
-      console.log(`⏭️ No streak update needed`);
+      console.log(`⏭️ No streak update needed, updating last update date`);
+      userActivity.streakLastUpdate = new Date();
+      await userActivity.save();
     }
 
     // Save the updated user activity
