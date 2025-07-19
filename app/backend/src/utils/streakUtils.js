@@ -258,17 +258,20 @@ async function updateUserStreak(
       if (streakChanged) {
         // Note: Broadcasting after transaction commits
         setImmediate(() => {
-          broadcastNotification({
+          const notificationData = {
             type: "STREAK_UPDATE",
             data: {
               userAddress: normalizedAddress,
-              streak: userActivity.streak,
+              streak: userActivity.streak || 0,
               streakLastUpdate: userActivity.streakLastUpdate,
-              streakXpAwarded: streakXp,
-              oldStreak,
-              newStreak: userActivity.streak,
+              streakXpAwarded: streakXp || 0,
+              oldStreak: oldStreak || 0,
+              newStreak: userActivity.streak || 0,
             },
-          });
+          };
+          
+          console.log(`📡 Broadcasting streak update:`, notificationData);
+          broadcastNotification(notificationData);
         });
       }
 

@@ -199,10 +199,37 @@ export default function Header() {
           // Choose emoji based on action
           const actionEmoji = action === "buy" ? "💰" : "💸";
 
-          // Format the message for notification - using const instead of let
-          const notificationMessage = `${actionEmoji} ${action?.toUpperCase()} ${tokenAmount} ${tokenSymbol} @ $${
-            tokenPrice ? tokenPrice.toFixed(2) : "N/A"
-          }`;
+          // Format price with better precision
+          const formatPrice = (price: number) => {
+            if (!price) return "N/A";
+
+            // Convert to string to avoid scientific notation
+            const priceStr = price.toString();
+
+            // If price is less than 0.01, show more precision
+            if (price < 0.01) {
+              // Find the first non-zero digit after decimal
+              const match = priceStr.match(/0\.0*([1-9])/);
+              if (match) {
+                const firstNonZeroIndex = match[1];
+                const decimalIndex = priceStr.indexOf(".");
+                const precision = decimalIndex + 2 + firstNonZeroIndex.length;
+                return price.toFixed(Math.min(precision, 8));
+              }
+            }
+
+            // For prices >= 0.01, show at least 3 significant digits
+            const significantDigits = Math.max(
+              3,
+              priceStr.replace(".", "").replace(/^0+/, "").length
+            );
+            return price.toFixed(Math.min(significantDigits, 6));
+          };
+
+          // Format the message for notification
+          const notificationMessage = `${actionEmoji} ${action?.toUpperCase()} ${tokenAmount} ${tokenSymbol} @ $${formatPrice(
+            tokenPrice || 0
+          )}`;
 
           // Show toast notification with formatted message
           showCustomNotification(notificationMessage, "Trade Signal");
@@ -340,21 +367,14 @@ export default function Header() {
   const fetchStreak = useCallback(async () => {
     if (!authenticated || !address) return;
 
-    console.log("🔍 Fetching streak data for address:", address);
-
     try {
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/activity/track/me?address=${address}`
       );
       const data = await response.json();
 
-      console.log("📊 Streak API response:", data);
-
       if (data.userActivity?.streak) {
-        console.log("🔥 Setting streak to:", data.userActivity.streak);
         setStreak(data.userActivity.streak);
-      } else {
-        console.log("❌ No streak data found in response");
       }
     } catch (error) {
       console.error("Error fetching streak data:", error);

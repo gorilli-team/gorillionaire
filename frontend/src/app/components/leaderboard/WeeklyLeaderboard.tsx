@@ -445,7 +445,7 @@ const WeeklyLeaderboardComponent = () => {
                               WEEKLY POINTS
                             </th>
                             <th className="pb-2 pr-2 font-medium text-center">
-                              STREAK 🔥
+                              STREAK
                             </th>
                             {hasReferrals && (
                               <th className="pb-2 pr-2 font-medium text-center">
@@ -738,7 +738,7 @@ const WeeklyLeaderboardComponent = () => {
                       </th>
                       <th className="pb-2 pr-2 font-medium">WEEKLY POINTS</th>
                       <th className="pb-2 pr-2 font-medium text-center">
-                        STREAK 🔥
+                        STREAK
                       </th>
                       {hasReferrals && (
                         <th className="pb-2 pr-2 font-medium text-center">

@@ -296,16 +296,6 @@ router.post("/trade-points", async (req, res) => {
       });
 
       if (referrerActivity) {
-        referrerActivity.points += referralBonus;
-        referrerActivity.activitiesList.push({
-          name: "Referral Trade Bonus",
-          points: referralBonus,
-          date: new Date(),
-          referralId: referral._id,
-          referredUserAddress: address.toLowerCase(),
-          originalTradePoints: points,
-        });
-
         // Add referral bonus directly (no streak update for referral bonuses)
         referrerActivity.points += referralBonus;
         referrerActivity.activitiesList.push({
@@ -350,7 +340,15 @@ router.post("/trade-points", async (req, res) => {
     //broadcast notification to all clients
     broadcastNotification({
       type: "NOTIFICATION",
-      data: intent.toObject(),
+      data: {
+        data: {
+          action: intent.action,
+          tokenAmount: intent.tokenAmount,
+          tokenPrice: intent.tokenPrice,
+          tokenSymbol: intent.tokenSymbol,
+          userAddress: intent.userAddress,
+        },
+      },
     });
 
     res.json({ message: "Points added" });

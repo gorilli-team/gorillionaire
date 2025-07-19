@@ -282,7 +282,7 @@ router.post("/claim", async (req, res) => {
     res.json({
       message: "Quest reward claimed successfully",
       rewardPoints: quest.questRewardAmount,
-      newTotalPoints: updatedUserActivity.points,
+      newTotalPoints: userActivity.points,
     });
   } catch (error) {
     console.error("Error claiming daily quest:", error);
